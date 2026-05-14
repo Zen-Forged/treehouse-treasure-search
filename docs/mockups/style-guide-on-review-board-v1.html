@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Style Guide on /review-board — V1 mockup (session 162, Shape B)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* v2 tokens — mirrors lib/tokens.ts current values */
+    --bg:           #F7F3EB;
+    --bg-paper:     #FFFCF5;
+    --surface:      #FFFCF5;
+    --surface-warm: #FBF6EA;
+    --text-primary: #2B211A;
+    --text-secondary: #5C5246;
+    --text-muted:   #A39686;
+    --accent-green: #285C3C;
+    --green-dark:   #1F4A31;
+    --green-soft:   #E8EEE6;
+    --green-mid:    #3E694F;
+    --border-light: #E5DED2;
+    --border-medium: #D6CCBC;
+
+    /* v1 — used for the green-drift call-out */
+    --v1-green:    #1e4d2b;
+    --v1-cream:    #f2ecd8;
+    --v1-postit:   #fefae8;
+
+    /* v0.2 — legacy admin */
+    --v02-green:   #1e4d2b; /* CSS-resolves to same value as v1; here for tier labeling */
+
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body:    'Inter', -apple-system, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #1a1a1a;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    padding: 32px 16px;
+  }
+  .doc-header {
+    max-width: 1200px;
+    margin: 0 auto 32px;
+    color: #d8d3cb;
+  }
+  .doc-header h1 {
+    font-family: var(--font-display);
+    font-size: 32px;
+    margin: 0 0 8px;
+    color: #f5efe3;
+  }
+  .doc-header p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 800px;
+  }
+  .decision-pane {
+    max-width: 1200px;
+    margin: 0 auto 40px;
+    background: #28251e;
+    border: 1px solid #3a352b;
+    border-radius: 12px;
+    padding: 20px 24px;
+    color: #d8d3cb;
+  }
+  .decision-pane h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 12px;
+    color: #f5efe3;
+  }
+  .decision-pane ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decision-pane code {
+    background: #1a1a1a;
+    color: #f5efe3;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  .frame {
+    max-width: 1200px;
+    margin: 0 auto 48px;
+    background: var(--bg);
+    border: 1px solid #3a352b;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .frame-label {
+    background: #28251e;
+    color: #f5efe3;
+    padding: 14px 24px;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    border-bottom: 1px solid #3a352b;
+  }
+  .frame-label .tagline {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 400;
+    color: #a8a092;
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+  .review-board {
+    padding: 32px 24px 40px;
+    min-height: 600px;
+  }
+  .rb-header { max-width: 1100px; margin: 0 auto 32px; }
+  .rb-header h1 {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 500;
+    margin: 0;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+  .rb-header p {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    margin: 8px 0 0;
+    max-width: 720px;
+  }
+
+  /* ─── Frame A — Top-bar tabs ─── */
+  .top-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border-light);
+    margin: 24px auto 32px;
+    max-width: 1100px;
+    padding: 0 4px;
+  }
+  .top-tab {
+    padding: 10px 18px 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: default;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .top-tab.active {
+    color: var(--accent-green);
+    border-bottom-color: var(--accent-green);
+    font-weight: 600;
+  }
+  .top-tab .count {
+    font-size: 11px;
+    background: var(--surface-warm);
+    color: var(--text-muted);
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .top-tab.active .count {
+    background: var(--green-soft);
+    color: var(--accent-green);
+  }
+
+  /* ─── Frame B — Sidebar ─── */
+  .sidebar-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 32px;
+    max-width: 1100px;
+    margin: 24px auto 0;
+  }
+  .sidebar {
+    border-right: 1px solid var(--border-light);
+    padding-right: 24px;
+  }
+  .sidebar-group {
+    margin-bottom: 24px;
+  }
+  .sidebar-group-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    padding: 0 8px;
+  }
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: default;
+  }
+  .sidebar-link.active {
+    background: var(--green-soft);
+    color: var(--accent-green);
+    font-weight: 600;
+  }
+  .sidebar-link .count {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .sidebar-link.active .count {
+    color: var(--accent-green);
+  }
+
+  /* ─── Frame C — Anchored above tiles ─── */
+  .anchor-nav {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    padding: 4px;
+    max-width: 700px;
+    margin: 24px auto 32px;
+    box-shadow: 0 1px 2px rgba(43,33,26,0.04);
+  }
+  .anchor-link {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-radius: 999px;
+    cursor: default;
+  }
+  .anchor-link.active {
+    background: var(--accent-green);
+    color: var(--bg-paper);
+    font-weight: 500;
+  }
+
+  /* ─── Shared style-guide content (used in all 3 frames) ─── */
+  .sg-section {
+    max-width: 1100px;
+    margin: 0 auto 40px;
+  }
+  .sg-section h2 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    margin: 0 0 4px;
+    color: var(--text-primary);
+  }
+  .sg-section .sg-eyebrow {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 16px;
+  }
+  .sg-card {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .sg-card + .sg-card { margin-top: 16px; }
+
+  .drift-callout {
+    background: rgba(139,32,32,0.04);
+    border: 1px solid rgba(139,32,32,0.18);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    color: var(--text-primary);
+    line-height: 1.55;
+  }
+  .drift-callout strong { color: #8B2020; }
+
+  .green-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .green-cell {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .green-swatch {
+    height: 80px;
+  }
+  .green-meta {
+    padding: 10px 12px 12px;
+  }
+  .green-meta .name {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+  .green-meta .hex {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .green-meta .use {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .green-meta .pill {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+  }
+
+  .type-stack > div + div { margin-top: 6px; }
+  .type-step {
+    display: grid;
+    grid-template-columns: 100px 60px 1fr;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .type-step .label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .type-step .size {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px;
+    color: var(--accent-green);
+    font-weight: 600;
+  }
+  .type-step .sample {
+    font-family: var(--font-display);
+    color: var(--text-primary);
+    line-height: 1.25;
+  }
+
+  .copy-token-btn {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 9.5px;
+    background: var(--bg);
+    border: 1px solid var(--border-medium);
+    color: var(--text-muted);
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    cursor: default;
+    letter-spacing: 0.03em;
+  }
+
+  .primitive-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .primitive-cell {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+  .primitive-cell .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    margin-top: 12px;
+  }
+
+  /* Existing review-board tile mock (sample, one only) */
+  .tile-row {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, max-content));
+    gap: 24px;
+  }
+  .tile {
+    width: 280px;
+  }
+  .tile-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .tile-head .name {
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .tile-head .open {
+    font-size: 10px;
+    color: var(--accent-green);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .tile-iframe {
+    height: 280px;
+    background: var(--surface-warm);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .tile-path {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+  .tile-notes {
+    margin-top: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 12px;
+    min-height: 60px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .category-block { margin-top: 32px; }
+  .category-block h3 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    margin: 0 0 4px;
+    color: var(--text-primary);
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .category-block .category-hint {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 auto 16px;
+    max-width: 1100px;
+  }
+
+  .frame-note {
+    background: #28251e;
+    color: #d8d3cb;
+    padding: 14px 24px 18px;
+    font-size: 12px;
+    line-height: 1.6;
+    border-top: 1px solid #3a352b;
+  }
+  .frame-note strong { color: #f5efe3; }
+  .frame-note ul { margin: 4px 0 0 18px; padding: 0; }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>Style Guide on <code>/review-board</code> — V1 mockup</h1>
+  <p>Session 162, Shape B. Three frames spanning the navigation-model axis. Sample content (green-drift call-out + type scale + primitives) is consistent across all 3 so you compare structure, not content. The mockup mirrors current <code>/review-board</code> chrome (v2 tokens, Cormorant + Inter, 375×812 tile iframes) so each frame reads as a believable extension of the existing surface, not a redesign.</p>
+</div>
+
+<div class="decision-pane">
+  <h2>Questions this mockup is asking you to answer</h2>
+  <ul>
+    <li><strong>Q1 — Navigation model</strong> (this mockup): pick Frame A / B / C. Determines how Style Guide and Surfaces compose inside <code>/review-board</code>.</li>
+    <li><strong>Q2 — Content sections</strong> (prose Q&amp;A after pick): which sections ship in arc 2 (Foundations / Components / Patterns / Tokens-by-tier) vs Tier B headroom.</li>
+    <li><strong>Q3 — Token vocabulary mechanism</strong> (prose Q&amp;A after pick): how do feedback messages reference tokens? (a) copy-to-clipboard button next to each token, (b) deep-link per token, (c) defer.</li>
+  </ul>
+</div>
+
+<!-- ════════════════════ FRAME A ════════════════════ -->
+<div class="frame">
+  <div class="frame-label">
+    Frame A — Top-bar tabs
+    <span class="tagline">Discrete context switching. Click a tab; that section fills the body. Familiar pattern; tab-bar can grow (Patterns / Lint Status / Audit).</span>
+  </div>
+  <div class="review-board">
+    <div class="rb-header">
+      <h1>Review Board</h1>
+      <p>Internal visual-system audit. Each tile renders a production surface inside a 375×812 iframe. Style Guide tab below provides the canonical reference for any feedback you give on a tile.</p>
+    </div>
+
+    <div class="top-tabs">
+      <div class="top-tab">Surfaces <span class="count">16</span></div>
+      <div class="top-tab active">Style Guide <span class="count">v2</span></div>
+    </div>
+
+    <!-- Style Guide tab content -->
+    <div class="sg-section">
+      <h2>Foundations — Color</h2>
+      <p class="sg-eyebrow">Greens across all tiers (drift call-out)</p>
+      <div class="sg-card">
+        <div class="drift-callout">
+          <strong>Drift alert:</strong> three "primary green" values coexist across the v1 / v2 / v0.2 tiers. Use the correct one for the surface's tier. Side-by-side these read as visible drift even though each token is canonically named.
+        </div>
+        <div class="green-row">
+          <div class="green-cell">
+            <div class="green-swatch" style="background: #1e4d2b"></div>
+            <div class="green-meta">
+              <div class="name">v1.green <span class="copy-token-btn">copy</span></div>
+              <div class="hex">#1e4d2b</div>
+              <div class="use">Use on v1 surfaces: <code>/find/[id]</code>, <code>/map</code> basemap accents, /post flow.</div>
+              <span class="pill" style="background: #1e4d2b">Primary CTA</span>
+            </div>
+          </div>
+          <div class="green-cell">
+            <div class="green-swatch" style="background: #285C3C"></div>
+            <div class="green-meta">
+              <div class="name">v2.accent.green <span class="copy-token-btn">copy</span></div>
+              <div class="hex">#285C3C</div>
+              <div class="use">Default for new v2 surfaces: Home, Saved, /shelf, /me, /welcome.</div>
+              <span class="pill" style="background: #285C3C">Primary CTA</span>
+            </div>
+          </div>
+          <div class="green-cell">
+            <div class="green-swatch" style="background: #1e4d2b; opacity: 0.7"></div>
+            <div class="green-meta">
+              <div class="name">colors.green (v0.2) <span class="copy-token-btn">copy</span></div>
+              <div class="hex">#1e4d2b — legacy</div>
+              <div class="use">Admin only (<code>app/admin</code>). Treat as deprecated; migrate to v2 in arc 3.</div>
+              <span class="pill" style="background: #1e4d2b; opacity: 0.7">Primary CTA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sg-section">
+      <h2>Foundations — Type scale</h2>
+      <p class="sg-eyebrow">Canonical scale — locked session 162</p>
+      <div class="sg-card type-stack">
+        <div class="type-step"><span class="label">type.size.xxs</span><span class="size">9px</span><span class="sample" style="font-size: 9px">"Tiny metadata, captions"</span></div>
+        <div class="type-step"><span class="label">type.size.xs</span><span class="size">11px</span><span class="sample" style="font-size: 11px">"Small-caps eyebrows, secondary labels"</span></div>
+        <div class="type-step"><span class="label">type.size.sm</span><span class="size">13px</span><span class="sample" style="font-size: 13px">"Default tile labels, dense form copy"</span></div>
+        <div class="type-step"><span class="label">type.size.base</span><span class="size">14px</span><span class="sample" style="font-size: 14px">"Canonical body text"</span></div>
+        <div class="type-step"><span class="label">type.size.md</span><span class="size">16px</span><span class="sample" style="font-size: 16px">"Lora paragraph, dense headers"</span></div>
+        <div class="type-step"><span class="label">type.size.lg</span><span class="size">18px</span><span class="sample" style="font-size: 18px">"Booth / find names"</span></div>
+        <div class="type-step"><span class="label">type.size.xl</span><span class="size">22px</span><span class="sample" style="font-size: 22px">"Booth numerals, stamps"</span></div>
+        <div class="type-step"><span class="label">type.size.2xl</span><span class="size">26px</span><span class="sample" style="font-size: 26px">"Find-detail price"</span></div>
+        <div class="type-step"><span class="label">type.size.3xl</span><span class="size">32px</span><span class="sample" style="font-size: 32px">"Hero title"</span></div>
+      </div>
+    </div>
+
+    <div class="sg-section">
+      <h2>Components — Engagement bubbles</h2>
+      <p class="sg-eyebrow">Save / Bookmark / Share — 3-tier lattice</p>
+      <div class="sg-card">
+        <div class="primitive-grid">
+          <div class="primitive-cell">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border-light); box-shadow: 0 2px 6px rgba(43,33,26,0.06)"><span style="color: var(--accent-green); font-size: 18px">♥</span></div>
+            <div class="label">&lt;FlagGlyph weight="bold" /&gt;</div>
+          </div>
+          <div class="primitive-cell">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border-light)"><span style="color: var(--accent-green); font-size: 18px">🔖</span></div>
+            <div class="label">&lt;BookmarkBoothBubble /&gt;</div>
+          </div>
+          <div class="primitive-cell">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border-light)"><span style="color: var(--accent-green); font-size: 18px">✈</span></div>
+            <div class="label">&lt;ShareBubble variant="v2" /&gt;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame-note">
+    <strong>Frame A — what this looks like in use:</strong>
+    <ul>
+      <li>You're reviewing the Saved tile, notice a font feels off → click "Style Guide" tab → reference type scale → switch back to Surfaces → write feedback "use <code>type.size.lg</code> on the saved-row mall name"</li>
+      <li>One context at a time. Surfaces and Style Guide don't share screen.</li>
+      <li>Tab bar scales naturally if you later add Patterns / Lint Status / Audit Snapshots.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════ FRAME B ════════════════════ -->
+<div class="frame">
+  <div class="frame-label">
+    Frame B — Sidebar with sections
+    <span class="tagline">Persistent split-pane. Sidebar lists sections; right pane shows active. Reference + surfaces can share screen via section-switching speed.</span>
+  </div>
+  <div class="review-board">
+    <div class="rb-header">
+      <h1>Review Board</h1>
+      <p>Internal visual-system audit. Sidebar lists every section; click a section to swap the right pane. Style Guide stays one click away while you're reviewing a tile.</p>
+    </div>
+
+    <div class="sidebar-layout">
+      <aside class="sidebar">
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">Production surfaces</div>
+          <div class="sidebar-link"><span>Browse</span><span class="count">5</span></div>
+          <div class="sidebar-link"><span>Auth</span><span class="count">2</span></div>
+          <div class="sidebar-link"><span>Vendor</span><span class="count">6</span></div>
+          <div class="sidebar-link"><span>System</span><span class="count">2</span></div>
+        </div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">Style Guide</div>
+          <div class="sidebar-link active"><span>Foundations</span><span class="count">5</span></div>
+          <div class="sidebar-link"><span>Components</span><span class="count">12</span></div>
+          <div class="sidebar-link"><span>Patterns</span><span class="count">4</span></div>
+          <div class="sidebar-link"><span>Tokens (by tier)</span><span class="count">3</span></div>
+        </div>
+      </aside>
+      <div>
+        <!-- Same shared content -->
+        <div class="sg-section" style="margin-top: 0">
+          <h2>Foundations — Color</h2>
+          <p class="sg-eyebrow">Greens across all tiers (drift call-out)</p>
+          <div class="sg-card">
+            <div class="drift-callout">
+              <strong>Drift alert:</strong> three "primary green" values coexist across the v1 / v2 / v0.2 tiers. Use the correct one for the surface's tier.
+            </div>
+            <div class="green-row">
+              <div class="green-cell">
+                <div class="green-swatch" style="background: #1e4d2b"></div>
+                <div class="green-meta">
+                  <div class="name">v1.green <span class="copy-token-btn">copy</span></div>
+                  <div class="hex">#1e4d2b</div>
+                  <div class="use">Use on v1 surfaces.</div>
+                  <span class="pill" style="background: #1e4d2b">Primary CTA</span>
+                </div>
+              </div>
+              <div class="green-cell">
+                <div class="green-swatch" style="background: #285C3C"></div>
+                <div class="green-meta">
+                  <div class="name">v2.accent.green <span class="copy-token-btn">copy</span></div>
+                  <div class="hex">#285C3C</div>
+                  <div class="use">Default for new v2 surfaces.</div>
+                  <span class="pill" style="background: #285C3C">Primary CTA</span>
+                </div>
+              </div>
+              <div class="green-cell">
+                <div class="green-swatch" style="background: #1e4d2b; opacity: 0.7"></div>
+                <div class="green-meta">
+                  <div class="name">colors.green (v0.2) <span class="copy-token-btn">copy</span></div>
+                  <div class="hex">#1e4d2b — legacy</div>
+                  <div class="use">Admin only; treat as deprecated.</div>
+                  <span class="pill" style="background: #1e4d2b; opacity: 0.7">Primary CTA</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-section">
+          <h2>Foundations — Type scale</h2>
+          <p class="sg-eyebrow">Canonical — session 162</p>
+          <div class="sg-card type-stack">
+            <div class="type-step"><span class="label">type.size.sm</span><span class="size">13px</span><span class="sample" style="font-size: 13px">"Default tile labels"</span></div>
+            <div class="type-step"><span class="label">type.size.base</span><span class="size">14px</span><span class="sample" style="font-size: 14px">"Canonical body"</span></div>
+            <div class="type-step"><span class="label">type.size.lg</span><span class="size">18px</span><span class="sample" style="font-size: 18px">"Booth / find names"</span></div>
+            <div class="type-step"><span class="label">type.size.2xl</span><span class="size">26px</span><span class="sample" style="font-size: 26px">"Find-detail price"</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame-note">
+    <strong>Frame B — what this looks like in use:</strong>
+    <ul>
+      <li>You're reviewing tile Saved → glance at sidebar → click "Foundations" → reference type scale → click "Browse" → write feedback referencing <code>type.size.lg</code></li>
+      <li>Sidebar shows section counts at a glance — surfaces count + tokens count + components count.</li>
+      <li>Most horizontal real-estate usage; works well at ≥1200px wide, narrower viewports may need to collapse sidebar to top-bar fallback.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════ FRAME C ════════════════════ -->
+<div class="frame">
+  <div class="frame-label">
+    Frame C — Anchored sections above tiles
+    <span class="tagline">Single scroll. Style Guide content fills top of page; tile categories follow. Sticky anchor-nav pill lets you jump between sections.</span>
+  </div>
+  <div class="review-board">
+    <div class="rb-header">
+      <h1>Review Board</h1>
+      <p>Internal visual-system audit. Reference foundations + components at top; production-surface tiles follow below. Anchor nav stays sticky during scroll.</p>
+    </div>
+
+    <div class="anchor-nav">
+      <div class="anchor-link active">Foundations</div>
+      <div class="anchor-link">Components</div>
+      <div class="anchor-link">Patterns</div>
+      <div class="anchor-link">Surfaces ↓</div>
+    </div>
+
+    <div class="sg-section">
+      <h2>Foundations — Color</h2>
+      <p class="sg-eyebrow">Greens across all tiers (drift call-out)</p>
+      <div class="sg-card">
+        <div class="drift-callout">
+          <strong>Drift alert:</strong> three "primary green" values coexist across v1 / v2 / v0.2 tiers. Use the correct one for the surface's tier.
+        </div>
+        <div class="green-row">
+          <div class="green-cell">
+            <div class="green-swatch" style="background: #1e4d2b"></div>
+            <div class="green-meta">
+              <div class="name">v1.green <span class="copy-token-btn">copy</span></div>
+              <div class="hex">#1e4d2b</div>
+              <span class="pill" style="background: #1e4d2b">Primary CTA</span>
+            </div>
+          </div>
+          <div class="green-cell">
+            <div class="green-swatch" style="background: #285C3C"></div>
+            <div class="green-meta">
+              <div class="name">v2.accent.green <span class="copy-token-btn">copy</span></div>
+              <div class="hex">#285C3C</div>
+              <span class="pill" style="background: #285C3C">Primary CTA</span>
+            </div>
+          </div>
+          <div class="green-cell">
+            <div class="green-swatch" style="background: #1e4d2b; opacity: 0.7"></div>
+            <div class="green-meta">
+              <div class="name">colors.green (v0.2) <span class="copy-token-btn">copy</span></div>
+              <div class="hex">#1e4d2b — legacy</div>
+              <span class="pill" style="background: #1e4d2b; opacity: 0.7">Primary CTA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Existing tile section preserved as continuation -->
+    <div class="category-block">
+      <h3>Browse</h3>
+      <p class="category-hint">Shopper-facing discovery surfaces</p>
+      <div class="tile-row">
+        <div class="tile">
+          <div class="tile-head"><span class="name">Saved</span><span class="open">Open ↗</span></div>
+          <div class="tile-iframe">[saved page iframe]</div>
+          <div class="tile-path">/flagged</div>
+          <div class="tile-notes">Per-tile findings ─ use Style Guide above to reference exact tokens in your feedback.</div>
+        </div>
+        <div class="tile">
+          <div class="tile-head"><span class="name">Home</span><span class="open">Open ↗</span></div>
+          <div class="tile-iframe">[home iframe]</div>
+          <div class="tile-path">/</div>
+          <div class="tile-notes">…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame-note">
+    <strong>Frame C — what this looks like in use:</strong>
+    <ul>
+      <li>Open <code>/review-board</code> → scroll through Foundations to set context → continue down to tile categories → write feedback referencing the tokens you just scrolled past.</li>
+      <li>Anchor pill lets you jump back to Foundations without scroll. Sticky during scroll.</li>
+      <li>One long page; no nav state to manage. Reference is "above" not "beside," so cross-referencing requires scroll back up while writing feedback.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="decision-pane">
+  <h2>Trade-offs at a glance</h2>
+  <ul>
+    <li><strong>Frame A (top tabs)</strong> — cleanest separation, familiar pattern, tab-bar grows naturally. Only sees one context at a time.</li>
+    <li><strong>Frame B (sidebar)</strong> — persistent reference, fastest section-switching, shows counts. Eats horizontal space; weaker on narrow viewports.</li>
+    <li><strong>Frame C (anchored above)</strong> — simplest, no nav state, preserves existing tile layout untouched. Long scroll; reference is "above," not "beside" tiles during feedback writing.</li>
+  </ul>
+  <h2 style="margin-top: 20px">Recommendation</h2>
+  <ul>
+    <li>If the primary use-case is <em>review a tile, then check the standard</em>, Frame A is the right shape (sequential).</li>
+    <li>If the primary use-case is <em>have the standard visible while reviewing</em>, Frame B is the right shape (simultaneous).</li>
+    <li>Frame C is the cheapest to ship but pays an ergonomic tax every time you write feedback.</li>
+  </ul>
+  <p style="margin-top: 16px; color: #c5beb0; font-size: 12.5px">Pick A, B, or C and I'll surface Q2 (sections) + Q3 (token vocabulary mechanism) as prose. Then design record lands + arc 2 ships next session.</p>
+</div>
+
+</body>
+</html>

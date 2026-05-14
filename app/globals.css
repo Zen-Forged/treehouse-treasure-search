@@ -39,6 +39,20 @@
   --th-radius-xl:   20px;
   --th-radius-pill: 999px;
 
+  /* Canonical type scale — Shape C arc 1, session 162.
+   * 9 steps, density-tuned to empirical usage (78% of inline fontSize
+   * numerics across 128 scanned files map 1:1 to a step). See
+   * lib/tokens.ts > export const type for semantic role per step. */
+  --th-type-xxs:  9px;
+  --th-type-xs:   11px;
+  --th-type-sm:   13px;
+  --th-type-base: 14px;
+  --th-type-md:   16px;
+  --th-type-lg:   18px;
+  --th-type-xl:   22px;
+  --th-type-2xl:  26px;
+  --th-type-3xl:  32px;
+
   /* ── v1 — paper + post-it ── */
   --th-v1-paper-cream:     #f2ecd8;
   --th-v1-paper-warm:      #fefae6;

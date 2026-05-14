@@ -127,6 +127,43 @@ export const radius = {
   pill: "var(--th-radius-pill)",
 } as const;
 
+// Canonical type scale — Shape C arc 1, session 162.
+//
+// Locked from empirical fontSize distribution (535 inline numerics across
+// 128 scanned files, 28 distinct values pre-scale; 56% concentrated in
+// 11/12/13/14 cluster). 9 steps, density-tuned to existing usage so the
+// migration from inline numerics is 1:1 at ~78% of call sites.
+//
+// Naming pattern mirrors `radius.*` semantic shape (sm/md/lg/xl/...) so
+// scale-value flips ripple via single :root edit without consumer rewrites.
+//
+//  9px — xxs  rare; tiny metadata, captions
+// 11px — xs   small-caps eyebrows, secondary metadata labels
+// 13px — sm   default tile labels, dense form copy
+// 14px — base canonical body text
+// 16px — md   Lora paragraph, dense headers
+// 18px — lg   booth / find names, prominent labels
+// 22px — xl   booth numerals, post-it stamp
+// 26px — 2xl  find-detail price
+// 32px — 3xl  hero title
+//
+// NO consumer changes ship in this commit — the scale exists for future
+// migration. Adoption is opt-in; the lint:fonts script (session 162) warns
+// on raw fontSize numerics that bypass the scale.
+export const type = {
+  size: {
+    xxs:   "var(--th-type-xxs)",
+    xs:    "var(--th-type-xs)",
+    sm:    "var(--th-type-sm)",
+    base:  "var(--th-type-base)",
+    md:    "var(--th-type-md)",
+    lg:    "var(--th-type-lg)",
+    xl:    "var(--th-type-xl)",
+    "2xl": "var(--th-type-2xl)",
+    "3xl": "var(--th-type-3xl)",
+  },
+} as const;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // v1 — journal-vocabulary tokens (v1.1h / v1.2)
 // ═══════════════════════════════════════════════════════════════════════════

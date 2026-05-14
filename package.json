@@ -14,7 +14,11 @@
     "test:filters": "npx tsx scripts/test-filters.ts",
     "test:query-builder": "npx tsx scripts/test-query-builder.ts",
     "test:comps": "npx tsx scripts/test-comps.ts",
-    "lint:spacing": "npx tsx scripts/lint-spacing.ts"
+    "lint:spacing": "npx tsx scripts/lint-spacing.ts",
+    "lint:colors": "npx tsx scripts/lint-colors.ts",
+    "lint:fonts": "npx tsx scripts/lint-fonts.ts",
+    "lint:shadows": "npx tsx scripts/lint-shadows.ts",
+    "lint:radius": "npx tsx scripts/lint-radius.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
