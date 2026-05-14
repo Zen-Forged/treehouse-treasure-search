@@ -1,10 +1,18 @@
 // components/HomeHero.tsx
-// Home hero primitive — Frame C from docs/home-hero-design.md.
+// Home hero primitive — Frame C + Shape A sticky behavior from
+// docs/home-hero-design.md.
 //
 // Composition: 33vh background-image hero (wordmark baked into asset) +
 // cream-fade overlay gradient at the bottom + embedded SearchBar anchored
-// 52px from hero bottom. Self-contained section; scrolls away with the
-// feed per D5.
+// 32px from hero bottom (D7 V2 dial).
+//
+// Sticky behavior (D16 V2 — reverses D5):
+//   position: sticky; top: calc(STICKY_THIN_HEIGHT_PX - 33vh)
+// As user scrolls, hero rises with feed content until its top edge reaches
+// the negative offset, then pins. Only the bottom STICKY_THIN_HEIGHT (90px)
+// stays visible at top of viewport — natural image continuity since it's
+// the same DOM node + same image scrolled into its sticky position.
+// Wordmark portion scrolls out the top naturally.
 //
 // Consumers: app/(tabs)/layout.tsx (Arc 3 adoption — shared across Home,
 // Saved, Map). Asset at /public/home-hero.png; swap mechanism is file
@@ -23,7 +31,8 @@ interface Props {
 }
 
 const HERO_HEIGHT_VH        = 33;
-const SEARCH_BOTTOM_OFFSET  = 52;
+const STICKY_THIN_HEIGHT_PX = 90;  // D17 — visible-strip height when sticky pins
+const SEARCH_BOTTOM_OFFSET  = 32;  // D7 V2 — was 52, dropped 20px per David's iPhone QA
 const SEARCH_HORIZ_PADDING  = 16;
 
 export default function HomeHero({
@@ -32,7 +41,10 @@ export default function HomeHero({
   searchPlaceholder,
 }: Props) {
   const sectionStyle: React.CSSProperties = {
-    position:           "relative",
+    // Shape A sticky-header behavior — see file-top comment.
+    position:           "sticky",
+    top:                `calc(${STICKY_THIN_HEIGHT_PX}px - ${HERO_HEIGHT_VH}vh)`,
+    zIndex:             10,  // D18 — sit above scrolling feed content
     width:              "100%",
     height:             `${HERO_HEIGHT_VH}vh`,
     // Layered backgrounds: cream-fade overlay (D9) on top, hero asset
