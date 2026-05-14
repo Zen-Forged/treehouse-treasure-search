@@ -353,6 +353,14 @@ interface TreehouseMapProps {
   /** Session 123 — saves grouped by mall id. PinCallout renders
    *  "X saved finds" when count > 0, falling back to total finds otherwise. */
   savedByMallId?:  Record<string, number>;
+  /**
+   * Session 161 dial — bumps from parent on Reset taps so the fitBounds
+   * effect re-runs even when selectedMallId is already null. Without this,
+   * tapping Reset while already in all-Kentucky scope is a no-op because
+   * the effect deps `[selectedMallId, malls]` don't change. Default 0;
+   * any change re-triggers the effect.
+   */
+  resetKey?:       number;
   className?:      string;
   style?:          React.CSSProperties;
 }
@@ -372,6 +380,7 @@ export default function TreehouseMap({
   onCommit,
   mallStats,
   savedByMallId,
+  resetKey = 0,
   className,
   style,
 }: TreehouseMapProps) {
@@ -722,7 +731,9 @@ export default function TreehouseMap({
 
     if (styleLoadedRef.current) apply();
     else                        map.once("style.load", apply);
-  }, [selectedMallId, malls]);
+    // resetKey included so parent can force re-fit even when scope is
+    // already all-Kentucky (session 161 dial — Reset always-visible).
+  }, [selectedMallId, malls, resetKey]);
 
   return (
     <div
