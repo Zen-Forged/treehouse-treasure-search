@@ -128,6 +128,13 @@
   --th-v2-bg-main:       #F7F3EB;
   --th-v2-bg-paper:      #FFFCF5;
   --th-v2-bg-soft:       #F1EBDD;
+  /* Session 166 dial 10 — safe-area-inset-top exposed as a CSS var so JS
+     (TabsChrome auto-scroll) can read the value at runtime via
+     getComputedStyle().getPropertyValue('--th-safe-area-inset-top').
+     env() can only be used inside CSS; wrapping it as a variable makes
+     it readable from JS for device-aware geometry calculations. */
+  --th-safe-area-inset-top: env(safe-area-inset-top, 0px);
+
   /* Session 166 dial 8 — (tabs)/ surfaces (Home + Saved) bg tier. Slightly
      warmer/darker cream than v2.bg.main (#F7F3EB). v2.bg.main is used by
      ~37 non-(tabs)/ surfaces (post-flow, auth, admin, review-board, etc.)

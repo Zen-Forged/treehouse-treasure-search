@@ -34,9 +34,26 @@ interface Props {
 }
 
 const HERO_HEIGHT_VH        = 33;
-// Exported for MallMapDrawer's top:calc realignment in Arc 3.1.3 — drawer
-// opens from below the sticky-collapsed hero's visible strip.
-export const STICKY_THIN_HEIGHT_PX = 90;  // D17 — visible-strip height when sticky pins
+
+// Session 166 dial 10 (post-Shape-A iPhone QA) — sticky-stop point on Home
+// extends so the embedded SearchBar's TOP edge pins at the bottom of where
+// the /find + /shelf StickyMasthead would be (David's "top of search bar
+// hits what would be the bottom of the masthead").
+//
+// Math: MASTHEAD_HEIGHT (max(14, safe-area) + 84) + SearchBar height (44)
+// + SEARCH_BOTTOM_OFFSET (16) = MASTHEAD_HEIGHT + 60. Hero strip extends
+// down to viewport y = MASTHEAD_HEIGHT + 60.
+//
+// On Saved (no embedded SearchBar), keep the session-164 D17 strip height
+// of 90px since there's no search-bar-to-masthead alignment to satisfy.
+const HERO_STRIP_HEIGHT_HOME  = "calc(max(14px, env(safe-area-inset-top, 14px)) + 144px)";
+const HERO_STRIP_HEIGHT_SAVED = "90px";
+
+// Export the Home value — chip + drawer (Home-only consumers post-dial-7)
+// use this constant to align their sticky pin / drawer top with the hero
+// strip's bottom edge. Renamed from STICKY_THIN_HEIGHT_PX since it's no
+// longer a single pixel number.
+export const STICKY_THIN_HEIGHT = HERO_STRIP_HEIGHT_HOME;
 // Session 166 dial (post-Arc 3.1.3 iPhone QA) — search bar drops from 32 to
 // 16 per David's "drop down more so there is more headroom" call. In sticky-
 // collapsed state, this shifts search bar bottom from viewport y=58 to y=74,
@@ -49,11 +66,12 @@ export default function HomeHero({
   onSearchChange,
   searchPlaceholder,
 }: Props) {
-  const showSearch = searchQuery !== undefined && onSearchChange !== undefined;
+  const showSearch       = searchQuery !== undefined && onSearchChange !== undefined;
+  const stickyThinHeight = showSearch ? HERO_STRIP_HEIGHT_HOME : HERO_STRIP_HEIGHT_SAVED;
   const sectionStyle: React.CSSProperties = {
     // Shape A sticky-header behavior — see file-top comment.
     position:           "sticky",
-    top:                `calc(${STICKY_THIN_HEIGHT_PX}px - ${HERO_HEIGHT_VH}vh)`,
+    top:                `calc(${stickyThinHeight} - ${HERO_HEIGHT_VH}vh)`,
     zIndex:             10,  // D18 — sit above scrolling feed content
     width:              "100%",
     height:             `${HERO_HEIGHT_VH}vh`,

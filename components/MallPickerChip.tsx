@@ -30,7 +30,7 @@
 import * as React from "react";
 import { PiMapPinFill, PiCaretDown } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT } from "@/lib/tokens";
-import { STICKY_THIN_HEIGHT_PX } from "@/components/HomeHero";
+import { STICKY_THIN_HEIGHT } from "@/components/HomeHero";
 
 interface MallPickerChipProps {
   mallName: string;
@@ -76,7 +76,7 @@ export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps)
         // drawer's top:calc accounts for chip height so they don't
         // overlap when drawer is open.
         position:   "sticky",
-        top:        STICKY_THIN_HEIGHT_PX,
+        top:        STICKY_THIN_HEIGHT,
         zIndex:     11,
         // Session 166 dial 8 — chip sticky bg follows (tabs)/-surfaces
         // tier so seam between feed-scrolling-under-chip and the chip

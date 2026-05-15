@@ -76,7 +76,7 @@ import {
 // new HomeHero sticky-collapsed strip + MallPickerChip sticky-pinned
 // chip strip. Drawer top = hero strip height + chip strip height so
 // chip stays visible above drawer as dismiss affordance.
-import { STICKY_THIN_HEIGHT_PX } from "./HomeHero";
+import { STICKY_THIN_HEIGHT } from "./HomeHero";
 import { CHIP_VISIBLE_HEIGHT_PX } from "./MallPickerChip";
 import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
@@ -224,7 +224,7 @@ export default function MallMapDrawer({
               // + chip strip" (152px) so MallPickerChip stays visible as a
               // dismiss affordance during drawer-open state. Resolves
               // David's "currently trapped without a refresh" finding.
-              top:           `${STICKY_THIN_HEIGHT_PX + CHIP_VISIBLE_HEIGHT_PX}px`,
+              top:           `calc(${STICKY_THIN_HEIGHT} + ${CHIP_VISIBLE_HEIGHT_PX}px)`,
               // Mobile-column containment — mirrors StickyMasthead +
               // BottomNav fixed-chrome pattern. Without this,
               // the drawer (and its full-bleed Mapbox canvas) extends to
