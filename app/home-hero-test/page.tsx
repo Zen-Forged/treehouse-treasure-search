@@ -25,12 +25,25 @@
 
 import * as React from "react";
 import HomeHero from "@/components/HomeHero";
+import MallPickerChip from "@/components/MallPickerChip";
 import { v2, FONT_INTER } from "@/lib/tokens";
 
 export const dynamic = "force-dynamic";
 
+// Session 166 Arc 2.2 — mount cycle of mock mall scopes so iPhone QA can
+// verify chip composition + tap behavior + name lineHeight against
+// realistic name lengths (short / long / all-Kentucky default).
+const MOCK_MALLS = [
+  "America's Antique Mall",
+  "Crestwood Antique Mall",
+  "All Kentucky locations",
+];
+
 export default function HomeHeroTestPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [mallIndex,   setMallIndex]   = React.useState(0);
+
+  const currentMall = MOCK_MALLS[mallIndex];
 
   return (
     <main
@@ -45,9 +58,17 @@ export default function HomeHeroTestPage() {
         onSearchChange={setSearchQuery}
       />
 
+      {/* Arc 2.2 — MallPickerChip directly below hero per D10 + D11.
+          Verifies the 22px top breathing room reads right against the
+          hero's cream-fade bottom edge. */}
+      <MallPickerChip
+        mallName={currentMall}
+        onTap={() => setMallIndex((i) => (i + 1) % MOCK_MALLS.length)}
+      />
+
       <div
         style={{
-          padding:      "24px 18px",
+          padding:      "0 18px 24px",
           fontFamily:   FONT_INTER,
           fontSize:     14,
           color:        v2.text.primary,
@@ -59,7 +80,7 @@ export default function HomeHeroTestPage() {
           /home-hero-test
         </h1>
         <p style={{ marginBottom: 16, color: v2.text.secondary, fontSize: 13, lineHeight: 1.6 }}>
-          Smoke route for <code>&lt;HomeHero&gt;</code> primitive. Type in the search bar to verify debounced fan-out; scroll past the hero to verify it scrolls away cleanly with the page (D5).
+          Smoke route for <code>&lt;HomeHero&gt;</code> + <code>&lt;MallPickerChip&gt;</code>. Type to verify debounced fan-out; tap the chip to cycle mock malls (verifies name length + chevron behavior); scroll past the hero to verify Shape A sticky-header collapse (D16).
         </p>
 
         <div
@@ -75,10 +96,13 @@ export default function HomeHeroTestPage() {
         >
           <strong>Debounced query:</strong>{" "}
           {searchQuery === "" ? <em>(empty)</em> : <code>{searchQuery}</code>}
+          <br />
+          <strong>Selected mall:</strong> <code>{currentMall}</code>
         </div>
 
         <p style={{ fontSize: 13, color: v2.text.secondary, marginBottom: 12 }}>
-          Filler content below — scroll past to confirm hero scrolls away with feed.
+          Filler content below — scroll past to confirm hero collapses to its
+          sticky-thin state (90px) at top of viewport.
         </p>
         {Array.from({ length: 20 }).map((_, i) => (
           <div
@@ -94,7 +118,7 @@ export default function HomeHeroTestPage() {
             }}
           >
             Filler row {i + 1} — placeholder for tile grid that will mount
-            below the mall picker chip post-Arc-3.
+            below the mall picker chip in Arc 3.
           </div>
         ))}
       </div>

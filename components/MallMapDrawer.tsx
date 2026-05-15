@@ -49,7 +49,7 @@
 //                                  layer between drawer + BottomNav
 //
 // Pure presentation primitive — drawer-open state lives in consumer
-// (<HomeChrome> in Arc 2). Drawer reads `open` prop and renders. Pin commit
+// (<TabsChrome> at layout level since Arc 3). Drawer reads `open` prop and renders. Pin commit
 // fires `onMallPick(id)`; consumer handles scope update + drawer close +
 // analytics fire. Clear pill fires `onClear()` (drawer stays open per D2;
 // scope clears).
@@ -71,8 +71,13 @@ import {
   MOTION_BOTTOM_SHEET_EASE,
   MOTION_BOTTOM_SHEET_SHEET_DURATION,
 } from "@/lib/tokens";
-import { MASTHEAD_HEIGHT } from "./StickyMasthead";
-import { STRIP_HEIGHT, SEARCH_BAR_WRAP_HEIGHT } from "./MallStrip";
+// Session 166 Arc 3.1.3 — drawer top realigns from the retired
+// MASTHEAD/SEARCH_BAR_WRAP/STRIP chrome stack (sessions 154-157) to the
+// new HomeHero sticky-collapsed strip + MallPickerChip sticky-pinned
+// chip strip. Drawer top = hero strip height + chip strip height so
+// chip stays visible above drawer as dismiss affordance.
+import { STICKY_THIN_HEIGHT } from "./HomeHero";
+import { CHIP_VISIBLE_HEIGHT_PX } from "./MallPickerChip";
 import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
 
@@ -115,8 +120,8 @@ interface MallMapDrawerProps {
    * MallMatchChip when query matches an active mall name/city. Optional;
    * defaults to "" (chip won't render). Passed as prop rather than read via
    * useSearchParams internally so the drawer stays free of router-state
-   * dependencies — keeps the /home-chrome-test smoke route + any other
-   * future direct consumer prerenderable without a Suspense wrapper.
+   * dependencies — keeps any future direct consumer prerenderable
+   * without forcing a Suspense wrapper on the consumer.
    */
   query?:           string;
 }
@@ -214,14 +219,14 @@ export default function MallMapDrawer({
             }}
             style={{
               position:      "fixed",
-              // Slide up to the strip's bottom edge — strip stays sticky above.
-              // CSS nested calc() is well-supported; MASTHEAD_HEIGHT is itself
-              // a calc(...) string from <StickyMasthead>. Session 157 — chrome
-              // stack now masthead + SearchBar wrap + strip, so drawer top
-              // includes SEARCH_BAR_WRAP_HEIGHT.
-              top:           `calc(${MASTHEAD_HEIGHT} + ${SEARCH_BAR_WRAP_HEIGHT}px + ${STRIP_HEIGHT}px)`,
+              // Session 166 dial 2 (post-Arc-3.1.3 iPhone QA) — drawer top
+              // realigns from "below hero strip" (90px) to "below hero strip
+              // + chip strip" (152px) so MallPickerChip stays visible as a
+              // dismiss affordance during drawer-open state. Resolves
+              // David's "currently trapped without a refresh" finding.
+              top:           `calc(${STICKY_THIN_HEIGHT} + ${CHIP_VISIBLE_HEIGHT_PX}px)`,
               // Mobile-column containment — mirrors StickyMasthead +
-              // MallStrip + BottomNav fixed-chrome pattern. Without this,
+              // BottomNav fixed-chrome pattern. Without this,
               // the drawer (and its full-bleed Mapbox canvas) extends to
               // the entire viewport on desktop instead of staying inside
               // the 430px column with the rest of the app chrome.
@@ -229,7 +234,8 @@ export default function MallMapDrawer({
               width:         "100%",
               maxWidth:      430,
               bottom:        0,
-              background:    v2.bg.main,
+              // Session 166 dial 8 — drawer bg migrates with (tabs)/ tier.
+              background:    v2.bg.tabs,
               // Below strip's z-39 so strip wins on any pixel overlap at the
               // border-bottom seam. Strip's borderBottom 1px serves as the
               // visual separator between strip + drawer.
@@ -255,7 +261,7 @@ export default function MallMapDrawer({
                   on the chip itself (parent wrapper has pointerEvents:none so
                   taps elsewhere fall through to the map). Tap routes through
                   onMallPick — same handler as pin-commit, which sets scope +
-                  closes drawer + clears query downstream via HomeChrome. */}
+                  closes drawer + clears query downstream via TabsChrome. */}
               <div
                 style={{
                   position:      "absolute",
@@ -352,7 +358,11 @@ function MapControlPill({ onClear }: { onClear: () => void }) {
       onClick={onClear}
       style={{
         position:        "absolute",
-        top:             12,
+        // Session 166 dial 4 (post-Arc-3.1.3 iPhone QA round 3) — top 12 → 8
+        // per David's "Move the reset button a bit higher; should be about
+        // the same spacing as there is on the far right." Tightens visual
+        // gap between Reset + drawer top edge.
+        top:             8,
         right:           12,
         // Session 165 iPhone QA: David's "reset button is getting covered
         // consistently by the expanded pinned mall card." PinCallout

@@ -55,7 +55,9 @@ const CLIENT_EVENT_TYPES = [
   "share_find_qr_viewed",
   "share_find_sms_initiated",
   "share_find_copy_link_completed",
-  // Session 154 — Home chrome restructure D12. MallStrip tap = drawer open.
+  // Session 154 — Home chrome restructure D12; event key preserved across
+  // session 166 chrome restructure (MallStrip tap → MallPickerChip tap;
+  // semantic ("user engaged map wayfinding chrome") unchanged).
   "home_strip_tapped",
   // Session 158 — Map enrichment (D14 in docs/map-enrichment-design.md).
   // Carousel card tap + flanking-arrow neighbor-stepping on PinCallout.

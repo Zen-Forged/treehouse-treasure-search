@@ -128,6 +128,21 @@
   --th-v2-bg-main:       #F7F3EB;
   --th-v2-bg-paper:      #FFFCF5;
   --th-v2-bg-soft:       #F1EBDD;
+  /* Session 166 dial 10 — safe-area-inset-top exposed as a CSS var so JS
+     (TabsChrome auto-scroll) can read the value at runtime via
+     getComputedStyle().getPropertyValue('--th-safe-area-inset-top').
+     env() can only be used inside CSS; wrapping it as a variable makes
+     it readable from JS for device-aware geometry calculations. */
+  --th-safe-area-inset-top: env(safe-area-inset-top, 0px);
+
+  /* Session 166 dial 8 — (tabs)/ surfaces (Home + Saved) bg tier. Slightly
+     warmer/darker cream than v2.bg.main (#F7F3EB). v2.bg.main is used by
+     ~37 non-(tabs)/ surfaces (post-flow, auth, admin, review-board, etc.)
+     so a system-wide value swap would affect too many surfaces for the
+     (tabs)/-scoped iPhone QA finding. Surfaces consuming this tier:
+     (tabs)/layout.tsx page bg, MallPickerChip sticky bg, MallMapDrawer
+     bg, HomeHero gradient end-stop. */
+  --th-v2-bg-tabs:       #E6DECF;
   --th-v2-surface-card:  #FFFCF5;
   --th-v2-surface-warm:  #FBF6EA;
   /* Session 153 Review Board Finding 6C introduced this at #F0EBE0 as a
