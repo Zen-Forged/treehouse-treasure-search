@@ -22,7 +22,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { PiLeaf, PiLeafFill } from "react-icons/pi";
+import { PiLeafBold, PiLeafFill } from "react-icons/pi";
 import { v2 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 
@@ -220,7 +220,7 @@ export default function HomeFeedTile({
             {isFollowed ? (
               <PiLeafFill size={20} aria-hidden />
             ) : (
-              <PiLeaf size={20} aria-hidden />
+              <PiLeafBold size={20} aria-hidden />
             )}
           </button>
         )}

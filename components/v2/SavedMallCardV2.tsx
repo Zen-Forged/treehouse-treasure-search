@@ -28,7 +28,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
-import { PiLeaf } from "react-icons/pi";
+import { PiLeafBold } from "react-icons/pi";
 
 // Session 144 iPhone QA: long mall names ("Copper Awning Flea Market") wrapped
 // to 2 lines at fontSize 25 on iPhone widths. Mirrors PostcardMallCard's
@@ -257,7 +257,7 @@ export default function SavedMallCardV2({
             whiteSpace: "nowrap",
           }}
         >
-          <PiLeaf size={16} aria-hidden />
+          <PiLeafBold size={16} aria-hidden />
           {findsCount} {findsCount === 1 ? "find" : "finds"} waiting to be found
         </span>
         <span

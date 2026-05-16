@@ -63,7 +63,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { PiLeaf } from "react-icons/pi";
+import { PiLeafBold } from "react-icons/pi";
 import { ArrowLeft } from "lucide-react";
 import { getVendorsByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
@@ -260,7 +260,7 @@ function NoBooth() {
           marginBottom: 22,
         }}
       >
-        <PiLeaf size={22} style={{ color: v2.text.muted }} />
+        <PiLeafBold size={22} style={{ color: v2.text.muted }} />
       </div>
       <div
         style={{

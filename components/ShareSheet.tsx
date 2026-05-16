@@ -44,7 +44,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
-import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLeaf } from "react-icons/pi";
+import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLeafBold } from "react-icons/pi";
 import { authFetch } from "@/lib/authFetch";
 import { track } from "@/lib/clientEvents";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
@@ -1157,7 +1157,7 @@ function FooterDisclaimer({ copy }: { copy: string }) {
         borderTop: `1px solid ${v2.border.light}`,
       }}
     >
-      <PiLeaf
+      <PiLeafBold
         size={14}
         color={v2.text.muted}
         style={{ marginTop: 2, flexShrink: 0 }}
