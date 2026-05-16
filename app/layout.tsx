@@ -109,7 +109,7 @@ export default function RootLayout({
             we don't want — interferes with the v2 SavedMallCardV2 +
             RichPostcardMallCard typography vocabulary. We surface our
             own deliberate map/address affordances (LocationActions
-            "Take Trip" CTA, etc.) so iOS's heuristic adds noise. */}
+            "Take the Trip" CTA, etc.) so iOS's heuristic adds noise. */}
         <meta name="format-detection" content="telephone=no, address=no, email=no" />
       </head>
       {/* Session 143 — body bg migrates to v2.bg.main (was v1.paperCream

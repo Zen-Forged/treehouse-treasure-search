@@ -337,7 +337,7 @@ function LocationActionsDemo() {
         <code style={{ fontFamily: MONO_FONT, fontSize: type.size.xs, marginLeft: 4 }}>
           /find/fixture-post-1
         </code>{" "}
-        with location granted to see the Take Trip CTA live.
+        with location granted to see the Take the Trip CTA live.
       </div>
     </div>
   );
