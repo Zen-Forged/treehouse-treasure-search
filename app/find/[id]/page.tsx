@@ -84,6 +84,7 @@ import {
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { mapsUrl, boothNumeralSize } from "@/lib/utils";
+import { mallSnapshotUrl } from "@/lib/mapStaticImage";
 import { track } from "@/lib/clientEvents";
 import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendorPostsCache, setVendorPostsCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
@@ -1112,11 +1113,14 @@ export default function FindDetailPage() {
   const mallName    = post?.mall?.name ?? null;
   const mallCity    = post?.mall?.city ?? null;
   const mallState   = post?.mall?.state ?? null;
-  // Session 157 — mallSlug / mallLat / mallLng vars retired alongside the
-  // LocationActions render (Review Board Find #1). They were only consumed
-  // as that component's props. SELECT-side enrichment of mall.latitude /
-  // mall.longitude on lib/posts.ts stays as substrate for other surfaces
-  // that still consume LocationActions; only this page stopped reading them.
+  const mallSlug    = post?.mall?.slug ?? null;
+  // Session 169 round 2 — mall lat/lng REVIVED for the Explore Booth +
+  // map snapshot redesign (Review Board Finding 4). Session 157 retired
+  // them alongside the LocationActions render; the static-snapshot
+  // consumer is a new use case + needs them back. SELECT-side
+  // enrichment on lib/posts.ts has carried these through unchanged.
+  const mallLat     = post?.mall?.latitude  ?? null;
+  const mallLng     = post?.mall?.longitude ?? null;
   const price       = post?.price_asking;
   const showSoldBody   = !!post && isSold && !isMyPost;
   const showNormalBody = !!post && !showSoldBody;
@@ -1606,61 +1610,86 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* Session 157 Review Board Find #1 + #2 — David: "I want each page
-          to have a specific action to take. So on the find page I want
-          to change the 'Take Trip' to 'Save the Find'. Button should
-          change saved state (moved to saved and icon filled)" +
-          "replace the hairline divider under quotes with the 'Save the
-          Find' button."
+      {/* Session 169 round 2 — CTA pair (Explore Booth secondary +
+          Flag the Find primary) side-by-side under the price. David:
+          "I'm thinking of two butts under the price (a) Explore Booth
+          (secondary) (b) Flag the Find (primary)."
 
-          The plain v1.1j hairline divider retires. In its slot — the
-          page's primary action CTA. Find detail's job is to deliver the
-          find; the canonical action is to capture it. "Take Trip" CTA
-          (R17 LocationActions) retires from this surface — its job moves
-          out of Find detail entirely (still rendered on /shelf and /map
-          via their LocationActions consumers, which are unchanged).
-
-          Visual contract mirrors LocationActions Take Trip exactly:
-          full-width, v2.accent.greenMid bg, 10px radius, FONT_INTER 11px
-          uppercase 0.12em letterSpacing weight 600 — primary CTA voice
-          already established on the project. Saved state flips icon
-          fill (outline → filled, both white against the green bg) +
-          label ("Save the Find" → "Saved"). Same handleToggleSave
-          callback as the corner FlagGlyph bubble, so both affordances
-          stay in sync via useShopperSaves.
+          Replaces the session-157 single full-width Flag-the-Find
+          button. Side-by-side 50/50 via flex (David picked side-by-side
+          over stacked at session-169 round-2 Q2). Explore Booth on
+          left (secondary outlined green-on-cream) routes to /shelf/[slug];
+          Flag the Find on right (primary filled green) toggles save.
+          Both buttons inherit the saved-state color flip pattern from
+          session-157 — Flag the Find's saved state still flips bg to
+          v2.surface.input + green text + filled green icon + 1px green
+          border.
 
           Conditional render preserves the hairline's gate (vendor or
           booth number must exist for the find to belong to something
-          saveable). */}
+          saveable). Explore Booth inner-conditional on vendorSlug (only
+          routes when a slug exists; falls back to a disabled-style
+          button if vendor exists without a slug — rare but defensive). */}
       {(vendorName || boothNumber) && (
         <div
           style={{
             padding: "0 22px",
             marginBottom: 22,
+            display: "flex",
+            gap: 10,
           }}
         >
+          {/* Explore Booth — secondary outlined. Routes to /shelf/[slug].
+              Hidden when vendorSlug is null (vendor row exists but no
+              slug yet — edge case from admin creation flow). */}
+          {vendorSlug && (
+            <Link
+              href={`/shelf/${vendorSlug}`}
+              aria-label="Explore this booth"
+              style={{
+                flex: 1,
+                background:     v2.surface.input,
+                color:          v2.accent.greenMid,
+                border:         `1px solid ${v2.accent.greenMid}`,
+                borderRadius:   10,
+                padding:        9,
+                fontFamily:     FONT_INTER,
+                fontSize:       11,
+                fontWeight:     600,
+                letterSpacing:  "0.12em",
+                textTransform:  "uppercase",
+                display:        "flex",
+                alignItems:     "center",
+                justifyContent: "center",
+                gap:            8,
+                cursor:         "pointer",
+                textDecoration: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <PiStorefront size={14} aria-hidden style={{ flexShrink: 0 }} />
+              Explore Booth
+            </Link>
+          )}
+
+          {/* Flag the Find — primary filled. Saved-state color-flip
+              pattern preserved from session-157 (Unsaved: solid green
+              bg + white text/icon; Saved: white bg + green text + filled
+              green icon + 1px green border). 1px border on saved
+              subtracts from height; padding compensates by -1 so total
+              footprint stays consistent across states (and stays
+              vertically-aligned with the Explore Booth sibling which
+              always has 1px border + 9px padding). */}
           <button
             type="button"
             onClick={handleToggleSave}
             aria-label={isSaved ? "Remove Flag" : "Flag this find"}
             style={{
-              width:          "100%",
-              // Session 157 Review Board Find #1 — invert color pattern on
-              // saved state. Unsaved: solid green bg + white text/icon
-              // (primary CTA voice). Saved: white bg (matches nav bar bg =
-              // v2.surface.input #FFFCF5) + green text + filled green icon
-              // + 1px green border so the button retains visual weight
-              // against the surrounding paper-cream body. David —
-              // "BG/Text: Green/White to White/Green. The 'white I'm
-              // referring to should be the same color as the bg of the
-              // nav bar."
+              flex: 1,
               background:     isSaved ? v2.surface.input : v2.accent.greenMid,
               color:          isSaved ? v2.accent.greenMid : "#fff",
               border:         isSaved ? `1px solid ${v2.accent.greenMid}` : "none",
               borderRadius:   10,
-              // 1px border on saved subtracts from total height; subtract
-              // 1px of padding so total button footprint stays consistent
-              // across the two states.
               padding:        isSaved ? 9 : 10,
               fontFamily:     FONT_INTER,
               fontSize:       11,
@@ -1881,6 +1910,60 @@ export default function FindDetailPage() {
                 cardInner
               );
             })()}
+
+            {/* Map snapshot — small Mapbox Static Images thumbnail
+                anchored at the mall's lat/lng. Session 169 round 2
+                Review Board Finding 4: "Possibly a small snapshot of
+                the map location under the Mall location and booth."
+                Wraps in Link to /map?mall=<slug> for spatial-wayfinding
+                tap target. Gated on mallLat + mallLng + mallSlug;
+                gracefully absent when any are null (no degradation
+                affordance, just no snapshot — the mall/booth card
+                above + the Explore Booth CTA below carry the load).
+                onError fallback hides the <img> tag when Mapbox
+                rejects the request (e.g. preview deployments where
+                token URL allowlist excludes *.vercel.app per session-
+                156 carry); the wrapper Link stays so the tap target
+                still routes if image fetch silently fails. */}
+            {mallLat !== null && mallLng !== null && mallSlug && (
+              <Link
+                href={`/map?mall=${mallSlug}`}
+                aria-label={`View ${mallName ?? "this mall"} on the map`}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  aspectRatio: "2.5 / 1",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  border: `1px solid ${v2.border.light}`,
+                  background: v2.surface.warm,
+                  textDecoration: "none",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                {(() => {
+                  const url = mallSnapshotUrl(mallLng, mallLat, 600, 240);
+                  if (!url) return null;
+                  return (
+                    <img
+                      src={url}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  );
+                })()}
+              </Link>
+            )}
+
             {/* Session 157 Review Board Find #1 — LocationActions
                 "Take Trip" CTA retires from /find/[id]. David's call:
                 "I want each page to have a specific action to take. So
