@@ -1,62 +1,64 @@
 // components/StickyMasthead.tsx
-// Shared masthead chrome — session 70 lock pass + session 77 PWA fix
-// (docs/masthead-lock-design.md).
+// Shared masthead chrome — session 167 chrome-unification arc (design record at
+// docs/chrome-unification-design.md).
 //
-// Visual stability with affordances. Single `1fr auto 1fr` inner grid across
-// every page that renders this component. The wordmark sits in the auto
-// middle column and is always visually centered between two equal 1fr
-// columns regardless of left/right slot content. Both side slots reserve
-// `min-width: 80px` so an empty slot reserves the same column width as the
-// heaviest case (multi-bubble on /shelf/[slug]) — the wordmark cannot drift.
+// Visual identity: universal "hero photo IS the masthead bg" strip pattern.
+// BG.png cropped to strip height with bottom-fade gradient to surface bg +
+// treehouse_transparent.png centered as the wordmark.
 //
-// Session 77 — `position: fixed` + layout spacer.
-// Originally `position: sticky`. iOS PWA standalone mode has a known paint
-// bug where bfcache restoration leaves position:sticky elements at zero
-// computed height until a touch/scroll event forces a layout recompute.
-// Three earlier fix attempts (loading branch chrome, pageshow handler,
-// useLayoutEffect nudge) didn't trigger reliably in iOS PWA — events
-// either don't fire or fire too late. position:fixed bypasses the bug
-// class entirely: fixed elements use viewport coords and are always
-// painted regardless of bfcache state. The component name is preserved
-// (StickyMasthead) for caller stability — the visual contract is
-// identical, only the underlying CSS primitive changed.
+// Replaces the session 140 cream `v2.bg.main` chrome aesthetic with the new
+// photographic identity. The 1fr auto 1fr inner grid + safe-area-aware
+// padding pattern is preserved verbatim from session 70 lock — only the bg
+// + the wordmark asset + the strip height changed.
+//
+// Geometry constants live in lib/chromeTokens.ts as single source of truth.
+// MASTHEAD_HEIGHT bumped from `safe-area + 84` to `safe-area + 116` to give
+// chip-overlay room on Home (which uses HomeHero, not StickyMasthead — but
+// the constant is shared so consumers' body-content spacers stay aligned
+// across surfaces). Per D2.
+//
+// Session 77 — `position: fixed` + layout spacer is preserved (iOS PWA
+// standalone bfcache paint bug).
 //
 // Usage:
 //
-//   <StickyMasthead />                          // empty left + right (root tabs)
+//   <StickyMasthead />                          // empty left + right (Saved)
 //   <StickyMasthead left={<BackButton />} />    // detail/leaf pages
-//   <StickyMasthead right={<SignOutLink />} />
 //   <StickyMasthead
 //     left={<BackButton />}
 //     right={<><FlagBubble /><ShareBubble /></>}
 //   />
 //
-// Session 156 — David iPhone QA: "remove the thin line under the masthead
-// on scroll. No longer needed with this setup as the masthead and the
-// location selector read as one component." The hairline-on-scroll signal
-// breaks the masthead + strip continuous-chrome reading from session 155.
-// Retire the borderBottom plus the entire supporting state machine (scrolled
-// state, useEffect scroll listener, threshold prop, scrollTarget prop) per
-// feedback_dead_code_cleanup_as_byproduct — when the consumer of state is
-// retired, retire the state in the same commit.
+// Consumers that sit on (tabs)/-tinted surfaces (Saved) pass
+// `fadeTarget={v2.bg.tabs}` so the masthead's bottom-edge gradient lands on
+// the correct surface tier. Defaults to v2.bg.main for the majority of
+// consumers (/find /shelf /me /vendor-request /post/* /contact /my-shelf).
 
 "use client";
 
 import { type ReactNode } from "react";
 import { v2 } from "@/lib/tokens";
+import {
+  MASTHEAD_HEIGHT as MASTHEAD_HEIGHT_TOKEN,
+  MASTHEAD_CONTENT_HEIGHT_PX,
+  LOGO_WIDTH_DEFAULT_PX,
+  LOGO_WIDTH_WITH_SLOTS_PX,
+  WORDMARK_URL,
+  stripBackgroundImage,
+} from "@/lib/chromeTokens";
 
 interface StickyMastheadProps {
   /**
    * Left-slot content. Typically a back button on detail/leaf pages
    * (`/find/[id]`, `/shelf/[slug]`, `/post/preview`, `/post/edit/*`).
-   * Empty on root tabs.
+   * Empty on Saved.
    */
   left?: ReactNode;
   /**
-   * Center-slot content. Defaults to the Treehouse Finds wordmark logo
-   * (`/wordmark.png`, transparent-bg). Override only for surfaces that
-   * carry a different center identity (rare — the masthead lock spec
-   * keeps this single).
+   * Center-slot content. Defaults to the Treehouse Finds wordmark
+   * (`treehouse_transparent.png` per session 167 chrome-unification arc).
+   * Override only for surfaces that carry a different center identity —
+   * extremely rare; the masthead lock spec keeps this single.
    */
   wordmark?: ReactNode;
   /**
@@ -64,123 +66,125 @@ interface StickyMastheadProps {
    * Renders right-aligned within the locked `min-width: 80px` column.
    *
    * Session 137 — defaults to null when omitted. Previously (session 90)
-   * defaulted to <MastheadShareButton /> as a "share this page" sign-up
-   * acquisition affordance, but the 3-tier engagement+share lattice
-   * (memory: project_layered_engagement_share_hierarchy) replaces the
-   * generic page-share with entity-specific Share Mall / Share Booth /
-   * Share Find via <ShareSheet>. Pages that want a share affordance
-   * pass an explicit `right={...}` opening the appropriate ShareSheet
-   * for their entity. Pages with no share entity (e.g. /vendor-request,
-   * /me, /contact) pass `right={null}` to be explicit.
+   * defaulted to a generic share button; the 3-tier engagement+share lattice
+   * (project_layered_engagement_share_hierarchy) replaced that with entity-
+   * specific Share Mall / Share Booth / Share Find via <ShareSheet>. Pages
+   * with no share entity (e.g. /vendor-request, /me, /contact) pass
+   * `right={null}` to be explicit.
    */
   right?: ReactNode;
+  /**
+   * Bg color the masthead's bottom-fade gradient targets. The fade gradient
+   * lets the photo bleed into the surface bg below the masthead. Per surface:
+   *   - (tabs)/ surfaces (Saved):     v2.bg.tabs  (#E6DECF)
+   *   - Non-(tabs)/ surfaces:         v2.bg.main  (#F7F3EB) — default
+   * Per D2 + design record's "Bottom-fade target color varies per surface."
+   */
+  fadeTarget?: string;
 }
 
-// Session 95 — wordmark height 90 → 72 (-20%) per David's call. Session 94
-// bumped to 90 for "heavier brand anchor"; iPhone QA found it heavier than
-// intended. Session 154 — inner-grid minHeight 90 → 72 + MASTHEAD_HEIGHT
-// calc 103 → 85 per David's session-154 chrome-reduction ask (closes the
-// session-95 pre-specified canonical dial). Wordmark centers within the
-// 72px grid with minimal breathing room above + below.
-// Width auto-sizes from the 1500×800 aspect ratio (~135px at 72px height).
-const WORDMARK_DEFAULT = (
-  <img
-    src="/wordmark.png"
-    alt="Treehouse Finds"
-    style={{
-      height: 72,
-      width: "auto",
-      display: "block",
-    }}
-  />
-);
-
-// Total masthead height = paddingTop + inner grid minHeight + paddingBottom.
-// paddingTop is max(14px, safe-area-inset-top); the rest is fixed. Session 94:
-// inner grid 50 → 90, so calc 63 → 103. Session 154: inner grid 90 → 72, so
-// calc 103 → 85. Session 157: calc 85 → 84 — session 156 reasoned that
-// retiring the hairline borderBottom didn't change visible height because
-// "the border was 1px transparent at rest." Wrong: a transparent 1px border
-// still occupies 1px of layout space. With the border gone, the visible
-// masthead bottom edge sits 1px ABOVE where the spacer + strip top expect
-// (= paddingTop + 72 + 12 = paddingTop + 84). Pre-session-156 the 85 was
-// correct (paddingTop + 72 + 12 + 1px border). Now 84 closes the seam.
-// Exported as the canonical SSOT for any future surface that needs to compute
-// layout against the masthead footprint (fixed overlays, scroll-snap targets,
-// etc.). The spacer inside this component already reserves the height for
-// content rendered after <StickyMasthead /> in the React tree.
-export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 84px)";
+/**
+ * Canonical masthead height — re-exported from lib/chromeTokens.ts so
+ * existing consumers that import from StickyMasthead don't break. New code
+ * should import from chromeTokens directly.
+ */
+export const MASTHEAD_HEIGHT = MASTHEAD_HEIGHT_TOKEN;
 
 export default function StickyMasthead({
   left,
   wordmark,
   right,
+  fadeTarget = v2.bg.main,
 }: StickyMastheadProps) {
+  // Logo width adapts to slot state — when slots are filled (back button + share
+  // bubble) the wordmark renders tighter so the slots don't crowd it. Per D4.
+  const hasSlotContent = left != null || right != null;
+  const logoWidth      = hasSlotContent ? LOGO_WIDTH_WITH_SLOTS_PX : LOGO_WIDTH_DEFAULT_PX;
+
+  const defaultWordmark = (
+    <img
+      src={WORDMARK_URL}
+      alt="Treehouse Finds"
+      style={{
+        width:   logoWidth,
+        height:  "auto",
+        display: "block",
+      }}
+    />
+  );
+
+  // Inner grid minHeight = MASTHEAD_CONTENT_HEIGHT_PX - paddingBottom (12) =
+  // 104. The wordmark img at ~73px height (LOGO_WIDTH_DEFAULT_PX × 815/399
+  // aspect) centers vertically with ~15px breathing room above + below.
+  const innerGridMinHeight = MASTHEAD_CONTENT_HEIGHT_PX - 12;
+
   return (
     <>
-      {/* Layout spacer — reserves the same vertical space the sticky masthead
-          used to take, so content below is positioned identically. */}
+      {/* Layout spacer — reserves the same vertical space the fixed masthead
+          uses so content below is positioned identically. */}
       <div
         aria-hidden="true"
         style={{
-          height: MASTHEAD_HEIGHT,
+          height:     MASTHEAD_HEIGHT,
           flexShrink: 0,
         }}
       />
 
       {/* Fixed-position masthead — pinned to viewport top. Centered + capped at
           maxWidth: 430 to match the page wrapper's content column.
-          Background extends only to the maxWidth column on iPhone (since
-          screen width is 390-430px). */}
+          Background is the chrome-unification strip: BG.png cropped to bottom
+          slice (center 92%) with a fade-to-surface-bg gradient at the bottom
+          edge. */}
       <div
         style={{
-          position: "fixed",
-          top: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: 430,
-          zIndex: 40,
-          // Session 140 — chrome migrates to v2.bg.main (#F7F3EB).
-          // Was hardcoded #f2ecd8 since session 132 frosted-glass retire.
-          background: v2.bg.main,
-          paddingTop: "max(14px, env(safe-area-inset-top, 14px))",
-          paddingBottom: 12,
-          paddingLeft: 18,
-          paddingRight: 18,
+          position:           "fixed",
+          top:                0,
+          left:               "50%",
+          transform:          "translateX(-50%)",
+          width:              "100%",
+          maxWidth:           430,
+          zIndex:             40,
+          backgroundImage:    stripBackgroundImage(fadeTarget),
+          backgroundSize:     "auto, cover",
+          backgroundPosition: "center, center 92%",
+          backgroundRepeat:   "no-repeat",
+          paddingTop:         "max(14px, env(safe-area-inset-top, 14px))",
+          paddingBottom:      12,
+          paddingLeft:        18,
+          paddingRight:       18,
         }}
       >
         <div
           style={{
-            display: "grid",
+            display:            "grid",
             gridTemplateColumns: "1fr auto 1fr",
-            alignItems: "center",
-            minHeight: 72,
-            gap: 8,
+            alignItems:         "center",
+            minHeight:          innerGridMinHeight,
+            gap:                8,
           }}
         >
           <div
             style={{
               justifySelf: "start",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              minWidth: 80,
+              display:     "flex",
+              alignItems:  "center",
+              gap:         6,
+              minWidth:    80,
             }}
           >
             {left}
           </div>
           <div style={{ textAlign: "center" }}>
-            {wordmark ?? WORDMARK_DEFAULT}
+            {wordmark ?? defaultWordmark}
           </div>
           <div
             style={{
-              justifySelf: "end",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
+              justifySelf:    "end",
+              display:        "flex",
+              alignItems:     "center",
+              gap:            6,
               justifyContent: "flex-end",
-              minWidth: 80,
+              minWidth:       80,
             }}
           >
             {right ?? null}
