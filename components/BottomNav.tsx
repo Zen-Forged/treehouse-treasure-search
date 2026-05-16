@@ -326,6 +326,23 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               {isActive && (
                 <motion.div
                   layoutId="bottomnav-active-pill"
+                  // Session 168 round 4 finding 2 — David iPhone QA: "The
+                  // highlight animation for the selected nav icon should
+                  // stay contained in the nav bar component and only move
+                  // left/right. It's currently animating in from the bottom
+                  // and coming in at an angle." Root cause: without
+                  // `initial={false}`, framer-motion runs its default mount
+                  // animation (opacity 0 + transform offset) on the FIRST
+                  // mount of the pill (cold page load OR first nav-to-tab
+                  // after the pill last unmounted) — visible as enter-from-
+                  // bottom-at-angle before settling. `initial={false}`
+                  // suppresses the initial enter animation so the pill
+                  // paints at its target position on first mount; subsequent
+                  // tab changes still get the smooth layoutId-driven slide
+                  // because both source + destination wrappers are mounted
+                  // in the React tree on each render (see comment block
+                  // above for layoutId mechanics).
+                  initial={false}
                   transition={{ type: "spring", stiffness: 500, damping: 40 }}
                   style={{
                     position: "absolute",
