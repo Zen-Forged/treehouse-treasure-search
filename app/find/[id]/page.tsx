@@ -65,7 +65,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, ChevronRight } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { PiStorefront } from "react-icons/pi";
 import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
@@ -344,30 +344,25 @@ function ShelfSection({
 
   return (
     <div style={{ marginBottom: 32 }}>
-      {/* Session 157 Review Board Find #6 — header row becomes flex
-          space-between: "More from this booth…" eyebrow on left,
-          right-aligned "Visit Booth →" link relocated here from the
-          cartographic eyebrow above per David: "Move Visit Booth section
-          to the same line as 'More from this booth…'". Link inherits the
-          16px Cormorant italic from the header (matches sibling on left)
-          + weight 500 + v2.accent.green to read as the deliberate
-          affordance. Gated on vendorSlug — null vendor means no booth
-          to visit so the right slot collapses. */}
+      {/* Session 169 round 3 — Review Board Finding 5: "Visit Booth"
+          link retires from this header row entirely. David: "Remove
+          the 'visit booth' text and link above the 'more from this
+          booth'." Reverses session 157 Review Board Find #6's relocate
+          of Visit Booth from cartographic eyebrow → this header per
+          feedback_surface_locked_design_reversals. The "Explore Booth"
+          secondary CTA shipped at session 169 round 2 (commit da3c29c)
+          carries the booth-navigation affordance now; this redundant
+          header link earned its retirement. flex space-between
+          collapses to plain block since right slot is gone. */}
       <div
         style={{
           paddingLeft: 22,
           paddingRight: 22,
           marginBottom: 14,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
         }}
       >
         {/* Review Board Finding 4 (session 169 round 2) — eyebrow
-            fontSize 16 → 18 + sibling "Visit Booth →" link bumps to
-            match (cross-eyebrow consistency with "Purchase this item
-            at" above). David: "same with more from this booth." */}
+            fontSize 16 → 18 (David: "same with more from this booth"). */}
         <div
           style={{
             fontFamily: FONT_CORMORANT,
@@ -378,28 +373,6 @@ function ShelfSection({
         >
           More from this booth…
         </div>
-        {vendorSlug && (
-          <Link
-            href={`/shelf/${vendorSlug}`}
-            style={{
-              display:        "inline-flex",
-              alignItems:     "center",
-              gap:            2,
-              fontFamily:     FONT_CORMORANT,
-              fontStyle:      "italic",
-              fontSize:       18,
-              fontWeight:     500,
-              color:          v2.accent.green,
-              lineHeight:     1.4,
-              textDecoration: "none",
-              whiteSpace:     "nowrap",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            Visit Booth
-            <ChevronRight size={16} strokeWidth={2} aria-hidden />
-          </Link>
-        )}
       </div>
       <div
         ref={stripRef}
