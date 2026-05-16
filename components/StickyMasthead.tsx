@@ -74,6 +74,20 @@ interface StickyMastheadProps {
    * /me, /contact) pass `right={null}` to be explicit.
    */
   right?: ReactNode;
+  /**
+   * Session 169 round 4 — optional bg override. When omitted, masthead
+   * paints `v2.bg.main` (#E6DECF) — canonical chrome shared with
+   * (tabs)/ page wrappers + most v2 surfaces. Consumers whose page bg
+   * is NOT v2.bg.main (e.g. /find/[id] + /shelf/[slug] + /my-shelf
+   * which flipped to v2.surface.warm at session 169 round 3) pass
+   * `bg={v2.surface.warm}` so masthead chrome reads continuous with
+   * page bg. Surface-specific bg keeps the masthead-page-bg coupling
+   * surgical without rippling into pages that still match v2.bg.main.
+   * Review Board Finding 1 (session 169 round 4) — David: "need to
+   * change the masthead bg to match the change to the rest of the bg
+   * on the /find page and the /shelf and /my-shelf pages."
+   */
+  bg?: string;
 }
 
 // Session 95 — wordmark height 90 → 72 (-20%) per David's call. Session 94
@@ -131,6 +145,7 @@ export default function StickyMasthead({
   left,
   wordmark,
   right,
+  bg,
 }: StickyMastheadProps) {
   return (
     <>
@@ -159,7 +174,9 @@ export default function StickyMasthead({
           zIndex: 40,
           // Session 140 — chrome migrates to v2.bg.main (#F7F3EB).
           // Was hardcoded #f2ecd8 since session 132 frosted-glass retire.
-          background: v2.bg.main,
+          // Session 169 round 4 — optional `bg` prop override per
+          // consumer; defaults to v2.bg.main for backward compat.
+          background: bg ?? v2.bg.main,
           paddingTop: "max(14px, env(safe-area-inset-top, 14px))",
           // Session 168 round 7 → 8 — David iPhone QA convergence:
           // 12 (too gappy) → 0 (too tight) → 8 (canonical space.s8).

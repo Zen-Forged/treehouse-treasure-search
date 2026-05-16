@@ -128,6 +128,11 @@ export default function SearchBar({
     transition:   "border-color 180ms ease, box-shadow 180ms ease",
   };
 
+  // Review Board Finding 1 (session 169) — typed-text color v1.inkPrimary
+  // (#2B211A) → v2.text.muted (#A39686). Pairs with the ::placeholder rule
+  // below so typed + placeholder share the same muted voice; otherwise the
+  // browser-default ~56% inheritance would leave the placeholder lighter
+  // than the typed text once you start typing.
   const inputStyle: React.CSSProperties = {
     flex:        1,
     border:      "none",
@@ -135,7 +140,7 @@ export default function SearchBar({
     outline:     "none",
     fontFamily:  FONT_LORA,
     fontSize:    15,
-    color:       v1.inkPrimary,
+    color:       v2.text.muted,
     // Native caret — green when typing, transparent (hidden) when empty +
     // focused so the custom caret takes over without visual overlap.
     caretColor:  showCustomCaret ? "transparent" : v1.green,
@@ -166,8 +171,15 @@ export default function SearchBar({
     <div style={wrapperStyle} role="search">
       {/* Custom-caret blink keyframes. Inline so the primitive stays
           self-contained; `steps(2, start)` gives the hard 50/50 on/off
-          cadence iOS native carets use (no opacity ramp). */}
-      <style>{`@keyframes th-caret-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }`}</style>
+          cadence iOS native carets use (no opacity ramp).
+          Placeholder rule pins ::placeholder color to the same v2.text.muted
+          (#A39686) value as the typed-text color above. Without this rule,
+          browser-default ::placeholder inheritance applies ~56% opacity to
+          the input color, which would leave the placeholder muted-of-muted. */}
+      <style>{`
+        @keyframes th-caret-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+        input[aria-label="Search Treehouse Finds"]::placeholder { color: ${v2.text.muted}; opacity: 1; }
+      `}</style>
 
       <Search
         size={18}

@@ -45,7 +45,7 @@ import { PiEnvelopeSimple, PiCamera } from "react-icons/pi";
 import { getActiveMalls } from "@/lib/posts";
 import { getUser } from "@/lib/auth";
 import { compressImage } from "@/lib/imageUpload";
-import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import StickyMasthead from "@/components/StickyMasthead";
 import FormField, { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
@@ -288,13 +288,13 @@ function VendorRequestInner() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: v2.surface.warm,
-              border: `1px solid ${v2.border.light}`,
+              background: v1.iconBubble,
+              border: "none",
               cursor: "pointer",
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
         }
         right={null}

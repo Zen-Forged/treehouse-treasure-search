@@ -34,7 +34,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, Store, HelpCircle } from "lucide-react";
 import { getSession, detectUserRoleWithAutoClaim } from "@/lib/auth";
 import { isReviewMode } from "@/lib/reviewMode";
-import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 
 type RenderState = "loading" | "ready";
 
@@ -104,13 +104,13 @@ function WelcomeInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
+            background: v1.iconBubble,
+            border: "none",
             cursor: "pointer",
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 

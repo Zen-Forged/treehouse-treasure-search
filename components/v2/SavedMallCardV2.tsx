@@ -28,7 +28,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
-import { PiLeaf } from "react-icons/pi";
+import { PiLeafBold } from "react-icons/pi";
 
 // Session 144 iPhone QA: long mall names ("Copper Awning Flea Market") wrapped
 // to 2 lines at fontSize 25 on iPhone widths. Mirrors PostcardMallCard's
@@ -173,7 +173,12 @@ export default function SavedMallCardV2({
         </div>
       </div>
 
-      {/* GET DIRECTIONS thinner full-width green CTA */}
+      {/* TAKE THE TRIP thinner full-width green CTA. Vocabulary unified
+          with LocationActions canonical at session 169 Review Board Saved
+          #1 — copy "Find Your Way" → "Take the Trip" + LocationActions
+          renames "Take Trip" → "Take the Trip" in same commit so all 4
+          consumers (LocationActions on /find/[id] + /shelf/[slug] + /map
+          PinCallout; SavedMallCardV2 on Saved) read identically. */}
       <div style={{ padding: "0 20px 12px" }}>
         <button
           type="button"
@@ -181,7 +186,7 @@ export default function SavedMallCardV2({
           style={{
             width: "100%",
             // Session 141 — promoted to v2.accent.greenMid token when
-            // LocationActions Take Trip joined as second button consumer.
+            // LocationActions Take the Trip joined as second button consumer.
             // Was an inline literal (#3e694f) at session 139.
             background: v2.accent.greenMid,
             color: "#fff",
@@ -200,7 +205,7 @@ export default function SavedMallCardV2({
             cursor: "pointer",
           }}
         >
-          Find Your Way
+          Take the Trip
           <svg
             width={12}
             height={12}
@@ -252,7 +257,7 @@ export default function SavedMallCardV2({
             whiteSpace: "nowrap",
           }}
         >
-          <PiLeaf size={16} aria-hidden />
+          <PiLeafBold size={16} aria-hidden />
           {findsCount} {findsCount === 1 ? "find" : "finds"} waiting to be found
         </span>
         <span

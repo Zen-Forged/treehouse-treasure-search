@@ -51,7 +51,7 @@ import { PiEnvelopeSimple, PiClipboard, PiStorefront, PiKey, PiQuestion } from "
 import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin, detectUserRoleWithAutoClaim, tryAutoClaimVendorRows } from "@/lib/auth";
 import { isReviewMode } from "@/lib/reviewMode";
 import { supabase } from "@/lib/supabase";
-import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
 import BottomNav from "@/components/BottomNav";
 import FormButton from "@/components/FormButton";
@@ -515,13 +515,13 @@ function LoginInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
+            background: v1.iconBubble,
+            border: "none",
             cursor: "pointer",
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
 
         {/* Help affordance — moved here from the bottom of the page in
@@ -539,23 +539,34 @@ function LoginInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
+            background: v1.iconBubble,
+            border: "none",
             textDecoration: "none",
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <PiQuestion size={22} style={{ color: v2.text.primary }} />
+          <PiQuestion size={22} style={{ color: v1.inkPrimary }} />
         </Link>
       </header>
 
+      {/* Review Board Finding 5 (session 169) — content sat low because
+          flex `justifyContent: "center"` was vertically-centering the
+          form group between the back+help header (top) and BottomNav
+          (bottom). David: "centered vertically but is accounting for
+          the masthead height which is blank making it seem low."
+          Switched to top-anchored via `justifyContent: "flex-start"` +
+          explicit `paddingTop: 24` so the wordmark sits closer to the
+          header. Form group reads as "anchored at the top of the page"
+          (matches the post/tag + post/preview + vendor-flow top-
+          anchored rhythm per feedback_admin_flow_one_screen_progression
+          ✅ Promoted) instead of "floating in space below the masthead." */}
       <div
         style={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          padding: "0 24px 8px",
+          justifyContent: "flex-start",
+          padding: "24px 24px 8px",
           minHeight: 0,
         }}
       >
@@ -579,9 +590,11 @@ function LoginInner() {
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              // Review Board Finding 11B (session 153) — sub-text 14 → 16
-              // for legibility under the 96px wordmark. Was getting lost.
-              fontSize: 16,
+              // Review Board Finding 6 (session 169) — sub-text 16 → 18.
+              // David: "Improve the readability of the text it feels small
+              // and hard to read esp on 'enter your email..' text." Second
+              // bump on this string (was 14 → 16 at session 153 Finding 11B).
+              fontSize: 18,
               color: v2.text.muted,
               lineHeight: 1.55,
               margin: "0 auto",
@@ -677,7 +690,13 @@ function LoginInner() {
                   style={{
                     fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
-                    fontSize: 12,
+                    // Review Board Finding 6 (session 169) — sub-text 12 → 14.
+                    // David: "Improve the readability of the text... esp on...
+                    // 'We'll email you..' text." 12px was too quiet for the
+                    // 40-65 demographic per the session-46 small-type sweep
+                    // rule; 14 matches the wordmark sub-text bump (16 → 18)
+                    // paired in this commit.
+                    fontSize: 14,
                     color: v2.text.muted,
                     textAlign: "center",
                     lineHeight: 1.5,

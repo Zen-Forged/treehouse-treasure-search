@@ -25,15 +25,23 @@
 // at strokeWidth 1.7. New optional `weight: "regular" | "bold"` prop
 // lets callsites opt INTO PiLeafBold (≈Lucide 2.0, slightly overshoots
 // 1.7 but in the right direction — closest available Phosphor variant).
-// Default stays "regular" so BottomNav Saved tab + feed masonry tile +
-// /flagged tile remain at the session-97 calibration; /find/[id] photo
-// bubble opts in via weight="bold" to visually match the airplane. This
-// is a BOUNDED LOCAL REVIVAL of PiLeafBold per
-// `feedback_surface_locked_design_reversals` — session 97 retired Bold
-// project-wide; session 160 lets specific callsites re-opt-in without
-// regressing the BottomNav nav-row context that drove the original
-// retirement. Saved-state PiLeafFill is unchanged (filled = no stroke
-// concern).
+// Default WAS "regular" so BottomNav Saved tab + feed masonry tile +
+// /flagged tile remained at the session-97 calibration; /find/[id] photo
+// bubble opted in via weight="bold" to visually match the airplane.
+//
+// Session 169 — David Review Board #1: "update all PiLeaf instances to
+// the bold variant." Default flips "regular" → "bold" so EVERY FlagGlyph
+// consumer renders PiLeafBold by default; explicit callsites (incl. the
+// session-160 /find/[id] photo opt-in) stay unchanged. Fully promotes
+// the session-160 bounded local revival to system-wide canonical, per
+// `feedback_surface_locked_design_reversals` — session 97 project-wide
+// retirement + session 160 bounded local revival converge on system-wide
+// PiLeafBold canonical. Saved-state PiLeafFill is unchanged (filled =
+// no stroke concern). Paired with direct PiLeaf → PiLeafBold swaps at 8
+// non-FlagGlyph callsites in the same commit (HomeFeedTile +
+// SavedFindRow + SavedMallCardV2 + BottomNav + my-shelf empty state +
+// TreehouseMap LeafBubblePin + PiLeafIcon wrapper + ShareSheet footer
+// disclaimer).
 
 import * as React from "react";
 import { PiLeaf, PiLeafBold, PiLeafFill } from "react-icons/pi";
@@ -44,9 +52,10 @@ interface Props {
   style?:       React.CSSProperties;
   /**
    * Phosphor weight variant for the unfilled (saved=false) state.
-   * Default "regular" — PiLeaf. Opt-in "bold" — PiLeafBold (heavier,
-   * matches Lucide strokeWidth ≈2.0 visually). Filled state ignores
-   * this; saved bubbles always render PiLeafFill.
+   * Default "bold" (session 169 system-wide flip) — PiLeafBold (heavier,
+   * matches Lucide strokeWidth ≈2.0 visually). Opt-out via "regular" —
+   * PiLeaf (kept available for any future thin-leaf use case). Filled
+   * state ignores this; saved bubbles always render PiLeafFill.
    */
   weight?: "regular" | "bold";
 }
@@ -54,7 +63,7 @@ interface Props {
 export default function FlagGlyph({
   size = 20,
   style,
-  weight = "regular",
+  weight = "bold",
 }: Props) {
   const fillProp  = style?.fill;
   const isFilled  = !!fillProp && fillProp !== "none";

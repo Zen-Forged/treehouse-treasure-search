@@ -59,7 +59,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { PiCamera, PiTag } from "react-icons/pi";
 import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
-import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { track } from "@/lib/clientEvents";
 import { isReviewMode } from "@/lib/reviewMode";
 import { FIXTURE_POSTS } from "@/lib/fixtures";
@@ -331,15 +331,15 @@ function PostTagInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
+            background: v1.iconBubble,
+            border: "none",
             cursor: isExtracting ? "default" : "pointer",
             opacity: isExtracting ? 0.45 : 1,
             padding: 0,
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 
@@ -388,18 +388,26 @@ function PostTagInner() {
           </div>
         </div>
 
-        {/* Find + Tag side-by-side — find shows ✓ overlay (captured),
-            tag is dotted placeholder until extraction populates it. */}
+        {/* Review Board Finding 7 (session 169) — Find + Tag stack
+            vertically (Find on top, Tag below) + center on screen.
+            David: "Position the the tag outlined box image under the
+            photo thumbnail and center on screen."
+            Was 2-col side-by-side (Find left, Tag right) per Arc 7.2
+            ship; David's iPhone QA call moves to single-column stacked.
+            Both elements constrained to ~58% of viewport width so the
+            stack reads as deliberate composition rather than spanning
+            the full content area. */}
         <div
           style={{
             padding: "0 22px",
             display: "flex",
-            gap: 12,
-            alignItems: "flex-start",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 14,
           }}
         >
-          {/* Left column: find polaroid + check overlay + retake link */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          {/* Find polaroid + check overlay + retake link */}
+          <div style={{ width: "58%", display: "flex", flexDirection: "column", alignItems: "center" }}>
             {itemImage && (
               <div style={{ width: "100%", position: "relative" }}>
                 <PolaroidTile
@@ -461,8 +469,9 @@ function PostTagInner() {
             )}
           </div>
 
-          {/* Right column: dotted tag placeholder OR captured tag photo */}
-          <div style={{ flex: 1 }}>
+          {/* Tag dotted placeholder OR captured tag photo — same ~58%
+              width as Find polaroid above, centered. */}
+          <div style={{ width: "58%" }}>
             {!isExtracting && (
               <div
                 aria-label="Tag photo will appear here"

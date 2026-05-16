@@ -120,7 +120,7 @@ import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MdOutlineExplore } from "react-icons/md";
-import { PiLeaf, PiStorefront } from "react-icons/pi";
+import { PiLeafBold, PiStorefront } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
 import { useUserRole } from "@/lib/useUserRole";
 
@@ -203,7 +203,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     },
     {
       key: "flagged", label: "Saved", href: "/flagged",
-      icon: <PiLeaf size={21} />, badge: true,
+      icon: <PiLeafBold size={21} />, badge: true,
     },
     // Session 160 — Booth at rightmost slot per session-114 "rightmost =
     // role-specialty when present" rule. /my-shelf already passes

@@ -60,7 +60,7 @@ import {
   type LocalVendorProfile,
   type Vendor,
 } from "@/types/treehouse";
-import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
 import AmberNotice from "@/components/AmberNotice";
@@ -600,14 +600,14 @@ function PostPreviewInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
+            background: v1.iconBubble,
+            border: "none",
             cursor: "pointer",
             padding: 0,
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 
@@ -641,7 +641,11 @@ function PostPreviewInner() {
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              fontSize: 14,
+              // Review Board Finding 8 (session 169) — sub-text 14 → 16.
+              // David: "subtext feels really small and hard to read."
+              // Pairs with login wordmark sub-text bump (16 → 18) — same
+              // readability class shipped in the same commit.
+              fontSize: 16,
               color: v2.text.muted,
               lineHeight: 1.5,
               maxWidth: 290,

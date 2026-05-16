@@ -63,7 +63,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { PiLeaf } from "react-icons/pi";
+import { PiLeafBold } from "react-icons/pi";
 import { ArrowLeft } from "lucide-react";
 import { getVendorsByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
@@ -90,12 +90,12 @@ import {
   BoothHero,
   BoothTitleBlock,
   MallBlock,
-  DiamondDivider,
   WindowView,
   BoothCloser,
   BoothPageStyles,
 } from "@/components/BoothPage";
-import { v2, radius, FONT_CORMORANT, MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
+import { v1, v2, radius, FONT_CORMORANT, FONT_INTER, MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
+import { PiCamera } from "react-icons/pi";
 import type { User } from "@supabase/supabase-js";
 
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
@@ -203,6 +203,7 @@ function Masthead({
   // the canonical landing for the vendor mode).
   return (
     <StickyMasthead
+      bg={v2.surface.warm}
       left={
         onBack ? (
           <button
@@ -212,17 +213,17 @@ function Masthead({
               width: 44,
               height: 44,
               borderRadius: "50%",
-              background: v2.surface.warm,
+              background: v1.iconBubble,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: `1px solid ${v2.border.light}`,
+              border: "none",
               cursor: "pointer",
               padding: 0,
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
         ) : null
       }
@@ -260,7 +261,7 @@ function NoBooth() {
           marginBottom: 22,
         }}
       >
-        <PiLeaf size={22} style={{ color: v2.text.muted }} />
+        <PiLeafBold size={22} style={{ color: v2.text.muted }} />
       </div>
       <div
         style={{
@@ -299,7 +300,7 @@ function Skeleton() {
         className="booth-shimmer"
         style={{ borderRadius: radius.lg, minHeight: 260, width: "100%" }}
       />
-      <div style={{ padding: "36px 22px 6px" }}>
+      <div style={{ padding: "16px 22px 6px" }}>
         <div className="booth-shimmer" style={{ height: 14, width: 120, borderRadius: 4, marginBottom: 8 }} />
         <div className="booth-shimmer" style={{ height: 34, width: 240, borderRadius: 6 }} />
       </div>
@@ -820,7 +821,7 @@ function MyBoothInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v2.bg.main,
+        background: v2.surface.warm,
         maxWidth: 430,
         margin: "0 auto",
         paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
@@ -856,15 +857,69 @@ function MyBoothInner() {
               onEditName={() => setShowEditSheet(true)}
             />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
-            <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
+
+            {/* Session 169 round 3 — Review Board Finding 1: "Add a Find"
+                primary CTA promotes from the dashed-tile slot in WindowView
+                (showAddTile retires) to the slot ABOVE WindowView where
+                DiamondDivider used to sit, matching /shelf/[slug]'s
+                Bookmark Booth placement from session-169-round-1 (commit
+                18fe631). David: "add button under the address that says
+                Add a Find. This replaces the existing add a find button
+                on the page."
+                Vendor-self primary action lives ABOVE the find grid
+                where the user sees it on first scroll, instead of
+                appearing as a dashed tile inside the grid (which read
+                as "filler placeholder" rather than primary affordance).
+                Visual contract mirrors /shelf/[slug]'s primary CTA
+                exactly — v2.accent.greenMid bg, FONT_INTER 11px uppercase
+                0.12em weight 600, 10px radius, full-width with 10px
+                padding. PiCamera glyph instead of Phosphor BookmarkSimple
+                ('add new find' = camera vocabulary). DiamondDivider
+                primitive retires from this surface (still exported from
+                BoothPage.tsx; no other consumer remaining after this
+                commit — opportunistic dead-code follow-up). */}
+            <div style={{ padding: "22px 22px 12px" }}>
+              <button
+                type="button"
+                onClick={openAddSheet}
+                aria-label="Add a Find"
+                style={{
+                  width:          "100%",
+                  background:     v2.accent.greenMid,
+                  color:          "#fff",
+                  border:         "none",
+                  borderRadius:   10,
+                  padding:        10,
+                  fontFamily:     FONT_INTER,
+                  fontSize:       11,
+                  fontWeight:     600,
+                  letterSpacing:  "0.12em",
+                  textTransform:  "uppercase",
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  gap:            8,
+                  cursor:         "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  transition:     "background 0.15s ease",
+                }}
+              >
+                <PiCamera size={14} aria-hidden />
+                Add a Find
+              </button>
+            </div>
 
             {/* Session 128 (refinement design D2 + D3): ViewToggle + ShelfView
-                retired. WindowView is the only find-rendering path. */}
+                retired. WindowView is the only find-rendering path.
+                Session 169 round 3 — showAddTile retires (was true);
+                the dashed Add-Find tile inside the grid promoted to a
+                primary CTA above the grid (see button block above).
+                onAddClick prop drops since no AddFindTile consumer
+                remains inside WindowView for this surface. */}
             <WindowView
               posts={available}
               vendorId={activeVendor.id}
-              showAddTile={true}
-              onAddClick={openAddSheet}
+              showAddTile={false}
             />
 
             <BoothCloser />

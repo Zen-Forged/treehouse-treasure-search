@@ -22,7 +22,7 @@ import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import mapboxgl, { type LngLatBoundsLike } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { PiLeaf } from "react-icons/pi";
+import { PiLeafBold } from "react-icons/pi";
 import { v1, v2, FONT_SYS } from "@/lib/tokens";
 import PinCallout from "@/components/PinCallout";
 import { milesFromUser } from "@/lib/distance";
@@ -381,7 +381,7 @@ function LeafBubblePin({ selected }: { selected: boolean }) {
         transition:     "width 160ms ease, height 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease",
       }}
     >
-      <PiLeaf size={selected ? 20 : 18} aria-hidden="true" />
+      <PiLeafBold size={selected ? 20 : 18} aria-hidden="true" />
     </div>
   );
 }

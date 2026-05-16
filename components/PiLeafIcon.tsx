@@ -1,9 +1,12 @@
 // components/PiLeafIcon.tsx
-// Thin wrapper around react-icons/pi PiLeaf.
+// Thin wrapper around react-icons/pi PiLeafBold.
 // Matches the lucide-react API shape (size, strokeWidth, style, className)
 // so all existing usages continue to work without changes.
+// Session 169 — Review Board #1 system-wide PiLeaf → PiLeafBold sweep.
+// Component name kept as PiLeafIcon for callsite-import stability per
+// feedback_user_facing_copy_scrub_skip_db_identifiers.
 
-import { PiLeaf } from "react-icons/pi";
+import { PiLeafBold } from "react-icons/pi";
 
 interface PiLeafIconProps {
   size?: number;
@@ -22,7 +25,7 @@ export default function PiLeafIcon({
   className,
 }: PiLeafIconProps) {
   return (
-    <PiLeaf
+    <PiLeafBold
       size={size}
       style={{
         ...(strokeWidth ? { strokeWidth } : {}),

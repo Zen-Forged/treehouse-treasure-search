@@ -19,7 +19,7 @@
 // descenders than Lora; bumping by 0.1 keeps clamp safe.
 "use client";
 
-import { PiLeaf, PiLeafFill } from "react-icons/pi";
+import { PiLeafBold, PiLeafFill } from "react-icons/pi";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 import FoundCheckCircle from "./FoundCheckCircle";
 
@@ -149,7 +149,7 @@ export default function SavedFindRow({
         {isSaved ? (
           <PiLeafFill size={18} aria-hidden />
         ) : (
-          <PiLeaf size={18} aria-hidden />
+          <PiLeafBold size={18} aria-hidden />
         )}
       </button>
     </div>

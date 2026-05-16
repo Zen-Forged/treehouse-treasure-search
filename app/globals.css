@@ -203,8 +203,8 @@
      mischaracterized at the initial design pass as a "saved/active
      toggle" variant; audit revealed it's actually the v2 CTA
      button-fill canonical across all 3 lattice tiers (SavedMallCardV2
-     "Find Your Way" + shelf "Bookmark Booth" + find "Save the Find" +
-     LocationActions "Take Trip" + post/edit greenBorder accent).
+     "Take the Trip" + shelf "Bookmark Booth" + find "Save the Find" +
+     LocationActions "Take the Trip" + post/edit greenBorder accent).
      David: "all buttons should use this v2.accent.greenDark." Value
      collapses #3E694F → #1F4A31. Saved-state hierarchy preserved by
      the bg-to-cream flip pattern, not by greenMid's distinct hex.

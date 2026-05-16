@@ -1,5 +1,5 @@
 // components/LocationActions.tsx
-// R17 Arc 1 — single full-width "Take Trip" CTA composing useUserLocation +
+// R17 Arc 1 — single full-width "Take the Trip" CTA composing useUserLocation +
 // native maps deep link + R3 analytics events.
 //
 // Hides entirely when:
@@ -9,7 +9,7 @@
 //
 // CTA shape:
 //   - Single full-width button, 44px height, 8px radius
-//   - Filled: "Take Trip" + Lucide <Navigation> 16px → native maps deep-link
+//   - Filled: "Take the Trip" + Lucide <Navigation> 16px → native maps deep-link
 //
 // Session 134 — "View on Find Map" Browse button retired across all
 // LocationActions consumers (/find/[id] + /shelf/[slug] + /geolocation-test).
@@ -20,23 +20,28 @@
 // /find/[id] the user can already tap the booth/mall card to reach
 // /shelf/[slug], and from /shelf/[slug] the user is already at the booth
 // — there's nowhere to "browse to" that the surrounding chrome doesn't
-// already provide. The Take Trip half (native-maps deep-link) was always
+// already provide. The Take the Trip half (native-maps deep-link) was always
 // the only LocationActions affordance you couldn't reach any other way.
 //
 // Reverses R17 Arc 1 D9 + D10 (twin-button shape) per
 // feedback_surface_locked_design_reversals — David acknowledged the
 // reversal at session-134 triage Q3 ("Remove from all except /map").
 //
-// "Take Trip" copy (was "Navigate" before commit 4 this session) —
-// invitation framed in user posture, not affordance description.
+// Copy evolution: "Navigate" → "Take Trip" (session 134, commit 4) →
+// "Take the Trip" (session 169 Review Board Saved #1 — vocabulary
+// unification with SavedMallCardV2's CTA; David: "change 'Find your
+// way' to 'Take the Trip'"). Article-bearing form reads as a fuller
+// invitation in user posture, not affordance description.
 //
 // Analytics fired on tap (D21):
 //   - "find_navigate_tapped" → { surface, mall_slug, vendor_id, post_id }
+//     (event name preserved per feedback_user_facing_copy_scrub_skip_db_identifiers
+//     — event keys are internal identifiers; only user-facing button text changed)
 //
 // "find_view_on_map_tapped" event type kept in lib/clientEvents.ts —
 // /map's PinCallout still fires it for its inline Browse pill.
 //
-// "Take Trip" uses window.location.href to trigger the iOS scheme since
+// "Take the Trip" uses window.location.href to trigger the iOS scheme since
 // router.push won't handle maps://. Keeps the user on the page if the
 // scheme silently fails (Apple Maps almost never does on iOS).
 
@@ -106,7 +111,7 @@ export default function LocationActions({
       }}
     >
       <Navigation size={14} strokeWidth={2.2} aria-hidden />
-      Take Trip
+      Take the Trip
     </button>
   );
 }

@@ -274,7 +274,7 @@ export default function EditFindPage() {
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 

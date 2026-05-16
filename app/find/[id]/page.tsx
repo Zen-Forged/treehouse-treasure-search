@@ -65,7 +65,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, ChevronRight } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { PiStorefront } from "react-icons/pi";
 import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
@@ -84,6 +84,7 @@ import {
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { mapsUrl, boothNumeralSize } from "@/lib/utils";
+import { mallSnapshotUrl } from "@/lib/mapStaticImage";
 import { track } from "@/lib/clientEvents";
 import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendorPostsCache, setVendorPostsCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
@@ -343,58 +344,41 @@ function ShelfSection({
 
   return (
     <div style={{ marginBottom: 32 }}>
-      {/* Session 157 Review Board Find #6 — header row becomes flex
-          space-between: "More from this booth…" eyebrow on left,
-          right-aligned "Visit Booth →" link relocated here from the
-          cartographic eyebrow above per David: "Move Visit Booth section
-          to the same line as 'More from this booth…'". Link inherits the
-          16px Cormorant italic from the header (matches sibling on left)
-          + weight 500 + v2.accent.green to read as the deliberate
-          affordance. Gated on vendorSlug — null vendor means no booth
-          to visit so the right slot collapses. */}
+      {/* Session 169 round 3 — Review Board Finding 5: "Visit Booth"
+          link retires from this header row entirely. David: "Remove
+          the 'visit booth' text and link above the 'more from this
+          booth'." Reverses session 157 Review Board Find #6's relocate
+          of Visit Booth from cartographic eyebrow → this header per
+          feedback_surface_locked_design_reversals. The "Explore Booth"
+          secondary CTA shipped at session 169 round 2 (commit da3c29c)
+          carries the booth-navigation affordance now; this redundant
+          header link earned its retirement. flex space-between
+          collapses to plain block since right slot is gone. */}
       <div
         style={{
           paddingLeft: 22,
           paddingRight: 22,
           marginBottom: 14,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
         }}
       >
+        {/* Review Board Finding 4 (session 169 round 2) — eyebrow
+            fontSize 16 → 18 (David: "same with more from this booth").
+            Review Board Finding 4 (session 169 round 4) — color
+            v2.text.muted (#A39686) → v2.text.secondary (#5C5246).
+            David: "on Find page the More from this booth... text is
+            too light use one of the darker colors." Matches the
+            "Purchase this item at" eyebrow voice in the same scroll
+            (both now v2.text.secondary at fontSize 18). */}
         <div
           style={{
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
-            fontSize: 16,
-            color: v2.text.muted,
+            fontSize: 18,
+            color: v2.text.secondary,
           }}
         >
           More from this booth…
         </div>
-        {vendorSlug && (
-          <Link
-            href={`/shelf/${vendorSlug}`}
-            style={{
-              display:        "inline-flex",
-              alignItems:     "center",
-              gap:            2,
-              fontFamily:     FONT_CORMORANT,
-              fontStyle:      "italic",
-              fontSize:       16,
-              fontWeight:     500,
-              color:          v2.accent.green,
-              lineHeight:     1.4,
-              textDecoration: "none",
-              whiteSpace:     "nowrap",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            Visit Booth
-            <ChevronRight size={16} strokeWidth={2} aria-hidden />
-          </Link>
-        )}
       </div>
       <div
         ref={stripRef}
@@ -1108,11 +1092,14 @@ export default function FindDetailPage() {
   const mallName    = post?.mall?.name ?? null;
   const mallCity    = post?.mall?.city ?? null;
   const mallState   = post?.mall?.state ?? null;
-  // Session 157 — mallSlug / mallLat / mallLng vars retired alongside the
-  // LocationActions render (Review Board Find #1). They were only consumed
-  // as that component's props. SELECT-side enrichment of mall.latitude /
-  // mall.longitude on lib/posts.ts stays as substrate for other surfaces
-  // that still consume LocationActions; only this page stopped reading them.
+  const mallSlug    = post?.mall?.slug ?? null;
+  // Session 169 round 2 — mall lat/lng REVIVED for the Explore Booth +
+  // map snapshot redesign (Review Board Finding 4). Session 157 retired
+  // them alongside the LocationActions render; the static-snapshot
+  // consumer is a new use case + needs them back. SELECT-side
+  // enrichment on lib/posts.ts has carried these through unchanged.
+  const mallLat     = post?.mall?.latitude  ?? null;
+  const mallLng     = post?.mall?.longitude ?? null;
   const price       = post?.price_asking;
   const showSoldBody   = !!post && isSold && !isMyPost;
   const showNormalBody = !!post && !showSoldBody;
@@ -1121,7 +1108,14 @@ export default function FindDetailPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: v2.bg.main,
+        // Session 169 round 3 — Review Board Finding 2: page bg
+        // v2.bg.main → v2.surface.warm (#FBF6EA). David: "Change the
+        // BG color for the /find page /shelf page (/my-shelf) page
+        // to background: var(--th-v2-surface-warm)." Booth + Find
+        // detail surfaces get a warmer cream than the default body
+        // bg; reads as "you've entered a specific physical place"
+        // chrome vs the (tabs)/ Explore/Saved/Booth-nav default.
+        background: v2.surface.warm,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -1129,6 +1123,7 @@ export default function FindDetailPage() {
       }}
     >
       <StickyMasthead
+        bg={v2.surface.warm}
         left={
           <IconBubble onClick={() => {
             try { sessionStorage.setItem(POPSTATE_MARKER_KEY, String(Date.now())); } catch {}
@@ -1279,7 +1274,7 @@ export default function FindDetailPage() {
                     e.stopPropagation();
                     handleToggleSave();
                   }}
-                  aria-label={isSaved ? "Unsave" : "Save"}
+                  aria-label={isSaved ? "Remove Flag" : "Flag this find"}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -1602,61 +1597,86 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* Session 157 Review Board Find #1 + #2 — David: "I want each page
-          to have a specific action to take. So on the find page I want
-          to change the 'Take Trip' to 'Save the Find'. Button should
-          change saved state (moved to saved and icon filled)" +
-          "replace the hairline divider under quotes with the 'Save the
-          Find' button."
+      {/* Session 169 round 2 — CTA pair (Explore Booth secondary +
+          Flag the Find primary) side-by-side under the price. David:
+          "I'm thinking of two butts under the price (a) Explore Booth
+          (secondary) (b) Flag the Find (primary)."
 
-          The plain v1.1j hairline divider retires. In its slot — the
-          page's primary action CTA. Find detail's job is to deliver the
-          find; the canonical action is to capture it. "Take Trip" CTA
-          (R17 LocationActions) retires from this surface — its job moves
-          out of Find detail entirely (still rendered on /shelf and /map
-          via their LocationActions consumers, which are unchanged).
-
-          Visual contract mirrors LocationActions Take Trip exactly:
-          full-width, v2.accent.greenMid bg, 10px radius, FONT_INTER 11px
-          uppercase 0.12em letterSpacing weight 600 — primary CTA voice
-          already established on the project. Saved state flips icon
-          fill (outline → filled, both white against the green bg) +
-          label ("Save the Find" → "Saved"). Same handleToggleSave
-          callback as the corner FlagGlyph bubble, so both affordances
-          stay in sync via useShopperSaves.
+          Replaces the session-157 single full-width Flag-the-Find
+          button. Side-by-side 50/50 via flex (David picked side-by-side
+          over stacked at session-169 round-2 Q2). Explore Booth on
+          left (secondary outlined green-on-cream) routes to /shelf/[slug];
+          Flag the Find on right (primary filled green) toggles save.
+          Both buttons inherit the saved-state color flip pattern from
+          session-157 — Flag the Find's saved state still flips bg to
+          v2.surface.input + green text + filled green icon + 1px green
+          border.
 
           Conditional render preserves the hairline's gate (vendor or
           booth number must exist for the find to belong to something
-          saveable). */}
+          saveable). Explore Booth inner-conditional on vendorSlug (only
+          routes when a slug exists; falls back to a disabled-style
+          button if vendor exists without a slug — rare but defensive). */}
       {(vendorName || boothNumber) && (
         <div
           style={{
             padding: "0 22px",
             marginBottom: 22,
+            display: "flex",
+            gap: 10,
           }}
         >
+          {/* Explore Booth — secondary outlined. Routes to /shelf/[slug].
+              Hidden when vendorSlug is null (vendor row exists but no
+              slug yet — edge case from admin creation flow). */}
+          {vendorSlug && (
+            <Link
+              href={`/shelf/${vendorSlug}`}
+              aria-label="Explore this booth"
+              style={{
+                flex: 1,
+                background:     v2.surface.input,
+                color:          v2.accent.greenMid,
+                border:         `1px solid ${v2.accent.greenMid}`,
+                borderRadius:   10,
+                padding:        9,
+                fontFamily:     FONT_INTER,
+                fontSize:       11,
+                fontWeight:     600,
+                letterSpacing:  "0.12em",
+                textTransform:  "uppercase",
+                display:        "flex",
+                alignItems:     "center",
+                justifyContent: "center",
+                gap:            8,
+                cursor:         "pointer",
+                textDecoration: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <PiStorefront size={14} aria-hidden style={{ flexShrink: 0 }} />
+              Explore Booth
+            </Link>
+          )}
+
+          {/* Flag the Find — primary filled. Saved-state color-flip
+              pattern preserved from session-157 (Unsaved: solid green
+              bg + white text/icon; Saved: white bg + green text + filled
+              green icon + 1px green border). 1px border on saved
+              subtracts from height; padding compensates by -1 so total
+              footprint stays consistent across states (and stays
+              vertically-aligned with the Explore Booth sibling which
+              always has 1px border + 9px padding). */}
           <button
             type="button"
             onClick={handleToggleSave}
-            aria-label={isSaved ? "Unsave this find" : "Save this find"}
+            aria-label={isSaved ? "Remove Flag" : "Flag this find"}
             style={{
-              width:          "100%",
-              // Session 157 Review Board Find #1 — invert color pattern on
-              // saved state. Unsaved: solid green bg + white text/icon
-              // (primary CTA voice). Saved: white bg (matches nav bar bg =
-              // v2.surface.input #FFFCF5) + green text + filled green icon
-              // + 1px green border so the button retains visual weight
-              // against the surrounding paper-cream body. David —
-              // "BG/Text: Green/White to White/Green. The 'white I'm
-              // referring to should be the same color as the bg of the
-              // nav bar."
+              flex: 1,
               background:     isSaved ? v2.surface.input : v2.accent.greenMid,
               color:          isSaved ? v2.accent.greenMid : "#fff",
               border:         isSaved ? `1px solid ${v2.accent.greenMid}` : "none",
               borderRadius:   10,
-              // 1px border on saved subtracts from total height; subtract
-              // 1px of padding so total button footprint stays consistent
-              // across the two states.
               padding:        isSaved ? 9 : 10,
               fontFamily:     FONT_INTER,
               fontSize:       11,
@@ -1680,7 +1700,7 @@ export default function FindDetailPage() {
                 fill:  isSaved ? v2.accent.greenMid : "none",
               }}
             />
-            {isSaved ? "Saved" : "Save the Find"}
+            {isSaved ? "Remove Flag" : "Flag the Find"}
           </button>
         </div>
       )}
@@ -1705,6 +1725,11 @@ export default function FindDetailPage() {
               semantically closer to the action. The cardInner Link wrapper
               below still keeps card-tap routing to /shelf/[slug] as a
               wider hit target. */}
+          {/* Review Board Finding 4 (session 169 round 2) — eyebrow
+              fontSize 16 → 18 + PiStorefront glyph 16 → 18 to match.
+              David: "The text for Purchase this item at is very small
+              hard to read." Pairs with the "More from this booth…"
+              eyebrow bump in same commit for cross-eyebrow consistency. */}
           <div
             style={{
               display:        "inline-flex",
@@ -1715,12 +1740,12 @@ export default function FindDetailPage() {
               paddingRight:   2,
               fontFamily:     FONT_CORMORANT,
               fontStyle:      "italic",
-              fontSize:       16,
+              fontSize:       18,
               color:          v2.text.secondary,
               lineHeight:     1.4,
             }}
           >
-            <PiStorefront size={16} aria-hidden style={{ flexShrink: 0 }} />
+            <PiStorefront size={18} aria-hidden style={{ flexShrink: 0 }} />
             Purchase this item at
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
@@ -1872,6 +1897,60 @@ export default function FindDetailPage() {
                 cardInner
               );
             })()}
+
+            {/* Map snapshot — small Mapbox Static Images thumbnail
+                anchored at the mall's lat/lng. Session 169 round 2
+                Review Board Finding 4: "Possibly a small snapshot of
+                the map location under the Mall location and booth."
+                Wraps in Link to /map?mall=<slug> for spatial-wayfinding
+                tap target. Gated on mallLat + mallLng + mallSlug;
+                gracefully absent when any are null (no degradation
+                affordance, just no snapshot — the mall/booth card
+                above + the Explore Booth CTA below carry the load).
+                onError fallback hides the <img> tag when Mapbox
+                rejects the request (e.g. preview deployments where
+                token URL allowlist excludes *.vercel.app per session-
+                156 carry); the wrapper Link stays so the tap target
+                still routes if image fetch silently fails. */}
+            {mallLat !== null && mallLng !== null && mallSlug && (
+              <Link
+                href={`/map?mall=${mallSlug}`}
+                aria-label={`View ${mallName ?? "this mall"} on the map`}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  aspectRatio: "2.5 / 1",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  border: `1px solid ${v2.border.light}`,
+                  background: v2.surface.warm,
+                  textDecoration: "none",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                {(() => {
+                  const url = mallSnapshotUrl(mallLng, mallLat, 600, 240);
+                  if (!url) return null;
+                  return (
+                    <img
+                      src={url}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  );
+                })()}
+              </Link>
+            )}
+
             {/* Session 157 Review Board Find #1 — LocationActions
                 "Take Trip" CTA retires from /find/[id]. David's call:
                 "I want each page to have a specific action to take. So
