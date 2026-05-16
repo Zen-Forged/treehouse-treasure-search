@@ -561,7 +561,7 @@ function LoginInner() {
       >
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <Image
-            src="/wordmark.png"
+            src="/treehouse_transparent.png"
             alt="Treehouse Finds"
             width={300}
             height={96}
