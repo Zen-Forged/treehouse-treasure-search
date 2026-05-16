@@ -238,6 +238,7 @@ export default function DestinationHero({
           fontFamily:  FONT_CORMORANT,
           fontStyle:   "italic",
           fontSize:    18,
+          fontWeight:  600,
           color:       v2.text.secondary,
           lineHeight:  1.3,
         }}
