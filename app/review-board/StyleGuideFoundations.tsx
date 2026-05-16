@@ -323,8 +323,8 @@ function ColorSection() {
         <ColorSwatch
           token="v2.bg.main"
           value={v2.bg.main}
-          hex="#F7F3EB"
-          notes="v2 body + page chrome."
+          hex="#E6DECF"
+          notes="Unified v2 body + page + masthead chrome. v2.bg.tabs alias resolves to the same value."
         />
         <ColorSwatch
           token="v2.surface.card"

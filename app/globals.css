@@ -115,11 +115,14 @@
   --th-v1-icon-xl:       24px;
 
   /* v1 R10 cartographic basemap. Session 155 refinement: cream realigned
-     to match v2.bg.main (#F7F3EB) so the map's land base reads continuous
-     with the masthead + strip chrome. Reverses the session-145 v1.basemap.*
+     to match v2.bg.main so the map's land base reads continuous with the
+     masthead + strip chrome. Session 168 round 9 — v2.bg.main flipped to
+     #E6DECF (was #F7F3EB) per David's system-wide bg unification ask;
+     basemap.cream follows so the cartographic land base stays continuous
+     with the surrounding chrome. Reverses the session-145 v1.basemap.*
      preservation lock — when the v2.basemap.* sub-arc lands (parked carry),
      these values will fold into a proper v2 cartographic palette. */
-  --th-v1-basemap-cream:  #F7F3EB;
+  --th-v1-basemap-cream:  #E6DECF;
   --th-v1-basemap-cream2: #e6d9b8;
   --th-v1-basemap-water:  #c5d6c4;
   --th-v1-basemap-water2: #aac3aa;
@@ -137,7 +140,15 @@
   --th-v1-shadow-callout:           0 8px 20px rgba(42,26,10,0.22), 0 2px 6px rgba(42,26,10,0.10);
 
   /* ── v2 — field-guide migration ── */
-  --th-v2-bg-main:       #F7F3EB;
+  /* Session 168 round 9 — David: "unify the background color on all
+     surfaces and masthead to var(--th-v2-bg-tabs)." v2.bg.main flipped
+     from #F7F3EB → #E6DECF (matches v2.bg.tabs canonical). System-wide
+     impact: every v2 surface (~37 consumers — Saved, Home, Find, /shelf,
+     /me, /welcome, /login, /vendor-request, post-flow, admin, review-
+     board) + StickyMasthead chrome + body bg now read as the warmer
+     (tabs)-tier cream. v2.bg.tabs token name preserved as an alias
+     resolving to the same value; both names safe for new work. */
+  --th-v2-bg-main:       #E6DECF;
   --th-v2-bg-paper:      #FFFCF5;
   --th-v2-bg-soft:       #F1EBDD;
   /* Session 166 dial 10 — safe-area-inset-top exposed as a CSS var so JS
@@ -271,8 +282,10 @@
   body {
     /* Session 143 — body bg migrates to v2.bg.main (was v1.paperCream
        #f2ecd8). Pairs with app/layout.tsx inline style. Structural fix
-       at the body layer kills the per-page page-bg dial bug class. */
-    background-color: #F7F3EB;
+       at the body layer kills the per-page page-bg dial bug class.
+       Session 168 round 9 — value follows v2.bg.main flip to #E6DECF
+       (unified bg per David's "all surfaces and masthead" ask). */
+    background-color: #E6DECF;
     color: #1a1a18;
   }
 
