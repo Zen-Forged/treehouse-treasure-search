@@ -124,6 +124,26 @@ let cachedMyShelf: { vendorId: string; posts: Post[] } | null = null;
 // it. Cleared explicitly on sign-out (null session) so a subsequent visit
 // post-logout doesn't flash content for the wrong user before redirecting.
 let cachedAuthUser: User | null = null;
+
+// Session 168 round 5 finding 3 (BoothHero image flash) — round 4's
+// cachedAuthUser killed the blank screen but BoothHero photo still
+// flashed because heroImageUrl wasn't populated until the vendor fetch
+// resolved. Caching the vendor + hero + mall bundle keyed by userId
+// lets the FIRST paint show the full BoothHero composition (photo +
+// title + mall strip) on warm-nav Booth-tab visits. Vendor fetch still
+// runs in background to refresh; if the cached vendor is stale (vendor
+// switch, profile edit, hero re-upload), loadVendor() reconciles in
+// the same render cycle as the existing cachedMyShelf posts refresh.
+//
+// Bundle includes everything the first paint needs (vendor identity +
+// hero asset + mall geometry) so all three primary visual surfaces
+// (BoothHero / BoothTitleBlock / address strip) hydrate in one shot.
+let cachedVendorBundle: {
+  userId:       string;
+  vendor:       Vendor;
+  heroImageUrl: string | null;
+  mall:         Mall | null;
+} | null = null;
 const MY_SHELF_SCROLL_KEY = "treehouse_my_shelf_scroll";
 
 // Session 85 — write to BOTH localStorage and sessionStorage. iOS Safari
@@ -312,11 +332,20 @@ function MyBoothInner() {
   const [user,          setUser]          = useState<User | null>(cachedAuthUser);
   const [authReady,     setAuthReady]     = useState(cachedAuthUser !== null);
 
+  // Session 168 round 5 finding 3 (BoothHero image flash) — hydrate
+  // active vendor + downstream state from cachedVendorBundle if cached
+  // user matches. activeVendor sync-populated means BoothHero / Title /
+  // mall strip all paint on first frame; the vendor-resolution effect
+  // below still runs to refresh from network.
+  const bundleHit = cachedVendorBundle && cachedAuthUser
+    && cachedVendorBundle.userId === cachedAuthUser.id
+    ? cachedVendorBundle : null;
+
   // Multi-booth state (session 35)
   const [vendorList,    setVendorList]    = useState<Vendor[]>([]);
-  const [activeVendor,  setActiveVendor]  = useState<Vendor | null>(null);
+  const [activeVendor,  setActiveVendor]  = useState<Vendor | null>(bundleHit?.vendor ?? null);
   const [adminOverride, setAdminOverride] = useState(false);   // true when ?vendor=id is used
-  const [vendorReady,   setVendorReady]   = useState(false);
+  const [vendorReady,   setVendorReady]   = useState(bundleHit !== null);
   const [pickerOpen,    setPickerOpen]    = useState(false);
 
   // Session 40 — Window share sheet state.
@@ -333,8 +362,8 @@ function MyBoothInner() {
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
 
-  const [mall,          setMall]          = useState<Mall | null>(null);
-  const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
+  const [mall,          setMall]          = useState<Mall | null>(bundleHit?.mall ?? null);
+  const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(bundleHit?.heroImageUrl ?? null);
   const [heroKey,       setHeroKey]       = useState(0);
 
   // v1.2 — AddFindSheet state + hidden file inputs.
@@ -361,9 +390,11 @@ function MyBoothInner() {
     }
     getSession().then(s => {
       if (!s?.user) {
-        // Clear stale cache so a future Booth-tab visit doesn't flash the
-        // signed-out user's chrome before redirecting.
-        cachedAuthUser = null;
+        // Clear stale caches so a future Booth-tab visit doesn't flash the
+        // signed-out user's chrome before redirecting. Round 5 — also
+        // clears the vendor bundle (round 4 only cleared the user).
+        cachedAuthUser     = null;
+        cachedVendorBundle = null;
         router.replace("/login");
         return;
       }
@@ -505,13 +536,9 @@ function MyBoothInner() {
 
   function loadVendor(vendor: Vendor, userId: string) {
     setActiveVendor(vendor);
-    if (vendor.hero_image_url) {
-      setHeroImageUrl(vendor.hero_image_url as string);
-      setHeroKey(k => k + 1);
-    } else {
-      setHeroImageUrl(null);
-      setHeroKey(k => k + 1);
-    }
+    const heroUrl = vendor.hero_image_url ? (vendor.hero_image_url as string) : null;
+    setHeroImageUrl(heroUrl);
+    setHeroKey(k => k + 1);
     const cached: LocalVendorProfile = {
       display_name: vendor.display_name,
       booth_number: vendor.booth_number ?? "",
@@ -526,12 +553,32 @@ function MyBoothInner() {
     if (!isReviewMode()) {
       try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached)); } catch {}
     }
+    let resolvedMall: Mall | null = null;
     if (vendor.mall) {
-      setMall(vendor.mall as Mall);
+      resolvedMall = vendor.mall as Mall;
+      setMall(resolvedMall);
     } else {
-      getAllMalls().then(malls => setMall(malls.find(m => m.id === vendor.mall_id) ?? null));
+      getAllMalls().then(malls => {
+        const found = malls.find(m => m.id === vendor.mall_id) ?? null;
+        setMall(found);
+        // Late mall resolution — patch the cache so a subsequent warm
+        // nav gets the full bundle.
+        if (cachedVendorBundle?.userId === userId && cachedVendorBundle.vendor.id === vendor.id) {
+          cachedVendorBundle = { ...cachedVendorBundle, mall: found };
+        }
+      });
     }
     setVendorReady(true);
+    // Session 168 round 5 finding 3 — populate cachedVendorBundle for
+    // next warm-nav first-paint. Skipped on Review Board (fixtures).
+    if (!isReviewMode()) {
+      cachedVendorBundle = {
+        userId,
+        vendor,
+        heroImageUrl: heroUrl,
+        mall:         resolvedMall,
+      };
+    }
   }
 
   // ── Posts hydration ────────────────────────────────────────────────────
