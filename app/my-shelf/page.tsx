@@ -820,7 +820,7 @@ function MyBoothInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v2.bg.main,
+        background: v2.surface.warm,
         maxWidth: 430,
         margin: "0 auto",
         paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",

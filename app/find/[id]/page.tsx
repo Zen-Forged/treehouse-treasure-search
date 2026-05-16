@@ -1102,7 +1102,14 @@ export default function FindDetailPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: v2.bg.main,
+        // Session 169 round 3 — Review Board Finding 2: page bg
+        // v2.bg.main → v2.surface.warm (#FBF6EA). David: "Change the
+        // BG color for the /find page /shelf page (/my-shelf) page
+        // to background: var(--th-v2-surface-warm)." Booth + Find
+        // detail surfaces get a warmer cream than the default body
+        // bg; reads as "you've entered a specific physical place"
+        // chrome vs the (tabs)/ Explore/Saved/Booth-nav default.
+        background: v2.surface.warm,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
