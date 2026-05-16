@@ -414,7 +414,23 @@ export function BoothTitleBlock({
           fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 16,
-          color: v2.text.secondary,
+          // Session 171 iPhone QA dial #5 immediate fix — David: "Use a
+          // darker color from the palette for the 'A curated booth by' this
+          // continues to be hard to read." Italic Cormorant at 16px loses
+          // stroke contrast faster than upright (curved letterforms have
+          // thinner mid-strokes); v2.text.secondary on v2.surface.warm
+          // failed the 40-65 demographic on production iPhone QA. Bumping
+          // one tier darker to v2.text.primary.
+          //
+          // Companion launch-blocking work: full contrast + legibility
+          // audit at docs/contrast-audit.md (session 171 Audit B) — the
+          // same pattern (≤14px / 15-16px italic / muted-secondary on
+          // warm-cream) recurs on other surfaces (login, /me, etc.) and
+          // gets a structured sweep in a follow-on session driven by that
+          // audit doc. This fix lands the specific BoothPage eyebrow
+          // referenced in the QA; the broader sweep ships per audit
+          // recommendations.
+          color: v2.text.primary,
           lineHeight: 1.3,
           margin: "0 0 4px",
         }}
