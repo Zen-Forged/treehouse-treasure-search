@@ -1,11 +1,17 @@
 // components/v2/SavedEmptyState.tsx
 //
 // v2 Arc 1.2 — Saved page empty state per D3 (refined): "No finds collected
-// yet — keep exploring" + Open Explore CTA linking to /. Field-guide voice;
+// yet — keep exploring" + Explore CTA linking to /. Field-guide voice;
 // matches v2 typography pairing (Cormorant italic headline + Inter button).
+//
+// Session 168 round 4 — David iPhone QA: "Change the button to say 'Explore'
+// instead of 'Open Explore' with Explore nav icon in front." Mirrors the
+// Explore tab's MdOutlineExplore + label vocabulary from BottomNav (session
+// 134) so the empty-state CTA reads as a direct shortcut to that nav.
 "use client";
 
 import Link from "next/link";
+import { MdOutlineExplore } from "react-icons/md";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 
 interface SavedEmptyStateProps {
@@ -61,7 +67,8 @@ export default function SavedEmptyState({
           minWidth: 200,
         }}
       >
-        Open Explore
+        <MdOutlineExplore size={18} aria-hidden />
+        Explore
       </Link>
     </div>
   );
