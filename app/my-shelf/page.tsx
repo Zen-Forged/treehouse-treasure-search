@@ -203,6 +203,7 @@ function Masthead({
   // the canonical landing for the vendor mode).
   return (
     <StickyMasthead
+      bg={v2.surface.warm}
       left={
         onBack ? (
           <button

@@ -117,6 +117,7 @@ function Masthead({
   // <BoothHero onShare={...} /> wiring below.
   return (
     <StickyMasthead
+      bg={v2.surface.warm}
       left={
         <button
           onClick={onBack}

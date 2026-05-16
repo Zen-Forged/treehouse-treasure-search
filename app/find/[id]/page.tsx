@@ -1123,6 +1123,7 @@ export default function FindDetailPage() {
       }}
     >
       <StickyMasthead
+        bg={v2.surface.warm}
         left={
           <IconBubble onClick={() => {
             try { sessionStorage.setItem(POPSTATE_MARKER_KEY, String(Date.now())); } catch {}
