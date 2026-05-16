@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>/find/[id] Destination Hero — V1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-page: #E6DECF;
+    --bg-warm: #FBF6EA;
+    --bg-card: #FFFCF5;
+    --bg-postit: #fbf3df;
+    --border-light: #E3DAC4;
+    --border-medium: #CFC4A8;
+    --text-primary: #2A1A0A;
+    --text-secondary: #5C5246;
+    --text-muted: #A39686;
+    --green: #1F4A31;
+    --green-mid: #285C3C;
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-hero: 0 2px 6px rgba(40,30,15,0.08), 0 8px 24px rgba(40,30,15,0.06);
+    --font-lora: "Cormorant Garamond", Georgia, serif;
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-numeral: "Times New Roman", Times, serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: #d8cdb5;
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    padding: 40px 0 80px;
+  }
+
+  .top-header {
+    max-width: 1240px;
+    margin: 0 auto 32px;
+    padding: 0 24px;
+    text-align: center;
+  }
+
+  .top-header h1 {
+    font-family: var(--font-lora);
+    font-size: 28px;
+    font-weight: 500;
+    margin: 0 0 8px;
+    color: var(--text-primary);
+  }
+
+  .top-header p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .frames-row {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 0 24px;
+  }
+
+  .frame {
+    width: 375px;
+    flex: 0 0 375px;
+  }
+
+  .frame-label {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .frame-label .name {
+    font-family: var(--font-lora);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .frame-label .desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .phone {
+    width: 375px;
+    background: var(--bg-warm); /* /find page bg per session 169 */
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border: 1px solid #c8bda1;
+  }
+
+  /* Masthead (simplified) */
+  .masthead {
+    height: 56px;
+    background: var(--bg-warm);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: none;
+  }
+
+  .masthead .back-bubble,
+  .masthead .profile-bubble {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--text-primary);
+  }
+
+  /* Photo hero */
+  .photo {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    background: linear-gradient(135deg, #6b7a5a 0%, #4a5640 50%, #3a4533 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(220,180,120,0.18), transparent 60%),
+      radial-gradient(ellipse at 70% 70%, rgba(120,80,40,0.22), transparent 50%);
+    pointer-events: none;
+  }
+
+  .photo .caption-tag {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 64px;
+    height: 64px;
+    background: var(--bg-postit);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transform: rotate(-6deg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-lora);
+    font-style: italic;
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .photo .caption-tag .price {
+    font-family: var(--font-numeral);
+    font-style: normal;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--green);
+    margin-top: 2px;
+  }
+
+  .photo .save-bubble {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(245,242,235,0.92);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+
+  .photo .save-bubble svg {
+    width: 22px;
+    height: 22px;
+    color: var(--green);
+    stroke: var(--green);
+    fill: none;
+    stroke-width: 1.8;
+  }
+
+  /* Title + price */
+  .title-block {
+    padding: 20px 20px 18px;
+    text-align: center;
+  }
+
+  .title-block .title {
+    font-family: var(--font-lora);
+    font-size: 32px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .title-block .price {
+    font-family: var(--font-sans);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--green);
+    margin-top: 6px;
+    letter-spacing: -0.005em;
+  }
+
+  /* Destination hero — base wrapper */
+  .dest-wrap {
+    padding: 0 16px 28px;
+  }
+
+  /* ============ FRAME A — Anchored card (subtle, refined) ============ */
+  .dest-A {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .dest-A .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 14px 2px;
+    font-family: var(--font-lora);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+  }
+
+  .dest-A .eyebrow .icon {
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+
+  .dest-A .mall-row {
+    padding: 0 14px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 12px;
+    align-items: end;
+  }
+
+  .dest-A .mall-info { min-width: 0; }
+
+  .dest-A .mall-subtitle {
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    line-height: 1.4;
+  }
+
+  .dest-A .vendor-name {
+    font-family: var(--font-lora);
+    font-size: 18px;
+    color: var(--text-primary);
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  .dest-A .booth-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1;
+  }
+
+  .dest-A .booth-label {
+    font-family: var(--font-sans);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .dest-A .booth-number {
+    font-family: var(--font-numeral);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .dest-A .map-snap {
+    width: 100%;
+    aspect-ratio: 2.5 / 1;
+    background:
+      linear-gradient(135deg, #efe7d2 0%, #e6dcbe 100%);
+    position: relative;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .dest-A .map-snap::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    width: 22px;
+    height: 28px;
+    background: var(--green);
+    clip-path: polygon(50% 100%, 0 38%, 50% 0, 100% 38%);
+  }
+
+  /* ============ FRAME B — Distinctive secondary hero ============ */
+  .dest-B {
+    background: var(--bg-warm);
+    border: 1px solid var(--border-medium);
+    border-radius: 14px;
+    box-shadow: var(--shadow-hero);
+    overflow: hidden;
+    padding: 20px 18px 0;
+  }
+
+  .dest-B .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .dest-B .eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border-medium);
+  }
+
+  .dest-B .mall-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 14px;
+    align-items: end;
+    padding-bottom: 16px;
+  }
+
+  .dest-B .mall-info { min-width: 0; }
+
+  .dest-B .mall-subtitle {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    line-height: 1.4;
+    margin-bottom: 2px;
+  }
+
+  .dest-B .vendor-name {
+    font-family: var(--font-lora);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dest-B .booth-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1;
+  }
+
+  .dest-B .booth-label {
+    font-family: var(--font-sans);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .dest-B .booth-number {
+    font-family: var(--font-numeral);
+    font-size: 30px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .dest-B .map-snap {
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    background:
+      linear-gradient(135deg, #efe7d2 0%, #e6dcbe 100%);
+    position: relative;
+    margin: 0 -18px;
+    width: calc(100% + 36px);
+    border-top: 1px solid var(--border-medium);
+  }
+
+  .dest-B .map-snap::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    width: 24px;
+    height: 30px;
+    background: var(--green);
+    clip-path: polygon(50% 100%, 0 38%, 50% 0, 100% 38%);
+  }
+
+  /* ============ FRAME C — Map-led composition ============ */
+  .dest-C-eyebrow-outer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px 10px;
+    font-family: var(--font-lora);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+  }
+
+  .dest-C {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+
+  .dest-C .map-snap {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background:
+      linear-gradient(135deg, #efe7d2 0%, #e6dcbe 100%);
+    position: relative;
+  }
+
+  .dest-C .map-snap::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    width: 26px;
+    height: 32px;
+    background: var(--green);
+    clip-path: polygon(50% 100%, 0 38%, 50% 0, 100% 38%);
+  }
+
+  .dest-C .info-strip {
+    padding: 14px 16px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 14px;
+    align-items: end;
+  }
+
+  .dest-C .mall-info { min-width: 0; }
+
+  .dest-C .mall-subtitle {
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    line-height: 1.4;
+  }
+
+  .dest-C .vendor-name {
+    font-family: var(--font-lora);
+    font-size: 20px;
+    color: var(--text-primary);
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 3px;
+  }
+
+  .dest-C .booth-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1;
+  }
+
+  .dest-C .booth-label {
+    font-family: var(--font-sans);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .dest-C .booth-number {
+    font-family: var(--font-numeral);
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Tradeoff matrix */
+  .matrix {
+    max-width: 1240px;
+    margin: 64px auto 0;
+    padding: 0 24px;
+  }
+
+  .matrix h2 {
+    font-family: var(--font-lora);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    margin: 0 0 24px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-warm);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+  }
+
+  th, td {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  th {
+    background: var(--bg-card);
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-medium);
+  }
+
+  th:first-child { width: 22%; }
+  th:not(:first-child) { width: 26%; }
+
+  td { color: var(--text-secondary); line-height: 1.5; }
+
+  tr:last-child td { border-bottom: none; }
+
+  .frame-tag {
+    display: inline-block;
+    font-family: var(--font-lora);
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  /* Mobile-only column stack at narrow viewports */
+  @media (max-width: 1200px) {
+    .frames-row { flex-direction: column; align-items: center; gap: 48px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-header">
+  <h1>/find/[id] — Destination Hero V1</h1>
+  <p>
+    Shape B re-architecture. Save bubble (PiLeaf) is the page's primary CTA, anchored top-right on photograph.<br>
+    Three frames span how the <code>&lt;DestinationHero&gt;</code> surface reads as a secondary hero.<br>
+    "More from this booth" carousel + Explore Booth + Flag-the-Find CTAs all retired.
+  </p>
+</div>
+
+<div class="frames-row">
+
+  <!-- ===================== FRAME A ===================== -->
+  <div class="frame">
+    <div class="frame-label">
+      <div class="name">Frame A — Anchored card</div>
+      <div class="desc">Subtle refined wrap. Eyebrow + content + map all inside one v2.surface.card with 1px border. Reads as today's structure unified.</div>
+    </div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="back-bubble">‹</div>
+        <div class="profile-bubble">·</div>
+      </div>
+      <div class="photo">
+        <div class="caption-tag">
+          <span>Asking</span>
+          <span class="price">$48</span>
+        </div>
+        <div class="save-bubble" aria-label="Flag this find">
+          <svg viewBox="0 0 24 24"><path d="M12 3 C 9 7, 7 11, 7 14 C 7 17, 9 19, 12 19 C 15 19, 17 17, 17 14 C 17 11, 15 7, 12 3 Z" /></svg>
+        </div>
+      </div>
+      <div class="title-block">
+        <h2 class="title">Brass library lamp</h2>
+        <div class="price">$48</div>
+      </div>
+      <div class="dest-wrap">
+        <div class="dest-A">
+          <div class="eyebrow">
+            <span class="icon">🏬</span>
+            <span>Purchase this item at</span>
+          </div>
+          <div class="mall-row">
+            <div class="mall-info">
+              <div class="mall-subtitle">America's Antique Mall · Lexington, KY</div>
+              <div class="vendor-name">Treasures &amp; Trinkets</div>
+            </div>
+            <div class="booth-badge">
+              <div class="booth-label">Booth</div>
+              <div class="booth-number">14B</div>
+            </div>
+          </div>
+          <div class="map-snap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FRAME B ===================== -->
+  <div class="frame">
+    <div class="frame-label">
+      <div class="name">Frame B — Distinctive secondary hero</div>
+      <div class="desc">Paper-warm bg + soft lift + small-caps tracked eyebrow. Reads as a clear visual peer to the photo hero. Map slightly larger (2:1) and bleeds card-to-card.</div>
+    </div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="back-bubble">‹</div>
+        <div class="profile-bubble">·</div>
+      </div>
+      <div class="photo">
+        <div class="caption-tag">
+          <span>Asking</span>
+          <span class="price">$48</span>
+        </div>
+        <div class="save-bubble" aria-label="Flag this find">
+          <svg viewBox="0 0 24 24"><path d="M12 3 C 9 7, 7 11, 7 14 C 7 17, 9 19, 12 19 C 15 19, 17 17, 17 14 C 17 11, 15 7, 12 3 Z" /></svg>
+        </div>
+      </div>
+      <div class="title-block">
+        <h2 class="title">Brass library lamp</h2>
+        <div class="price">$48</div>
+      </div>
+      <div class="dest-wrap">
+        <div class="dest-B">
+          <div class="eyebrow">Purchase this item at</div>
+          <div class="mall-row">
+            <div class="mall-info">
+              <div class="mall-subtitle">America's Antique Mall · Lexington, KY</div>
+              <div class="vendor-name">Treasures &amp; Trinkets</div>
+            </div>
+            <div class="booth-badge">
+              <div class="booth-label">Booth</div>
+              <div class="booth-number">14B</div>
+            </div>
+          </div>
+          <div class="map-snap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FRAME C ===================== -->
+  <div class="frame">
+    <div class="frame-label">
+      <div class="name">Frame C — Map-led composition</div>
+      <div class="desc">Map IS the hero. 16:9 cartographic image at top of card; mall + booth info as info strip below. Eyebrow floats above the card as a label.</div>
+    </div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="back-bubble">‹</div>
+        <div class="profile-bubble">·</div>
+      </div>
+      <div class="photo">
+        <div class="caption-tag">
+          <span>Asking</span>
+          <span class="price">$48</span>
+        </div>
+        <div class="save-bubble" aria-label="Flag this find">
+          <svg viewBox="0 0 24 24"><path d="M12 3 C 9 7, 7 11, 7 14 C 7 17, 9 19, 12 19 C 15 19, 17 17, 17 14 C 17 11, 15 7, 12 3 Z" /></svg>
+        </div>
+      </div>
+      <div class="title-block">
+        <h2 class="title">Brass library lamp</h2>
+        <div class="price">$48</div>
+      </div>
+      <div class="dest-wrap">
+        <div class="dest-C-eyebrow-outer">
+          <span style="font-size: 16px;">🏬</span>
+          <span>Purchase this item at</span>
+        </div>
+        <div class="dest-C">
+          <div class="map-snap"></div>
+          <div class="info-strip">
+            <div class="mall-info">
+              <div class="mall-subtitle">America's Antique Mall · Lexington, KY</div>
+              <div class="vendor-name">Treasures &amp; Trinkets</div>
+            </div>
+            <div class="booth-badge">
+              <div class="booth-label">Booth</div>
+              <div class="booth-number">14B</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===================== TRADEOFF MATRIX ===================== -->
+<div class="matrix">
+  <h2>Trade-off matrix</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Axis</th>
+        <th><span class="frame-tag">Frame A — Anchored card</span></th>
+        <th><span class="frame-tag">Frame B — Secondary hero</span></th>
+        <th><span class="frame-tag">Frame C — Map-led</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Visual register</strong></td>
+        <td>Quiet, matches today's refined surface. Closest to existing chrome.</td>
+        <td>Clearly a second hero. Soft lift + paper-warm bg + tracked eyebrow signal "this is an anchor."</td>
+        <td>Spatial-first. Map is the dominant visual; address info is overlay/strip.</td>
+      </tr>
+      <tr>
+        <td><strong>Cohesion gain</strong></td>
+        <td>Real but subtle — same parts as today, wrapped in one surface with no internal gaps.</td>
+        <td>Strongest cohesion — distinct identity makes it a balanced peer to the photo hero, not a refined sibling.</td>
+        <td>High — map carries the meaning so individual elements compete less.</td>
+      </tr>
+      <tr>
+        <td><strong>"Where you go" reading</strong></td>
+        <td>Mid. Reads as "card with mall + booth + map." Sequential.</td>
+        <td>High. Eyebrow vocabulary ("PURCHASE THIS ITEM AT") frames the card as a destination marker.</td>
+        <td>Highest. Map IS the place; you read where before you read what.</td>
+      </tr>
+      <tr>
+        <td><strong>Risk on busy maps</strong></td>
+        <td>Low — small map (2.5:1) won't compete with photo.</td>
+        <td>Low–mid — 2:1 map is slightly larger but still subordinate to photo hero.</td>
+        <td>Mid–high — 16:9 map at top of card is a big visual block right after the photo hero; risk of visual top-heaviness on a long-mall-name find.</td>
+      </tr>
+      <tr>
+        <td><strong>Discoverability of save (corner bubble)</strong></td>
+        <td>Standard. Bubble + photo + clean stack.</td>
+        <td>Standard. Same photo treatment.</td>
+        <td>Standard. Same photo treatment.</td>
+      </tr>
+      <tr>
+        <td><strong>Implementation cost</strong></td>
+        <td>Lowest. Wrap existing parts; gap retirement.</td>
+        <td>Low–mid. New paper-warm card primitive, slight shadow tier.</td>
+        <td>Mid. Map composition + info strip layout; bigger map snapshot URL aspect.</td>
+      </tr>
+      <tr>
+        <td><strong>Recommended for</strong></td>
+        <td>If destination hero should stay quiet supporting chrome.</td>
+        <td><strong>If destination hero should read as a balanced second anchor that gives the page two peers.</strong></td>
+        <td>If David wants spatial-first composition where the geography leads.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
