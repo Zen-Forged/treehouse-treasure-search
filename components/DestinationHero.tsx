@@ -290,6 +290,16 @@ export default function DestinationHero({
                 height:    "100%",
                 objectFit: "cover",
                 display:   "block",
+                // Session 171 dial #2 — push the Mapbox light-v11 default
+                // grey palette toward the project's cartographic warm-cream
+                // basemap (v1.basemap.cream #F1E9D2). Mapbox Static Images
+                // API doesn't accept the runtime palette overrides
+                // TreehouseMap applies via setPaintProperty — until a
+                // Mapbox Studio published style URL lands (carry from
+                // session 108 + 156), CSS filter is the cheapest seam.
+                // sepia warms grey → brown; hue-rotate nudges brown → cream;
+                // saturate restores color density lost to sepia.
+                filter:    "sepia(0.4) saturate(1.1) hue-rotate(-8deg)",
               }}
             />
           </Link>
