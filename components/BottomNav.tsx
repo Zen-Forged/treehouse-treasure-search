@@ -116,6 +116,7 @@
 
 "use client";
 
+import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MdOutlineExplore } from "react-icons/md";
@@ -258,22 +259,111 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
     padding: 3,
     display: "flex", alignItems: "center", gap: 24,
-    // Session 168 round 5 finding 2 part 2 — David iPhone QA: "highlight
-    // area still slides out of the component." Round 4's `initial={false}`
-    // killed the mount-from-bottom-at-angle enter, but the cross-tab
-    // layoutId animation path can still visually escape the nav's rounded
-    // bounds (spring undershoot + layoutId resizing between different-
-    // width tabs interpolates the pill through space outside its target).
-    // `overflow: hidden` clips anything that escapes to the rounded nav
-    // container — structural safety net. Geometry note: the nav's 18px
-    // radius + 3px padding leaves a 15px inner radius which is exactly
-    // 1px more than the pill's 14px radius, so the pill sits flush inside
-    // without visible clipping of its rounded corners during steady state.
-    overflow: "hidden",
+    // Session 168 round 6 finding 2 part 3 — overflow:hidden retired alongside
+    // the layoutId-pattern retirement below. The new canonical single-pill
+    // computed-position pattern measures the pill's position FROM WITHIN
+    // the nav's coordinate space, so the pill is structurally incapable
+    // of escaping — no safety net needed. Removing overflow:hidden also
+    // unclips the Saved-tab badge (which sits at right: -2 on the icon row,
+    // very close to the nav's inner edge).
   };
+
+  // Session 168 round 6 finding 2 part 3 — David iPhone QA: "highlight
+  // area on nav still slides from the corner." After 2 prior patches
+  // (round 4 initial={false} + round 5 overflow:hidden + layout=position
+  // + tween) failed to fully contain the layoutId-driven animation,
+  // restructured to the canonical single-pill computed-position pattern
+  // per feedback_kill_bug_class_after_3_patches ✅ Promoted. The pill is
+  // now a single motion.div at the nav level (sibling of all tab buttons,
+  // not nested inside the active tab), with its absolute left/width
+  // measured from each active tab's getBoundingClientRect relative to
+  // the nav. framer-motion animates pure CSS `x` translate + width
+  // between the measured geometries — no layoutId source/destination
+  // ambiguity, no per-tab parent-change interpolation, no possibility
+  // of escape because position is computed FROM WITHIN the nav's
+  // coordinate space.
+  //
+  // tabRefs: collected via callback ref so the render order can change
+  // (vendor login adds/removes Booth tab) without ref stalemate.
+  // pillGeom: { x, width } in nav-local coordinates. null when no active
+  // tab (the pill doesn't render at all then — no flash on first mount).
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [pillGeom, setPillGeom] = useState<{ x: number; width: number } | null>(null);
+
+  // useLayoutEffect fires synchronously after DOM commit and before paint —
+  // pill measurement + state update lands in the same paint as the tab's
+  // active-state style flip (bold weight, color), so the pill always paints
+  // at the correct position without a transient frame.
+  useLayoutEffect(() => {
+    if (!active) {
+      setPillGeom(null);
+      return;
+    }
+    const btn = tabRefs.current[active];
+    if (!btn) {
+      setPillGeom(null);
+      return;
+    }
+    const nav = btn.parentElement;
+    if (!nav) return;
+    const btnRect = btn.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+    setPillGeom({
+      x:     btnRect.left - navRect.left,
+      width: btnRect.width,
+    });
+  }, [active, tabs.length]);
+
+  // Window resize / orientation change → re-measure.
+  useEffect(() => {
+    function reMeasure() {
+      if (!active) return;
+      const btn = tabRefs.current[active];
+      if (!btn) return;
+      const nav = btn.parentElement;
+      if (!nav) return;
+      const btnRect = btn.getBoundingClientRect();
+      const navRect = nav.getBoundingClientRect();
+      setPillGeom({
+        x:     btnRect.left - navRect.left,
+        width: btnRect.width,
+      });
+    }
+    window.addEventListener("resize", reMeasure);
+    return () => window.removeEventListener("resize", reMeasure);
+  }, [active]);
 
   return (
     <nav style={navStyle}>
+      {/* Single pill — sibling of all tab buttons, absolutely positioned
+          relative to nav. Renders only when an active tab is measured;
+          animates x + width between tab geometries via deterministic
+          tween. pointerEvents: none so taps fall through to the buttons
+          underneath. */}
+      {pillGeom && (
+        <motion.div
+          initial={false}
+          animate={{ x: pillGeom.x, width: pillGeom.width }}
+          transition={{ type: "tween", duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+          style={{
+            position: "absolute",
+            // top/bottom inset matches the nav's 3px padding so the pill
+            // sits in the inner content area (nav's 18px radius − 3px
+            // padding = 15px inner radius, hugging the pill's 14px radius
+            // flush at steady state).
+            top:    3,
+            bottom: 3,
+            left:   0,
+            // height is intrinsic (top:3 / bottom:3 = nav height - 6).
+            // width is animated; initial flash-prevention via initial={false}
+            // pairs with pillGeom-null-until-measured gating above.
+            background:    C.greenLight,
+            borderRadius:  14,
+            zIndex:        0,
+            pointerEvents: "none",
+          }}
+        />
+      )}
       {tabs.map(tab => {
         const isActive  = active === tab.key;
         const showBadge = tab.badge && flaggedCount > 0;
@@ -282,6 +372,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
         return (
           <button
             key={tab.key}
+            ref={(el) => { if (tab.key) tabRefs.current[tab.key] = el; }}
             onClick={() => {
               // Session 168 round 6 — David iPhone QA: "when navigating to
               // the booth page the hero image does not load from the top."
@@ -312,37 +403,14 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               justifyContent: "center", gap: 0, padding: 0,
               background: "none", border: "none", cursor: "pointer",
               color: labelColor,
+              // Round 6 — zIndex:1 lifts each tab above the nav-level pill
+              // (which is zIndex:0). position:relative establishes the
+              // stacking context required for zIndex to apply.
               position: "relative",
+              zIndex: 1,
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            {/* Session 159 — David verbatim: "No scaling of selected items
-                or animations needed other than the highlight box sliding
-                left or right." Pre-session-159 the active inner pill bg +
-                padding crossfaded with `transition: "background 0.18s ease,
-                padding 0.18s ease"` — two pills appeared/disappeared at
-                their tab positions, not a single highlight box sliding
-                between them. New shape: padding is CONSTANT 5px/12px on
-                every tab (geometry unified so the highlight doesn't change
-                shape mid-slide), and the green-tinted bg is rendered via a
-                single `<motion.div layoutId="bottomnav-active-pill">` that
-                framer-motion morphs from the old active tab's wrapper into
-                the new active tab's wrapper on tab change. Spring transition
-                (stiffness 500 / damping 40) gives a crisp snap without
-                under-damped overshoot.
-
-                Tradeoff: inactive tabs now reserve 5/12 of padding each, so
-                each tab's intrinsic width grows by ~34px vs the pre-159
-                inactive shape. The compact-padding-3 outer container from
-                Commit 2 absorbs this; the overall pill still reads
-                "compact" because the outer container hugs the inner pills
-                at 3px breathing room.
-
-                Layout note — `<motion.div layoutId>` requires both possible
-                positions to be mounted in the same React tree on each
-                render. They are: every tab button always renders, only
-                one carries the motion.div at any given time. Framer-motion
-                handles the cross-button morph automatically. */}
             <div
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
@@ -351,54 +419,21 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
                 // the icon-baseline mismatch.
                 gap: 5,
                 // Session 159 — padding CONSTANT (was conditional on isActive).
-                // See Commit 3 commentary above for layoutId-slide rationale.
+                // Round 6 — pill no longer nested inside; padding now serves
+                // only as the tap-target geometry. Each tab's intrinsic width
+                // (padding + content) is what the nav-level pill measures
+                // and matches when this tab becomes active.
                 padding: "5px 12px",
                 borderRadius: 14,
                 position: "relative",
               }}
             >
-              {isActive && (
-                <motion.div
-                  layoutId="bottomnav-active-pill"
-                  // Session 168 round 4 finding 2 — David iPhone QA: "The
-                  // highlight animation for the selected nav icon should
-                  // stay contained in the nav bar component and only move
-                  // left/right. It's currently animating in from the bottom
-                  // and coming in at an angle." `initial={false}` suppresses
-                  // the default mount enter animation (opacity 0 + transform
-                  // offset) on first ever mount.
-                  //
-                  // Session 168 round 5 finding 2 part 2 — David iPhone QA:
-                  // "highlight area still slides out of the component."
-                  // Added (a) `layout="position"` to constrain layoutId
-                  // animation to position-only (pill snaps to new size,
-                  // slides in position only — no size-interpolation
-                  // diagonal-path artifact); (b) spring → tween transition
-                  // for deterministic motion (no undershoot/overshoot from
-                  // the prior stiffness 500 / damping 40 spring which sat
-                  // at ~0.89 damping ratio, technically underdamped).
-                  // Combined with `overflow: hidden` on the nav container
-                  // above, the pill is structurally constrained to slide
-                  // left/right within the nav's rounded bounds only.
-                  initial={false}
-                  layout="position"
-                  transition={{ type: "tween", duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: C.greenLight,
-                    borderRadius: 14,
-                    zIndex: 0,
-                  }}
-                />
-              )}
               <div style={{
                 position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
                 // Session 157 Review Board #1 — anchor row height at 22 (max
                 // icon size in the row).
                 height: 22,
                 color: iconColor,
-                zIndex: 1,
               }}>
                 {tab.icon}
                 {showBadge && (
@@ -436,7 +471,9 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
                 fontFamily: "system-ui, sans-serif",
                 fontSize: 10, fontWeight: isActive ? 600 : 400,
                 letterSpacing: "0.2px", lineHeight: 1, color: "inherit",
-                position: "relative", zIndex: 1,
+                // Round 6 — position:relative + zIndex:1 retired here; the
+                // parent button now owns the stacking context above the
+                // nav-level pill via its own position:relative + zIndex:1.
               }}>
                 {tab.label}
               </span>
