@@ -363,11 +363,15 @@ function ShelfSection({
           gap: 8,
         }}
       >
+        {/* Review Board Finding 4 (session 169 round 2) — eyebrow
+            fontSize 16 → 18 + sibling "Visit Booth →" link bumps to
+            match (cross-eyebrow consistency with "Purchase this item
+            at" above). David: "same with more from this booth." */}
         <div
           style={{
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
-            fontSize: 16,
+            fontSize: 18,
             color: v2.text.muted,
           }}
         >
@@ -382,7 +386,7 @@ function ShelfSection({
               gap:            2,
               fontFamily:     FONT_CORMORANT,
               fontStyle:      "italic",
-              fontSize:       16,
+              fontSize:       18,
               fontWeight:     500,
               color:          v2.accent.green,
               lineHeight:     1.4,
@@ -1705,6 +1709,11 @@ export default function FindDetailPage() {
               semantically closer to the action. The cardInner Link wrapper
               below still keeps card-tap routing to /shelf/[slug] as a
               wider hit target. */}
+          {/* Review Board Finding 4 (session 169 round 2) — eyebrow
+              fontSize 16 → 18 + PiStorefront glyph 16 → 18 to match.
+              David: "The text for Purchase this item at is very small
+              hard to read." Pairs with the "More from this booth…"
+              eyebrow bump in same commit for cross-eyebrow consistency. */}
           <div
             style={{
               display:        "inline-flex",
@@ -1715,12 +1724,12 @@ export default function FindDetailPage() {
               paddingRight:   2,
               fontFamily:     FONT_CORMORANT,
               fontStyle:      "italic",
-              fontSize:       16,
+              fontSize:       18,
               color:          v2.text.secondary,
               lineHeight:     1.4,
             }}
           >
-            <PiStorefront size={16} aria-hidden style={{ flexShrink: 0 }} />
+            <PiStorefront size={18} aria-hidden style={{ flexShrink: 0 }} />
             Purchase this item at
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
