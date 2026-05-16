@@ -246,7 +246,7 @@ export default function TabsChrome() {
             zIndex:   OVERLAY_Z,
           }}
         >
-          <MastheadBackButton onClick={closeDrawer} />
+          <MastheadBackButton onClick={closeDrawer} variant="overlay" />
         </div>
       )}
 
@@ -268,7 +268,7 @@ export default function TabsChrome() {
           zIndex:   OVERLAY_Z,
         }}
       >
-        <MastheadProfileButton />
+        <MastheadProfileButton variant="overlay" />
       </div>
 
       {showChipAndDrawer && (

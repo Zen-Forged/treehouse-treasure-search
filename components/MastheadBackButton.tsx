@@ -25,7 +25,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { v1 } from "@/lib/tokens";
+import { v1, v2 } from "@/lib/tokens";
 
 interface MastheadBackButtonProps {
   /** Path to push when window.history is empty (deep links). Default "/". */
@@ -38,11 +38,25 @@ interface MastheadBackButtonProps {
    * changes. fallback is ignored when onClick is provided.
    */
   onClick?: () => void;
+  /**
+   * Session 169 round 4 — visual variant for context-aware contrast.
+   * Default = "default" (v1.iconBubble rgba(42,26,10,0.06)). Reads well
+   * inside masthead chrome where the bubble lives on a known cream bg
+   * (v2.bg.main OR v2.surface.warm — both have decent contrast against
+   * the rgba dark tint).
+   * "overlay" = solid v2.surface.warm bg + 1px v2.border.light border.
+   * Used when the bubble floats over varied/dark backgrounds (TabsChrome
+   * floating overlays over HomeHero photo). Pre-Round-3 visual; restored
+   * here as overlay-only contract since Round-3 unification flipped the
+   * default to v1.iconBubble for masthead-slot consistency.
+   */
+  variant?: "default" | "overlay";
 }
 
 export default function MastheadBackButton({
   fallback = "/",
   onClick,
+  variant = "default",
 }: MastheadBackButtonProps = {}) {
   const router = useRouter();
 
@@ -70,8 +84,8 @@ export default function MastheadBackButton({
         display:         "flex",
         alignItems:      "center",
         justifyContent:  "center",
-        background:      v1.iconBubble,
-        border:          "none",
+        background:      variant === "overlay" ? v2.surface.warm : v1.iconBubble,
+        border:          variant === "overlay" ? `1px solid ${v2.border.light}` : "none",
         cursor:          "pointer",
         padding:         0,
         WebkitTapHighlightColor: "transparent",

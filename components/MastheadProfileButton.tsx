@@ -64,7 +64,7 @@
 
 import { useRouter } from "next/navigation";
 import { CircleUser } from "lucide-react";
-import { v1, FONT_SYS } from "@/lib/tokens";
+import { v1, v2, FONT_SYS } from "@/lib/tokens";
 import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useUserRole } from "@/lib/useUserRole";
 
@@ -89,10 +89,26 @@ interface MastheadProfileButtonProps {
    * fixture renders where the auth hook should be bypassed.
    */
   authedInitials?: string;
+  /**
+   * Session 169 round 4 — visual variant for context-aware contrast.
+   * Default = "default" (v1.iconBubble rgba(42,26,10,0.06)) when guest;
+   * v1.green when initials. Reads well inside masthead chrome where
+   * the bubble sits on a known cream bg.
+   * "overlay" = solid v2.surface.warm + 1px v2.border.light when guest;
+   * v1.green still wins for initials state. Used when the bubble
+   * floats over varied/dark backgrounds (TabsChrome floating overlay
+   * over HomeHero photo). Mirrors MastheadBackButton variant contract.
+   * Review Board Finding 2 (session 169 round 4) — David: "No background
+   * showing for profile icon on explore or saved page." v1.iconBubble
+   * (rgba dark over dark hero photo) was invisible; overlay variant
+   * restores solid bg for visibility against varied bg.
+   */
+  variant?: "default" | "overlay";
 }
 
 export default function MastheadProfileButton({
   authedInitials,
+  variant = "default",
 }: MastheadProfileButtonProps = {}) {
   const router       = useRouter();
   const auth         = useShopperAuth();
@@ -142,8 +158,15 @@ export default function MastheadProfileButton({
         // that of the back button bg on /find page and ensure consistency."
         // Matches MastheadBackButton + /find/[id] IconBubble exactly so
         // every masthead-slot bubble (back OR profile) reads identically.
-        background:      effectiveInitials ? v1.green : v1.iconBubble,
-        border:          "none",
+        // Session 169 round 4 — variant="overlay" path uses solid
+        // v2.surface.warm + border for visibility against varied bg
+        // (TabsChrome floating over HomeHero hero photo).
+        background:      effectiveInitials
+          ? v1.green
+          : variant === "overlay" ? v2.surface.warm : v1.iconBubble,
+        border:          variant === "overlay" && !effectiveInitials
+          ? `1px solid ${v2.border.light}`
+          : "none",
         cursor:          "pointer",
         padding:         0,
         WebkitTapHighlightColor: "transparent",
