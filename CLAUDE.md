@@ -67,133 +67,103 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 166 (2026-05-14) — Frame C chrome restructure: Arc 2 + Arc 3 ship + 10 iPhone-QA-driven dial cycles across 7 walks — 18 runtime commits + 1 close
+## ✅ Session 167 (2026-05-16) — Chrome-unification design pass + archive + Shape A versioning shipped (v0.167.0) + worktree cleanup — 2 runtime ships + 1 close (NO chrome change to production)
 
-David opened with `/session-open`; standup recommended Round 3 iPhone QA on session-165 ship + Arc 2 + Arc 3 carry from session 164. David: *"yes."* Round 3 walk passed 5/5 (5 carries closed). Per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory, 2 cost shapes surfaced (Arc 2 only vs Arc 2+3 combined). David picked Shape B (combined). 18 runtime commits + close across 7 rounds of iPhone-QA-driven dial cycles compressed into a single session.
+David opened with `/session-open`; standup recommended David's larger vision from session 166 close (non-Explore pages adopt StickyMasthead WITH hero photo as background; wordmark "locks" into masthead on Home scroll). David confirmed hero asset (`BG.png` reference-res 475×268) + new wordmark (`treehouse_transparent.png` 815×399 RGBA) were ready in `/public/`. Initial design pass V1 mockup compounded **22 variables before David could see a frame** (9-way pre-V1 decision tree + 3-frame V1 spanning 7 axes + 7-row tradeoff matrix + 6 dial Qs). David: *"too many variables to account for. How can I give better guidance? Do I really just need to create a figma mockup of each screen and what I'm looking for? My initial thought is that the explore page shows the full hero image and then when it's scrolled the thinner masthead locks into place. When you navigate to the other pages then the thinner masthead with the graphic just always loads without the scroll effect."* — design pass cancelled.
 
-### Arc 2 — `<MallPickerChip>` primitive in isolation (2 commits)
+### NEW MEMORY PROMOTED AT FIRST FIRING: `feedback_pre_mockup_prose_model_first.md`
 
-Pure execution against session-164 design record D10+D11 per `feedback_design_record_as_execution_spec` ✅ Promoted-via-memory — **27th cumulative firing** across 27+ different features.
+Honest reflection on what went wrong on my end (NOT David's articulation): the mockup-first reflex compounded variables faster than David could absorb. His two-sentence prose model gave cleaner direction in 30 seconds than 45 minutes of mockup-eliciting Qs had. Captured rule + promoted-via-memory at first firing per `feedback_recurring_phrase_signals_system.md` ✅ Promoted (David's "too many variables / cancel this" matches the recurring-phrase signal exactly). The rule: **ASK for prose mental model FIRST when feature shape is unclear in initial framing — if clear, prose IS the design (skip V1 phase); if vague, run the full design pass.** 22-variable budget rule + 22-variable cancel signal handling. Sub-pattern of `feedback_reference_first_when_concept_unclear.md` ✅ Promoted forming a clean 2x2 with concept-clarity × prose-vs-mockup default.
 
-- `7979d1d` Arc 2.1 — `<MallPickerChip>` primitive at `components/MallPickerChip.tsx`. PiMapPinFill 22px v2.accent.green + Cormorant 22px name v1.inkPrimary + PiCaretDown 18px v2.text.secondary + initial padding 22/18/10 (dialed at dial 6 → 12/18/6).
-- `37ade99` Arc 2.2 — `/home-hero-test` smoke route extension. Cycles 3 mock mall names on tap (validates lineHeight + chevron across short/long/all-Kentucky cases).
+### Audit-first scoping + design pass re-do against prose model
 
-### Arc 3 — (tabs)/ adoption (4 commits sequenced smallest→largest)
+Per `feedback_visibility_tools_first` ✅ Promoted, dispatched audit of every in-scope surface's current chrome (Home, Saved, /find, /shelf, /me, /login, etc.); produced **"what stays / what changes / what needs your call" table** mapping David's 3 rules against current production substrate. Surfaced 4 open questions where prose model collided with reality: Q1 Profile button location (floating overlay vs masthead slot); Q2 Back button same question; Q3 Home masthead behavior (always visible vs arrives on scroll); Q4 wordmark presence in hero photo. David locked: Q1=(b) floating overlay stays · Q2=(b) floating overlay stays · Q3=(b) masthead arrives on scroll · Q4=(iii) wordmark only in masthead.
 
-**Two load-bearing pre-implementation calls surfaced + resolved before drafting** per `feedback_user_clarification_restate_interpretation` ✅ Promoted:
+V1 chrome-unification mockup (`docs/mockups/chrome-unification-v1.html` — 5 surfaces: Explore at rest + scrolled, Saved, /find/[id], /shelf/[slug]) → David: *"closer"* + refinement *"I don't actually want the logo to hit the bottom of the hero image, rather I want the mall selector component to appear to scroll over the top of the bottom portion of the hero image to trim the bottom of the photo. Is that possible?"* V2 chip-overlay refinement (`docs/mockups/chrome-unification-v2.html` — masthead bumped 98→130px tall; logo at vcenter y≈65 sits with photo extending below; chip sticky-pins at y=100 with z-index above strip + upward `box-shadow: 0 -2px 8px` per D15) → David: *"lets give it a shot."*
 
-- **Call 1 — chip onTap target**: Design record D10 said MallSheet but MallSheet has been dormant in (tabs)/ chrome since session 158; canonical (tabs)/ picker today is MallMapDrawer. **Schema-forced deviation per `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted-via-memory at session 141 — 6th cumulative firing**. David picked option (a) MallMapDrawer.
-- **Call 2 — chrome on Saved**: 3 options A universal / B Home-only / C compromise (hero universal + SearchBar Home-only). David picked C. Later reversed at dial 7 within-session per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128.
+### 5-commit chrome ship to worktree branch (NOT main)
 
-Commits:
+Build clean across all 47 routes at every commit boundary; pushed to Vercel preview. Sequenced smallest+most-isolated first per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — 5 firings this session (cumulative ~413+):
 
-- `e29aa91` Arc 3.1.1 — HomeHero search props optional + export STICKY_THIN_HEIGHT_PX. Pure additive contract extension.
-- `d8ab9f8` Arc 3.1.2 — `<TabsChrome>` orchestrator at `components/TabsChrome.tsx`. Owns URL plumbing + ?mall=<slug> URL intake + useSavedMallId + useMapDrawer + getActiveMalls. No consumers yet.
-- `db92b9e` Arc 3.1.3 — Single coupled commit per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted-via-memory: `(tabs)/layout.tsx` retires StickyMasthead + 4 masthead components + mounts `<TabsChrome>`; `(tabs)/page.tsx` retires HomeChrome wrapper + paddingTop reservation; MallMapDrawer top realigns from masthead+search+strip calc stack to STICKY_THIN_HEIGHT_PX. Net −170 LOC, build clean across all 47 routes.
-- `ca22650` Arc 3.2 — dead-code byproducts per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted. 4 file deletes (HomeChrome + MallStrip + SearchBarRow + `/home-chrome-test` smoke route) + 2 scope-adjacent doc-rot scrubs. ~700 LOC retired. **Net change at this point: −636 LOC.**
+- `fbe7f26` Design pass: chrome unification design record + V1/V2 mockups + BG.png + treehouse_transparent.png + dead-code retire
+- `8bf01b4` Add `lib/chromeTokens.ts` — shared geometry constants (MASTHEAD_HEIGHT, LOGO_TOP, CHIP_TOP, STRIP_Z, CHIP_Z, `stripBackgroundImage()`)
+- `31c8d8d` StickyMasthead refactor — adopts strip aesthetic (BG.png cropped + cream-fade), wordmark → treehouse_transparent.png, MASTHEAD_HEIGHT safe-area+84 → safe-area+116. Inherits across 7 consumers
+- `b2510fb` **Coupled commit** (5 files): HomeHero rewrite (drop SearchBar, BG.png swap, simplify) + TabsChrome rewire (Saved mounts StickyMasthead, sibling sticky logo on Home, chip overlay geometry) + MallPickerChip sticky-top → CHIP_TOP + MallMapDrawer drawer-top recalc + `/home-hero-test` smoke route retire. **Net −212 LOC.** Per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted (4-file scale).
+- `821f424` /login wordmark img swap
 
-### 10 iPhone-QA-driven dial commits across 7 walk rounds
+### David's pivotal call — don't promote to production, iterate from production baseline
 
-**Round 1 (3 dials)** — drawer covers chip / search needs headroom / hero doesn't auto-collapse on drawer-open:
+David: *"Okay, so I don't want to implement any of these changes in production. I'd rather start back with the latest version in production and iterate from that one. What's the best way to do this?"* Cost-shape triage on branch fate (3 options: archive-rename / park / delete) + versioning preservation (3 options: cherry-pick / redo / discard). David picked **Archive-rename + cherry-pick versioning to fresh branch**.
 
-- `f65aae2` Dial 1 — SEARCH_BOTTOM_OFFSET 32 → 16 (more headroom above search bar in sticky-collapsed state).
-- `9a3e603` Dial 2 — MallPickerChip becomes `position: sticky; top: 90; zIndex: 11` + MallMapDrawer top realigns to `STICKY_THIN_HEIGHT_PX + CHIP_VISIBLE_HEIGHT_PX` (chip stays visible as dismiss affordance above drawer).
-- `0c1f372` Dial 3 — TabsChrome useEffect auto-scrolls to y=200 on drawer-open if scrollY<190 (engages hero+chip sticky-collapse naturally).
+Mechanics executed: pushed worktree HEAD to `archive/chrome-unification-v1` on origin (work preserved under sensible name for future revival) → deleted `claude/jovial-williamson-474480` on origin → switched worktree to fresh branch `chore/shape-a-versioning` off origin/main → cherry-picked `a4cccc9` (versioning infra commit) → amended CHANGELOG.md to scope to versioning-only (chrome-unification entry retired since chrome doesn't ship) → PR [#47](https://github.com/Zen-Forged/treehouse-treasure-search/pull/47) → squash-merged to main as `34d6a70` → tagged `v0.167.0` annotated on merge SHA → pushed tag. **Chrome work preserved on origin at `archive/chrome-unification-v1` (SHA `a4cccc9`); production main untouched by chrome change.**
 
-**Round 2 walk** clean.
+### Versioning discipline question + Shape A setup
 
-**Round 3 (3 dials)** — chip padding generous / first thumbnail clipped / Reset top too far:
+Earlier mid-session, David: *"1 important question comes up as I look at this, which is how do I start controlling versioning better. How can you help me with that"* Cost-shape triage surfaced **4 shapes** (A tags+CHANGELOG / B + GitHub Releases / C + Vercel promotion gate / D + visual regression). Pre-beta cadence + investor narrative needs aligned on A. David picked Shape A. Sub-decision on naming scheme: **session-aligned `v0.{session}.{patch}`** so versions map directly to CLAUDE.md session blocks. Hotfix lane via patch increments. v1.0.0 at beta launch.
 
-- `460527d` Dial 4 — MapControlPill top 12 → 8.
-- `a86b647` Dial 5 — TabsChrome auto-scroll 200 → 190 (lands exactly at sticky-engagement threshold, feed flushes with chip bottom).
-- `d065bc5` Dial 6 — MallPickerChip TOP_PADDING 22→12 / BOTTOM_PADDING 10→6 / CHIP_VISIBLE_HEIGHT_PX 62→48 (within-session D11 reversal).
+Shape A implementation (now live in production via PR #47):
+- **CHANGELOG.md** at repo root (Keep a Changelog format; first entry v0.167.0)
+- **package.json** version bumped 0.1.0 (Next.js scaffold default) → 0.167.0
+- **.claude/commands/session-close.md** updated with new step 4 (Versioning) before Git step + post-merge tagging step in Git block + 2 new "Do NOT" rules. Every future `/session-close` now auto-bumps version + prepends CHANGELOG entry + tags merge SHA
 
-**Round 4 (2 dials)** — chip should retire from Saved (R18 session 121 lock; no mall-scoping there) / bg should be #E6DECF:
+### Worktree cleanup operational pass
 
-- `9b5f4ee` Dial 7 — TabsChrome gates chip + drawer behind `showChipAndDrawer = isHome`. Within-session reversal of Call 2 Option C surfaced explicitly per `feedback_surface_locked_design_reversals` ✅ Promoted.
-- `8083144` Dial 8 — NEW token `v2.bg.tabs = #E6DECF` extracted (audit showed v2.bg.main has 37 non-(tabs)/ consumers, too broad for system-wide swap). Single coupled commit across globals.css + tokens.ts + layout + chip + drawer + hero gradient. MapControlPill (Reset) deliberately keeps v2.bg.main so it stands out as affordance against new darker drawer bg.
+David: *"cleanup"* → `gh pr list --state merged --base main --limit 100` + worktree-list-porcelain per-branch lookup loop retired 43 of 46 merged worktrees in single pass. Round 2 deleted 6 additional orphan refs (5 no-PR/no-WT branches + claude/jovial-williamson-474480 since work preserved on origin under archive ref). **From 48 worktrees + 52 local claude/* branches → 5 worktrees + 3 branches.** 3 unmerged worktrees flagged for David's discretion (`vigorous-hypatia-3b8f29` OPEN PR — active session; `gifted-archimedes-23a31c` + `interesting-golick-212096` no-PR — could be aborted or in-flight; David: *"leave for now"*). `archive/chrome-unification-v1` ref verified on origin at `a4cccc9` post-cleanup.
 
-**Round 5** — 3 structural findings: back button missing on drawer-open / Profile chrome gone / Saved page redesign. Per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted, 3 cost shapes surfaced (A overlays / B reintroduce minimal masthead / C full redesign pass). David picked Shape A:
+### Memory firings cumulative through session 167
 
-- `9c2ad4e` Shape A commit 1 — `<MastheadProfileButton>` as position:fixed overlay at top-right (universal Home + Saved). OVERLAY_TOP + OVERLAY_X + OVERLAY_Z constants at module scope.
-- `c9fec68` Shape A commit 2 — `<MastheadBackButton>` as position:fixed overlay at top-left WHEN drawerOpen===true. Mirror geometry of Profile button.
+- **NEW: `feedback_pre_mockup_prose_model_first` ✅ Promoted-via-memory at first firing** — load-bearing operating mode for ANY future UI ask. Caused immediate behavior change within session (cancel → prose-first → audit-first → V1 with right scope).
+- `feedback_recurring_phrase_signals_system` ✅ Promoted — fired on "too many variables / cancel this" signal → triggered the new memory promotion.
+- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory — **3 firings this session** at META level: (1) branch fate triage (3 options); (2) versioning scheme triage (3 options); (3) Shape A vs B/C/D versioning shape triage (4 options). NEW pattern observed: cost-shape triage at META level for tooling/process asks (not just visual/UI). Sub-pattern extension worth tracking.
+- `feedback_user_clarification_restate_interpretation` ✅ Promoted — multiple firings (sub-decision Qs surfaced explicitly before each cost-shape execution).
+- `feedback_visibility_tools_first` ✅ Promoted — audit-first impact table for David's prose model; gh + git porcelain queries for worktree cleanup scoping.
+- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — 5 firings this session (~413+ cumulative).
+- `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted-via-memory — 1 firing this session (commit `b2510fb` 5-file coupled rewire).
+- `feedback_revert_to_clean_baseline_before_pivot` ✅ Promoted — David's "iterate from production baseline" was a textbook firing.
+- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — chrome rewire retired `/home-hero-test` smoke route; worktree cleanup retired 43+ dormant worktrees.
+- `feedback_executing_actions_with_care` (system prompt) — branch deletion + cherry-pick + version-bump decisions all surfaced as cost-shape Qs before destructive ops.
+- `feedback_treehouse_no_coauthored_footer` ✅ Promoted — honored on all commits + this close.
+- `feedback_session_close_auto_merges_pr` ✅ Promoted — fired on PR #47 merge (chore/shape-a-versioning); about to fire again on this close PR.
 
-**Round 6 (1 dial)** — David: "back and profile button were always in the exact same location horizontally and vertically … use /find and /shelf as reference":
+### 4 NEW Tech Rule candidate patterns (single firings — promote on 2nd firing)
 
-- `d2fe57a` Dial 9 — Single coupled commit aligning OVERLAY_TOP (env+14 → max(14, env-safe-area)+14) and OVERLAY_X (16→18) to match StickyMasthead's button viewport-y + paddingLeft/Right exactly. Visual parity across /find + /shelf + Home + Saved chrome corners.
-
-**Round 7 (1 dial)** — David: "sticky header should stop scrolling when the top of the search bar hits what would be the bottom of the masthead that we use on /find and /shelf":
-
-- `5757896` Dial 10 — STICKY_THIN_HEIGHT_PX (90 number) → STICKY_THIN_HEIGHT (CSS calc string, safe-area-aware: `calc(max(14px, env(safe-area-inset-top, 14px)) + 144px)` = MASTHEAD_HEIGHT + 60). Saved keeps 90px (no search bar to align). TabsChrome auto-scroll computes engagement threshold dynamically via NEW `--th-safe-area-inset-top` CSS var bridge in globals.css. 5-file single coupled commit (globals.css + HomeHero + chip + drawer + TabsChrome).
-
-### Memory firings cumulative through session 166
-
-- `feedback_design_record_as_execution_spec` ✅ Promoted-via-memory — **27th cumulative firing** across 27+ different features. Load-bearing operating mode validated yet again.
-- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — **18 firings this session** (~408+ cumulative).
-- `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted-via-memory — **4 firings this session** (Arc 3.1.3 chrome adoption / Dial 2 chip+drawer / Dial 8 bg tier / Dial 10 safe-area-aware geometry).
-- `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128 — 2 firings (Call 2 Option C → chip Home-only at dial 7; D11 padding reduce at dial 6).
-- `feedback_surface_locked_design_reversals` ✅ Promoted — multiple firings (dial 7 chip retirement, dial 9 overlay realignment, dial 10 sticky-stop reversal).
-- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory — 3 firings (Arc 2+3 combined / Shape A overlays / sub-shape decisions per round).
-- `feedback_user_clarification_restate_interpretation` ✅ Promoted — Call 1 + Call 2 surfaced as prose Q+A before drafting code.
-- `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted-via-memory at session 141 — **6th cumulative firing** (D10 MallSheet → MallMapDrawer drift surfaced at Arc 3 entry).
-- `feedback_visibility_tools_first` ✅ Promoted — multiple firings (chip-gate verify, geometry trace before drafting, audit-first scoping at Arc 3 entry).
-- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — Arc 3.2 swept 4 files + 2 doc-rot scrubs in single commit.
-- `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 close — **7th cumulative firing** (html2canvas-pro local-env miss resolved via `npm install` at session start).
-- `feedback_v2_options_before_drafting` — Call 1 surfaced MallSheet vs MallMapDrawer options before drafting.
-- `feedback_treehouse_no_coauthored_footer` ✅ Promoted — honored on all 18 runtime commits + this close.
-- `feedback_session_close_auto_merges_pr` ✅ Promoted — about to fire on PR merge.
-
-### 5 NEW Tech Rule candidate patterns (single firings, all promote on 2nd firing)
-
-1. **Cross-surface chrome consistency via shared constants** — Shape A overlays imported OVERLAY_TOP / OVERLAY_X derived from StickyMasthead's slot geometry so corner-affordance positions stay pixel-identical across surfaces (/find, /shelf, Home, Saved). Sub-pattern of `feedback_user_clarification_restate_interpretation` extended to geometry-tracking-across-primitives.
-2. **CSS var bridge for safe-area-inset in JS** — `env()` only works inside CSS; wrap as `--th-safe-area-inset-top: env(safe-area-inset-top, 0px)` then read via `getComputedStyle().getPropertyValue()` from JS for runtime device-aware geometry. Pattern extension of session 156's "CSS var bridge for non-CSS APIs" (Mapbox) to runtime device-awareness.
-3. **Single coupled commit at 5-file scale for shared geometry constant** — Dial 10 touched globals.css + HomeHero + MallPickerChip + MallMapDrawer + TabsChrome together because STICKY_THIN_HEIGHT is shared semantic geometry. Per-file commits would have created intermediate broken states. Extension of `feedback_single_coupled_commit_when_must_move_together` to geometry-constant-shared-across-N-files.
-4. **Live conversation as cost-shape design pass for refactor-class asks** — Findings 1-2-3 (back + profile + Saved chrome) surfaced cost shapes A/B/C in live conversation, David picked, ship without separate design record. Cheaper than full design pass for refactor-class asks (vs new-feature asks which still warrant design record + V1 mockup).
-5. **iPhone QA round-N rolling refinement compresses what was historically separate sessions** — 7 walk rounds + 18 commits + 10 dials in single session validates that the operating-system rules (smallest→largest + dead-code-byproduct + surface-locked-reversals + within-session-design-record-reversal + visibility-tools-first + cap-speculative-patching) compose to make mid-session refinement at scale a single-session deliverable rather than multi-session arc. Each dial under 5 min from finding-paste to commit-pushed.
+1. **Cost-shape triage at META level for tooling/process asks** — extended from design asks to tooling/process. Fired 3× this session (branch fate / versioning preservation / versioning shape). Sub-pattern of `feedback_triage_cost_shape_before_design_pass.md` ✅ Promoted.
+2. **Archive-then-fresh-branch flow for cancelled exploration** — when multi-commit exploration ends with "don't merge, iterate from production": push HEAD to `archive/*` ref → delete original `claude/*` ref → cherry-pick keepers to fresh branch off main → ship fresh branch. Preserves work without polluting main + makes future revival a `git checkout archive/*` away.
+3. **Worktree cleanup operational pattern** — `gh pr list --state merged --base main` + worktree-list-porcelain per-branch lookup loop scales cleanly to 40+ stale worktrees. Per-branch lookup avoids awk multi-line interpolation bugs.
+4. **Shape A versioning as canonical pre-beta pattern** — annotated tags + CHANGELOG.md + per-session bump wired into `/session-close`. Reference pattern for any future Treehouse-style project: lightest viable versioning that composes upward (B/C/D layer in cleanly when user-facing risk warrants).
 
 ### Roadmap delta
 
-**18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level — chrome restructure is operational + substrate, not feature roadmap.
+**18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level — this session shipped substrate (versioning) + operational hygiene (worktree cleanup) + preserved exploration (chrome archive). Not feature roadmap.
 
-Substrate added: `<TabsChrome>` orchestrator + `<MallPickerChip>` primitive + new `v2.bg.tabs` token + NEW `--th-safe-area-inset-top` CSS var bridge + safe-area-aware `STICKY_THIN_HEIGHT` calc string + Profile/Back overlays in (tabs)/ chrome at /find-matching positions. Substrate removed: `<HomeChrome>` + `<MallStrip>` + `<SearchBarRow>` + `/home-chrome-test` smoke route. **Net ~−636 LOC.**
+Production gained `v0.167.0` tag at `34d6a70` (CHANGELOG.md + package.json bump + session-close protocol). Production did NOT gain chrome-unification — preserved at `archive/chrome-unification-v1` on origin.
 
-### David's larger vision (session-close conversation)
+### Carries opening into session 168
 
-David articulated the structural target at session close: **non-Explore pages should adopt StickyMasthead chrome WITH the hero photo as background** behind/around the wordmark slot. Hero asset to be updated with separate floating wordmark (not baked-in). On Explore scroll, the wordmark "locks" into the canonical masthead position — same viewport y-coordinate as everywhere else; photo scrolls away, wordmark stays. /admin exempt.
+🚧 **NEW (167→168): Chrome-unification revival path** — `archive/chrome-unification-v1` on origin has 6 commits (design record + V1/V2 mockups + BG.png + treehouse_transparent.png + chromeTokens module + StickyMasthead refactor + coupled HomeHero/TabsChrome/MallPickerChip/MallMapDrawer rewire + login wordmark swap). Smaller-scope iteration recommended per `feedback_pre_mockup_prose_model_first.md` ✅ Promoted: start with just the asset swaps (`wordmark.png` → `treehouse_transparent.png` + `home-hero.png` → `BG.png`) WITHOUT the chip-overlay + sibling-sticky-logo + Saved-chrome-change scope. iPhone QA after asset swap; evolve from there.
 
-Session 166 leaves substrate that serves this vision:
-- Sticky-stop on Home anchored to MASTHEAD_HEIGHT bottom — wordmark's "lock position" math already aligned with where masthead would sit on other pages
-- Profile + Back overlays at exactly /find / /shelf StickyMasthead positions — chrome corner-affordances cross-surface consistent
-- Hero universal on Home + Saved (Saved no chip, hero stays as identity beat) — substrate for "StickyMasthead + hero background" transition
+🚧 **NEW (167→168): 2 unmerged worktrees** — `gifted-archimedes-23a31c` + `interesting-golick-212096`. No PR, could be aborted or in-flight. David's call when next encountering them.
 
-### Carries opening into session 167
+🚧 **NEW (167→168+): 4 NEW Tech Rule candidate patterns** from session 167 — cost-shape triage at META level for tooling/process asks / archive-then-fresh-branch flow for cancelled exploration / worktree cleanup operational pattern / Shape A versioning as canonical pre-beta pattern.
 
-🚧 **NEW (166→167): David's larger vision implementation** — primary recommended next move once hero asset is updated. (1) Asset swap when David ships new hero PNG with separate floating wordmark. (2) Saved page + other non-Home pages: adopt StickyMasthead WITH hero background (likely new chrome primitive composing both). (3) Wordmark lock-into-masthead transition on Home scroll (CSS sticky on wordmark element OR scroll-driven framer-motion). Worth a design pass when David ships new asset.
-
-🚧 **NEW (166→167+): 5 NEW Tech Rule candidate patterns** from session 166 — cross-surface chrome consistency via shared constants / CSS var bridge for safe-area-inset in JS / single-coupled-commit at 5-file scale for shared geometry constant / live-conversation as cost-shape design pass for refactor-class asks / iPhone QA round-N rolling refinement compresses sessions.
-
-🚧 [Continues all open carries from sessions 156-165; see prior tombstones.]
+🚧 [Continues all open carries from sessions 156-166; see prior tombstones.]
 
 ### Commits this session
 
-18 runtime commits + 1 close. See `git log --oneline ae444dc..HEAD`:
+2 runtime ships + 1 close, all on main:
+- `34d6a70` — PR [#47](https://github.com/Zen-Forged/treehouse-treasure-search/pull/47) Set up Shape A versioning (a4cccc9 cherry-picked from archive/chrome-unification-v1). **Tagged `v0.167.0`.**
+- Worktree cleanup (operational hygiene; not a commit — `gh` + git ops).
+- This close commit — PR [#48](https://github.com/Zen-Forged/treehouse-treasure-search/pulls) (about to land). **Tagged `v0.167.1`.**
 
-**Arc 2 + Arc 3 base ship (6 commits)**:
-- `7979d1d` Add MallPickerChip primitive (Arc 2.1)
-- `37ade99` Mount MallPickerChip in /home-hero-test (Arc 2.2)
-- `e29aa91` Make HomeHero search props optional + export STICKY_THIN_HEIGHT_PX (Arc 3.1.1)
-- `d8ab9f8` Add TabsChrome orchestrator (Arc 3.1.2)
-- `db92b9e` (tabs)/ adopt HomeHero + MallPickerChip chrome (Arc 3.1.3)
-- `ca22650` Retire HomeChrome + MallStrip + SearchBarRow + /home-chrome-test (Arc 3.2)
+Chrome-unification 5 commits exist on `archive/chrome-unification-v1` on origin (not on main): design pass + chromeTokens + StickyMasthead refactor + coupled chrome rewire + login wordmark swap. Vercel preview URL for that branch still valid for design-record archaeology.
 
-**Rounds 1-7 dials (12 commits)**:
-- `f65aae2` Drop SearchBar 20px lower (dial 1) · `9a3e603` Chip sticky + drawer geometry (dial 2) · `0c1f372` Auto-collapse on drawer-open (dial 3)
-- `460527d` Reset top 12→8 (dial 4) · `a86b647` Auto-scroll 200→190 (dial 5) · `d065bc5` Chip padding reduce (dial 6)
-- `9b5f4ee` Chip + drawer Home-only (dial 7) · `8083144` v2.bg.tabs tier + #E6DECF (dial 8)
-- `9c2ad4e` Profile overlay (Shape A 1) · `c9fec68` Back overlay when drawerOpen (Shape A 2)
-- `d2fe57a` Overlay geometry match /find (dial 9) · `5757896` Sticky-stop at masthead bottom (dial 10)
+---
 
-Squash-merged via close protocol below.
+## ✅ Session 166 (2026-05-14) — Frame C chrome restructure: Arc 2 + Arc 3 ship + 10 iPhone-QA-driven dial cycles across 7 walks — 18 runtime commits + 1 close (rotated to mini-block session 167 close)
+
+> Full block rotated out at session 167 close. Net: 18 runtime commits + 1 close. David opened with `/session-open`; round 3 walk on session-165 ship passed 5/5 (5 carries closed). Per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted, David picked Shape B (Arc 2 + Arc 3 combined). **Arc 2 (2 commits)**: `<MallPickerChip>` primitive at `components/MallPickerChip.tsx` (PiMapPinFill + Cormorant 22px + caret) + `/home-hero-test` smoke route extension cycling 3 mock mall names. **Arc 3 (4 commits sequenced smallest→largest)**: two pre-implementation calls resolved (chip onTap target = MallMapDrawer per schema-forced deviation; chrome on Saved = Option C compromise) → HomeHero search props optional + STICKY_THIN_HEIGHT_PX export → `<TabsChrome>` orchestrator → (tabs)/ adoption single coupled commit (StickyMasthead + 4 masthead components retire; HomeChrome + MallStrip + SearchBarRow + /home-chrome-test smoke route retire as dead-code byproducts; ~700 LOC deleted) → 10 iPhone-QA-driven dial commits across 7 walk rounds. Build clean across all 47 routes at every commit boundary. **Net ~−636 LOC.** **27th cumulative firing of `feedback_design_record_as_execution_spec` ✅ Promoted**; **6th cumulative firing of `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted**; **7th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted**. 5 NEW Tech Rule candidate patterns: cross-surface chrome consistency via shared constants / CSS var bridge for safe-area-inset in JS / single-coupled-commit at 5-file scale / live-conversation as cost-shape design pass for refactor-class asks / iPhone QA round-N rolling refinement compresses sessions. **David's larger vision** articulated at session close: non-Explore pages adopt StickyMasthead WITH hero photo as background; wordmark "locks" into masthead on Home scroll. Session 167 attempted this vision via design pass; archived to `archive/chrome-unification-v1` after David's "iterate from production baseline" call. PR [#46](https://github.com/Zen-Forged/treehouse-treasure-search/pull/46) shipped 18 commits.
+
+_(Session 166 detailed beat narrative removed at session 167 close — see git history at commit `41d75cf` for the full beat-by-beat narrative.)_
 
 ---
 
@@ -241,15 +211,7 @@ _(Session 161 detailed beat narrative removed at session 162 close — see git h
 
 ---
 
-## ✅ Session 160 (2026-05-13) — Production iPhone QA on session 159 ship + 5-commit Finding 2 + 5 redirect (admin-routing + vendor Booth tab + airplane/leaf weight pair) + Review Board round 2 airplane dial — 6 runtime commits + 1 close (rotated to mini-block session 161 close)
-
-> Full block rotated out at session 161 close. Net: 6 runtime commits + 1 close. David's iPhone QA walk on session 159 ship surfaced 11/16 pass + 2 redirects (Finding 2 BottomNav vendor + Finding 5 airplane/leaf weight pair); David explicitly deferred sessions 158+157 walks. **5 commits sequenced smallest→largest**: ShareBubble airplane size 22 + offset (David verbatim); FlagGlyph `weight?: "regular" | "bold"` prop + /find/[id] photo opt-in `weight="bold"` (session 97 PiLeafBold bounded local revival); lib/useUserRole.ts shared role-detection hook; MastheadProfileButton admin → /admin routing; BottomNav vendor Booth tab restoration (7th iteration of R10 D1; partial reversal of session 159 Q3). Plus Review Board round 2 dial post-Vercel-QA — David's verbatim SVG spec (size 23 + strokeWidth 1.8) shipped per `feedback_user_provided_verbatim_values_ship_as_is`. 4 NEW Tech Rule candidates: partial revival of retired role-state via shared hook / Phosphor weight variant opt-in / verbatim SVG spec → consumer-site React prop overrides / Review Board workflow scales linearly to single-finding round 2 paste. PR [#40](https://github.com/Zen-Forged/treehouse-treasure-search/pull/40) shipped 6 commits.
-
-_(Session 160 detailed beat narrative removed at session 161 close — see git history at commit `757e28b` for the full beat-by-beat narrative.)_
-
-
----
-
+<!-- session 160 mini-block rotated off at session 167 close — see git history at commit `757e28b` for the full session-160 mini-block narrative -->
 <!-- session 159 mini-block rotated off at session 166 close — see git history at commit `ae444dc` for the full session-159 mini-block narrative -->
 
 ---
@@ -292,9 +254,9 @@ _(Session 151 tombstone rotated off at session 156 close — see git history at 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-05-14 (session 166 close — Frame C chrome restructure: Arc 2 + Arc 3 ship + 10 iPhone-QA-driven dial cycles across 7 walks. **18 runtime commits + 1 close.** David opened `/session-open`; round 3 walk on session-165 ship passed 5/5 (5 carries closed). Per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted, David picked Shape B (Arc 2 + Arc 3 combined). Arc 2 (2 commits): `<MallPickerChip>` primitive at `components/MallPickerChip.tsx` + smoke route extension. Arc 3 (4 commits sequenced smallest→largest): two pre-implementation calls resolved (chip onTap target = MallMapDrawer per schema-forced deviation; chrome on Saved = Option C compromise) → HomeHero search props optional + STICKY_THIN_HEIGHT_PX export → `<TabsChrome>` orchestrator → (tabs)/ adoption single coupled commit (StickyMasthead + 4 masthead components retire; HomeChrome + MallStrip + SearchBarRow + /home-chrome-test smoke route retire as dead-code byproducts; ~700 LOC deleted) → 10 iPhone-QA-driven dial commits across 7 walk rounds (SearchBar offset / chip becomes sticky + drawer geometry / auto-collapse on drawer-open / Reset top tighten / auto-scroll target / chip padding reduce / chip+drawer Home-only / NEW v2.bg.tabs token tier #E6DECF / Profile + Back floating overlays / overlay geometry aligned to /find StickyMasthead / sticky-stop point safe-area-aware so search bar TOP pins at /find masthead bottom via new --th-safe-area-inset-top CSS var bridge). Build clean across all 47 routes at every commit boundary. **Net ~−636 LOC** across substrate additions + dead-code retirements. **27th cumulative firing of `feedback_design_record_as_execution_spec`** ✅ Promoted; **6th cumulative firing of `feedback_schema_forced_deviation_not_design_reversal`** ✅ Promoted; **7th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate`** ✅ Promoted; `feedback_single_coupled_commit_when_must_move_together` fired 4× this session. 5 NEW Tech Rule candidate patterns: cross-surface chrome consistency via shared constants / CSS var bridge for safe-area-inset in JS / single-coupled-commit at 5-file scale for shared geometry constant / live-conversation as cost-shape design pass for refactor-class asks / iPhone QA round-N rolling refinement compresses sessions.)
+> Last updated: 2026-05-16 (session 167 close — Chrome-unification design pass archived + Shape A versioning shipped v0.167.0 + worktree cleanup. **2 runtime ships + 1 close. NO chrome change to production.** David opened `/session-open`; recommended David's larger vision from session 166 close. 22-variable design pass V1 mockup → David: *"too many variables to account for. How can I give better guidance?"* → design pass cancelled. NEW MEMORY PROMOTED AT FIRST FIRING: `feedback_pre_mockup_prose_model_first.md` — when user has a clear picture, prose IS the design; skip V1 mockup phase + implement directly. 22-variable budget rule. Re-do via prose model + audit-first impact table + V1 chrome-unification mockup (5 surfaces) → David: "closer" + chip-overlay refinement → V2 → David: "lets give it a shot." 5-commit chrome ship to worktree branch + push to Vercel preview (NOT main). David: *"I don't want to implement any of these changes in production. I'd rather start back with the latest version in production and iterate from that one."* Cost-shape triage on branch fate + versioning preservation → David picked **Archive-rename + cherry-pick versioning to fresh branch**. Worktree HEAD pushed to `archive/chrome-unification-v1` on origin (work preserved for future revival) → original `claude/jovial-williamson-474480` deleted on origin → switched to fresh branch `chore/shape-a-versioning` off origin/main → cherry-picked versioning infra → amended CHANGELOG to scope to versioning-only → PR [#47](https://github.com/Zen-Forged/treehouse-treasure-search/pull/47) → squash-merged to main as `34d6a70` → tagged `v0.167.0` annotated. Earlier mid-session David asked: *"how do I start controlling versioning better"* → cost-shape triage on 4 shapes (A tags+CHANGELOG / B + GitHub Releases / C + Vercel promotion gate / D + visual regression) → David picked **Shape A**, session-aligned `v0.{session}.{patch}` scheme. Shape A implementation (now live): CHANGELOG.md at repo root + package.json bump + .claude/commands/session-close.md updated with versioning step + post-merge tagging. Worktree cleanup operational pass: 48 → 5 worktrees + 52 → 3 local claude/* branches retired. 3 unmerged worktrees flagged for David's discretion. **NEW Tech Rule candidate patterns observed**: cost-shape triage at META level for tooling/process asks (3 firings) / archive-then-fresh-branch flow / worktree cleanup operational pattern / Shape A versioning as canonical pre-beta pattern.)
 
-**Working tree:** clean (after close commit). **Build:** green (`npx tsc --noEmit` + `next build` clean at every commit boundary; 47 routes compile). **Beta gate:** unblocked. **Net change this session:** 18 runtime commits + 1 close commit. See `git log --oneline ae444dc..HEAD` for full chain (Arc 2: MallPickerChip primitive + smoke route; Arc 3: HomeHero contract extension + TabsChrome orchestrator + (tabs)/ adoption single coupled commit + dead-code byproducts retire; Rounds 1-7 dials: SearchBar offset / chip becomes sticky + drawer geometry / auto-collapse / Reset top / auto-scroll target / chip padding / chip+drawer Home-only / v2.bg.tabs / Profile + Back overlays / overlay-geometry-aligned-to-/find / sticky-stop-at-masthead-bottom).
+**Working tree:** clean (after close commit). **Build:** green (`npx tsc --noEmit` + `next build` clean at every commit boundary; 47 routes compile). **Beta gate:** unblocked. **Production:** `main` @ `34d6a70` (session 167 versioning shipped via PR #47) + `v0.167.0` tag. **Net change this session on production:** 1 runtime ship (Shape A versioning) + 1 close ship + worktree cleanup operation. **Chrome-unification work preserved on origin at `archive/chrome-unification-v1` (SHA `a4cccc9`)** — 6 commits including design record + V1/V2 mockups + new assets (BG.png + treehouse_transparent.png) + chromeTokens module + StickyMasthead refactor + coupled chrome rewire + login wordmark swap. Vercel preview URL for that branch still valid for design-record archaeology. **Versioning is now live**: `v0.167.0` tag on production; every future `/session-close` auto-bumps version + prepends CHANGELOG entry + tags merge SHA.
 
 **Lint baselines unchanged from session 163** (no consumer-side token migration this session — chrome restructure works at substrate layer, not v0.2/v1→v2 migration):
 - `lint:spacing` → 332 / `lint:colors` → 428 / `lint:fonts` → 633 / `lint:radius` → 144 / `lint:shadows` → 35
@@ -304,32 +266,19 @@ Roadmap: **18 R-rows total. 13 ✅ Shipped (R1, R3, R4a/b/c, R5a, R7, R10, R11, 
 
 Substrate added this session: `components/TabsChrome.tsx` (~190 LOC orchestrator) + `components/MallPickerChip.tsx` (~95 LOC primitive) + new `v2.bg.tabs` token (`#E6DECF` (tabs)/-surfaces tier; 37 non-(tabs)/ consumers of v2.bg.main untouched) + NEW `--th-safe-area-inset-top` CSS var bridge in globals.css (env() readable from JS for device-aware geometry) + safe-area-aware `STICKY_THIN_HEIGHT` calc string + Profile/Back overlays at /find / /shelf StickyMasthead-matching positions. Substrate removed: `<HomeChrome>` + `<MallStrip>` + `<SearchBarRow>` + `/home-chrome-test` smoke route. **Net ~−636 LOC**. **Cumulative firings**: smallest→largest ~408+ (18 this session); design-record-as-execution-spec **27th cumulative**; single-coupled-commit 4 firings; schema-forced-deviation **6th cumulative**; pre-existing local-env miss **7th cumulative**; within-session-design-record-reversal 2 firings.
 
-### 🚧 Recommended next session — David's larger vision implementation (hero asset + non-Home chrome unification + wordmark lock-into-masthead)
+### 🚧 Recommended next session — Iterate from production v0.167.0 baseline
 
-**Primary recommendation:** David articulated the larger structural target at session-166 close. Non-Explore pages should adopt StickyMasthead chrome WITH the hero photo as background; hero asset to be updated with separate floating wordmark; on Explore scroll, wordmark "locks" into canonical masthead position. /admin exempt.
+Per session 167's "iterate from production baseline" call, next session opens fresh from `main` @ `34d6a70` + `v0.167.0` tag. Chrome-unification work archived to `archive/chrome-unification-v1` on origin (preserved for future revival; not promoted to production this session).
 
-Implementation has 3 components:
-1. **Asset swap** when David ships the new hero PNG with separate-region wordmark (background photo + floating wordmark, not baked-in). Trivial code-side: replace `/public/home-hero.png` + verify gradient dimensions still read right (probably a dial pass).
-2. **Saved page + other non-Home pages chrome** — adopt StickyMasthead WITH hero background. Likely a new chrome primitive that composes both (StickyMasthead transparent-bg + hero-as-section-bg below). Worth a design pass when David ships the new asset.
-3. **Wordmark lock-into-masthead transition on Home scroll** — when wordmark is separate from photo, animate it from "floating in hero" to "pinned in masthead slot" as user scrolls. Options: CSS sticky on wordmark element / scroll-driven framer-motion / scroll-position-driven transform. Worth a design pass.
+**Primary recommendation:** **Smaller-scope chrome iteration** per `feedback_pre_mockup_prose_model_first.md` ✅ Promoted (NEW this session). Start with just the asset swaps from the archive — no scope creep:
+1. **Asset swap only**: copy `BG.png` + `treehouse_transparent.png` from `archive/chrome-unification-v1` → main; swap `home-hero.png` → `BG.png` in HomeHero; swap `wordmark.png` → `treehouse_transparent.png` in StickyMasthead default + /login direct img. ~2-3 commits. iPhone QA on production-PWA. If asset swap reads clean, evolve from there (one structural axis at a time).
+2. **NO chip-overlay yet, NO sibling-sticky-logo yet, NO Saved-chrome-change yet** — those were the scope items that compounded into 22 variables. Each can land in its own focused session if asset swap proves the visual direction.
 
-Session 166 leaves substrate that serves this vision:
-- Sticky-stop on Home anchored to MASTHEAD_HEIGHT bottom — wordmark's "lock position" math already aligned
-- Profile + Back overlays at exactly /find / /shelf StickyMasthead positions — chrome corner-affordances cross-surface consistent
-- Hero universal on Home + Saved (Saved no chip, hero stays as identity beat) — substrate for "StickyMasthead + hero background" transition
-
-**If NEW-4 "selected carousel" still reads "not noticeable enough" on round 3 walk** — ship **Shape B follow-on** (documented in commit `544a088` body): render selected card as sibling overlay outside the scroll container, position-matched via JS scroll offset. ~2 commits + ~30 min. True "peek outside container" achievable only with Shape B because scroll container's overflow-x:auto computes overflow-y to auto regardless of explicit visible.
-
-**After round 3 walks clean**, carry-forward arcs from session 164:
-- **Arc 2 — `<MallPickerChip>` primitive in isolation** (~2 commits): primitive at `components/MallPickerChip.tsx` (PinIcon green-filled + Cormorant 22px name + chev per session-164 design record D10-D11) + smoke route extension
-- **Arc 3 — `(tabs)/layout.tsx` adoption** (~2 commits): replace StickyMasthead+SearchBarRow+MallStrip sticky chrome with HomeHero + MallPickerChip on Home + Saved + Map; dead-code byproducts (StickyMasthead retire from (tabs)/, MASTHEAD_HEIGHT audit, MallStrip primitive retirement if no consumers, SearchBarRow Suspense wrapper)
-
-Combinable: if round 3 clean + Arcs 2 + 3 land in single session, that's a ~5-7 commit batched ship + production iPhone QA across all 3 (tabs)/ surfaces (Home + Saved + Map). Investor-update trigger fires after that.
-
-Additional follow-ons (each focused session):
-- **Tier B B7 — `v2.shadow.*` tier extraction** — Foundations Shadow section surfaces gap concretely; 3rd inline-shadow consumer is design-pass trigger (carousel selected boxShadow in `544a088` may already be that consumer)
+**If chrome iteration is not the priority,** alternatives ranked by leverage:
+- **Tier B B7 — `v2.shadow.*` tier extraction** — 3rd inline-shadow consumer (session 165 carousel `boxShadow` in `544a088`) is design-pass trigger
 - **Shape C arc 3 — `app/admin/page.tsx` v0.2 → v1/v2 migration** — largest in-scope debt cluster (~265 violations); uses live style guide as canonical reference; resolves admin green-drift
-- **Mapbox preview-only token setup** — **12-session carry** now (156→165); ~15 min HITL; unblocks preview-QA loop for any future Mapbox-touching feature
+- **Mapbox preview-only token setup** — **13-session carry now** (156→167); ~15 min HITL; unblocks preview-QA loop for any future Mapbox-touching feature
+- **iPhone QA on production v0.167.0** — Shape A versioning + chrome from session 166 is on production; full smoke walk to confirm no regressions
 
 ### 🚧 Operational follow-ups carrying
 
@@ -396,40 +345,35 @@ Additional follow-ons (each focused session):
 
 ### Alternative next moves (top 5)
 
-1. **Round 3 iPhone QA on round-2 ship** — primary recommendation. Test pulse centering · Reset behavior + tappability · carousel selected pop · MallMatchChip. ~5 min if clean. If "carousel selected still not noticeable enough" → Shape B follow-on commit.
-2. **Arc 2 + Arc 3 end-to-end ship** — carry from session 164. After round 3 walks clean, proceed `<MallPickerChip>` primitive + (tabs)/layout.tsx adoption. ~4-5 commits + push + iPhone QA across Home + Saved + Map. **Investor-update trigger fires after this.**
-3. **Shape C arc 3 — `app/admin/page.tsx` v0.2 → v1/v2 migration** — ~265 violations, largest in-scope debt cluster; uses now-live style guide as canonical reference; resolves admin green-drift.
-4. **Tier B B7 — `v2.shadow.*` tier extraction** — carousel selected boxShadow in `544a088` may be the 3rd inline-shadow consumer that triggers design pass.
-5. **Mapbox preview-only token setup** — **12-session carry now**; ~15 min HITL. Unblocks preview-QA loop for any future Mapbox-touching feature.
+1. **Asset-swap-only chrome iteration** — smallest-scope path toward David's larger vision. Copy `BG.png` + `treehouse_transparent.png` from `archive/chrome-unification-v1` → main. Swap `home-hero.png` → `BG.png` in HomeHero + `wordmark.png` → `treehouse_transparent.png` in StickyMasthead default + /login direct img. ~2-3 commits. iPhone QA on production-PWA. NO chip-overlay / sibling-sticky-logo / Saved-chrome-change yet — those scope items compounded into 22 variables this session.
+2. **Tier B B7 — `v2.shadow.*` tier extraction** — 3rd inline-shadow consumer (session 165 carousel `boxShadow` in `544a088`) is design-pass trigger.
+3. **Shape C arc 3 — `app/admin/page.tsx` v0.2 → v1/v2 migration** — ~265 violations, largest in-scope debt cluster; uses /review-board style guide as canonical reference; resolves admin green-drift.
+4. **Mapbox preview-only token setup** — **13-session carry now** (156→167); ~15 min HITL; unblocks preview-QA loop for Mapbox-touching features.
+5. **iPhone QA on production v0.167.0** — Shape A versioning + session 166 chrome live on production; full smoke walk to confirm no regressions.
 
 Full alternatives + operational backlog in [`docs/queued-sessions.md`](docs/queued-sessions.md).
 
-### Session 167 opener (pre-filled — David's larger vision implementation, awaiting new hero asset)
+### Session 168 opener (pre-filled — iterate from v0.167.0 production baseline)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Sentry · Vercel · Mapbox GL JS
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md (session 166 full block — Frame C chrome restructure: Arc 2 + Arc 3 ship + 10 iPhone-QA-driven dial cycles across 7 walks, 18 commits sequenced smallest→largest, build clean, 27th cumulative firing of design-record-as-execution-spec, 5 NEW Tech Rule candidates, David's larger vision articulated at close), CONTEXT.md. Then run the session opening standup from MASTER_PROMPT.md.
+Read CLAUDE.md (session 167 full block — chrome-unification design pass archived to archive/chrome-unification-v1 + Shape A versioning shipped v0.167.0 + worktree cleanup 48→5; NEW MEMORY promoted at first firing: feedback_pre_mockup_prose_model_first.md; 4 NEW Tech Rule candidates), CONTEXT.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Session 166 shipped Frame C chrome restructure end-to-end via Arc 2 (MallPickerChip primitive) + Arc 3 ((tabs)/ adoption + dead-code byproducts retire) + 10 iPhone-QA-driven dial cycles across 7 walks. Net ~−636 LOC. New substrate: TabsChrome orchestrator + MallPickerChip + v2.bg.tabs token + --th-safe-area-inset-top CSS var bridge + safe-area-aware STICKY_THIN_HEIGHT calc + Profile/Back overlays at /find / /shelf StickyMasthead-matching positions. Retired: HomeChrome + MallStrip + SearchBarRow + /home-chrome-test smoke route. David articulated larger vision at close: non-Explore pages adopt StickyMasthead WITH hero photo as background; hero asset to be updated with separate floating wordmark (not baked-in); on Home scroll, wordmark "locks" into canonical masthead position.
+CURRENT ISSUE: Session 167 closed with two operational ships on production main (Shape A versioning v0.167.0 + session close v0.167.1) + ONE preserved exploration (chrome-unification 6 commits archived to archive/chrome-unification-v1 on origin, NOT promoted to production per David's "iterate from production baseline" call). Production main is at session 166 chrome + new versioning infrastructure. Versioning is now live: every /session-close auto-bumps version + prepends CHANGELOG entry + creates annotated tag.
 
-RECOMMENDED PRIMARY WORK FOR SESSION 167: David's larger vision implementation — this is a 3-component arc dependent on the new hero asset:
-  1. ASSET SWAP — replace /public/home-hero.png with new version (background photo + separate floating wordmark, not baked-in). Verify HomeHero gradient dimensions still read right; probably ~1 commit dial pass.
-  2. NON-HOME CHROME UNIFICATION — Saved + other non-/admin non-Home pages adopt StickyMasthead WITH hero background. Likely new chrome primitive composing both (StickyMasthead transparent-bg + hero-as-section-bg below). Worth a design pass: cost-shape triage + reference scan + V1 mockup spanning structural axes + locked design record.
-  3. WORDMARK LOCK-INTO-MASTHEAD TRANSITION on Home scroll — when wordmark is separate from photo, animate from "floating in hero" to "pinned in masthead slot" as user scrolls. Options: CSS sticky on wordmark element / scroll-driven framer-motion / scroll-position-driven transform. Worth a design pass.
+RECOMMENDED PRIMARY WORK FOR SESSION 168: smaller-scope chrome iteration per feedback_pre_mockup_prose_model_first.md ✅ Promoted. Start with just the asset swaps from the archive (NO chip-overlay, NO sibling-sticky-logo, NO Saved-chrome-change yet — those compounded into 22 variables in session 167):
+  1. ASSET SWAP — copy BG.png + treehouse_transparent.png from archive/chrome-unification-v1 → main. Swap home-hero.png → BG.png in HomeHero + wordmark.png → treehouse_transparent.png in StickyMasthead default + /login direct img. ~2-3 commits.
+  2. iPhone QA on production-PWA after asset swap; evolve from there one structural axis at a time if visual direction reads clean.
 
-Session 166 substrate already serves this vision:
-  - Sticky-stop on Home anchored to MASTHEAD_HEIGHT bottom (wordmark "lock position" math pre-aligned)
-  - Profile + Back overlays at exact /find / /shelf StickyMasthead positions (cross-surface chrome corner-affordances consistent)
-  - Hero universal on Home + Saved already (Saved no chip per dial 7; hero stays as identity beat)
+NON-CHROME ALTERNATIVES if chrome iteration is not the priority:
+  - Tier B7 v2.shadow.* extraction (3rd inline-shadow consumer trigger met; carousel selected boxShadow in 544a088)
+  - Shape C arc 3 admin /admin page v0.2 → v1/v2 migration (largest in-scope debt cluster, ~265 violations)
+  - Mapbox preview-only token setup (13-session carry; ~15 min HITL)
+  - iPhone QA on production v0.167.0 (smoke walk to confirm no regressions from Shape A + chrome from session 166)
 
-PRE-WORK: confirm David has shipped the new hero asset. If not yet, surface non-blocking alternatives:
-  - Tier B7 v2.shadow.* extraction (3rd inline-shadow consumer trigger likely met since session 165 carousel boxShadow)
-  - Shape C arc 3 admin /admin page v0.2 → v1/v2 migration (largest in-scope debt cluster, ~265 violations; uses /review-board style guide as canonical reference)
-  - Mapbox preview-only token setup (13-session carry; ~15 min HITL; unblocks preview-QA loop for Mapbox-touching features)
-
-CARRY-FORWARDS: 5 NEW Tech Rule candidate patterns from session 166 (cross-surface chrome consistency via shared constants / CSS var bridge for safe-area-inset in JS / single-coupled-commit at 5-file scale for shared geometry constant / live-conversation as cost-shape design pass for refactor-class asks / iPhone QA round-N rolling refinement compresses sessions). 5 NEW from session 165 (CSS-dynamic-width-transform-percentage-centering-bug / cost-shape-A-with-Shape-B-follow-on-in-commit-body / dual-slot-consumer-wiring-as-Shape-A-primitive / TS1117-edit-existing-line-when-adding-conditional / iPhone-QA-round-2-unmasks-pre-existing-bug-after-round-1-visibility-fix). All open carries from sessions 156-164.
+CARRY-FORWARDS: 4 NEW Tech Rule candidate patterns from session 167 (cost-shape triage at META level for tooling/process asks / archive-then-fresh-branch flow / worktree cleanup operational pattern / Shape A versioning as canonical pre-beta pattern). All carries from sessions 156-166 still apply. 2 unmerged worktrees in repo (gifted-archimedes-23a31c + interesting-golick-212096) — no PR, David's call if next encountered.
 
 SCHEDULED AGENT: trig_017455nMVrTTZb6PxYnYcYZY fires Thu May 21 9:00 AM EDT — checks if VendorCTACard still unused → opens cleanup PR if so.
 ```
