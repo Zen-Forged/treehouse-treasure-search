@@ -147,6 +147,7 @@ export default function DestinationHero({
             style={{
               fontFamily:    FONT_CORMORANT,
               fontSize:      20,
+              fontWeight:    600,
               color:         v2.text.primary,
               lineHeight:    1.3,
               letterSpacing: "-0.005em",
