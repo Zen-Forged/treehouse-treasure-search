@@ -11,12 +11,21 @@
 // Behavior: prefers router.back() — matches iOS-native "go back" mental
 // model. Falls back to a configurable path when there's no history (deep
 // link / PWA shortcut launch directly into Saved or Map).
+//
+// Session 169 round 3 — Review Board Finding 3: bg v2.surface.warm +
+// 1px v2.border.light → v1.iconBubble (rgba(42,26,10,0.06)) + no border.
+// Matches /find/[id]'s in-page IconBubble primitive exactly so back-
+// button visual reads identically across every surface that uses this
+// primitive. Sub-pattern of the "single primitive becomes the single
+// source of truth" promotion — `lib/MastheadBackButton.tsx` now mirrors
+// the /find IconBubble visual contract. Companion inline back-button
+// sweep on 14 v2 user-facing surfaces in the same commit.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { v2 } from "@/lib/tokens";
+import { v1 } from "@/lib/tokens";
 
 interface MastheadBackButtonProps {
   /** Path to push when window.history is empty (deep links). Default "/". */
@@ -61,15 +70,15 @@ export default function MastheadBackButton({
         display:         "flex",
         alignItems:      "center",
         justifyContent:  "center",
-        background:      v2.surface.warm,
-        border:          `1px solid ${v2.border.light}`,
+        background:      v1.iconBubble,
+        border:          "none",
         cursor:          "pointer",
         padding:         0,
         WebkitTapHighlightColor: "transparent",
         transition:      "background 0.18s ease",
       }}
     >
-      <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+      <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
     </button>
   );
 }

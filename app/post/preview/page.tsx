@@ -60,7 +60,7 @@ import {
   type LocalVendorProfile,
   type Vendor,
 } from "@/types/treehouse";
-import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
 import AmberNotice from "@/components/AmberNotice";
@@ -600,14 +600,14 @@ function PostPreviewInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
+            background: v1.iconBubble,
+            border: "none",
             cursor: "pointer",
             padding: 0,
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 

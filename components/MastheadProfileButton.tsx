@@ -64,7 +64,7 @@
 
 import { useRouter } from "next/navigation";
 import { CircleUser } from "lucide-react";
-import { v1, v2, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_SYS } from "@/lib/tokens";
 import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useUserRole } from "@/lib/useUserRole";
 
@@ -134,10 +134,15 @@ export default function MastheadProfileButton({
         justifyContent:  "center",
         // Session 159 — bg only swaps to v1.green when initials render
         // (authed shopper). Authed-without-shoppers-row + guest both show
-        // the v2.surface.warm bubble with CircleUser glyph — geometry
+        // the v1.iconBubble bubble with CircleUser glyph — geometry
         // unchanged across states so the masthead slot doesn't pulse on
         // auth-state hydration.
-        background:      effectiveInitials ? v1.green : v2.surface.warm,
+        // Session 169 round 3 — bg v2.surface.warm → v1.iconBubble per
+        // Review Board Finding 4: "Update the profile icon bg to match
+        // that of the back button bg on /find page and ensure consistency."
+        // Matches MastheadBackButton + /find/[id] IconBubble exactly so
+        // every masthead-slot bubble (back OR profile) reads identically.
+        background:      effectiveInitials ? v1.green : v1.iconBubble,
         border:          "none",
         cursor:          "pointer",
         padding:         0,

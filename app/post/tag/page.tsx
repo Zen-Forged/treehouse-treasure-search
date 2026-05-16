@@ -59,7 +59,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { PiCamera, PiTag } from "react-icons/pi";
 import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
-import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { track } from "@/lib/clientEvents";
 import { isReviewMode } from "@/lib/reviewMode";
 import { FIXTURE_POSTS } from "@/lib/fixtures";
@@ -331,15 +331,15 @@ function PostTagInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
+            background: v1.iconBubble,
+            border: "none",
             cursor: isExtracting ? "default" : "pointer",
             opacity: isExtracting ? 0.45 : 1,
             padding: 0,
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 

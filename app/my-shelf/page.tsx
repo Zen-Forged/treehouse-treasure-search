@@ -94,7 +94,7 @@ import {
   BoothCloser,
   BoothPageStyles,
 } from "@/components/BoothPage";
-import { v2, radius, FONT_CORMORANT, FONT_INTER, MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
+import { v1, v2, radius, FONT_CORMORANT, FONT_INTER, MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
 import { PiCamera } from "react-icons/pi";
 import type { User } from "@supabase/supabase-js";
 
@@ -212,17 +212,17 @@ function Masthead({
               width: 44,
               height: 44,
               borderRadius: "50%",
-              background: v2.surface.warm,
+              background: v1.iconBubble,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: `1px solid ${v2.border.light}`,
+              border: "none",
               cursor: "pointer",
               padding: 0,
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
         ) : null
       }

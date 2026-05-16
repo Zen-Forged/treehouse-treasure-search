@@ -39,7 +39,7 @@ import { ArrowLeft } from "lucide-react";
 
 import StickyMasthead from "@/components/StickyMasthead";
 import BottomNav     from "@/components/BottomNav";
-import { v2, FONT_CORMORANT, FONT_INTER, FONT_NUMERAL } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER, FONT_NUMERAL } from "@/lib/tokens";
 import { supabase }  from "@/lib/supabase";
 import { useShopperAuth }          from "@/lib/useShopperAuth";
 import { useShopperSaves }         from "@/lib/useShopperSaves";
@@ -152,18 +152,18 @@ export default function MePage() {
               width:           44,
               height:          44,
               borderRadius:    "50%",
-              background:      v2.surface.warm,
+              background:      v1.iconBubble,
               display:         "flex",
               alignItems:      "center",
               justifyContent:  "center",
-              border:          `1px solid ${v2.border.light}`,
+              border:          "none",
               cursor:          "pointer",
               padding:         0,
               WebkitTapHighlightColor: "transparent",
               transition:      "background 0.18s ease",
             }}
           >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
         }
         right={null}
