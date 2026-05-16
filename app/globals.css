@@ -186,13 +186,24 @@
      (legacy #1e4d2b + bright #285C3C) become a single canonical hex.
      v2.accent.green-dark stays at #1F4A31 — both names now resolve to
      the same value; greenDark API preserved for backwards-compat + any
-     future deliberate deeper-tone divergence. v2.accent.green-soft +
-     green-mid PRESERVED — intentional variants (soft = highlighted-bg
-     surface tint; mid = "saved/active toggle" state bg). */
+     future deliberate deeper-tone divergence.
+
+     Session 168 round 2 (iPhone QA finding) — v2.accent.green-mid was
+     mischaracterized at the initial design pass as a "saved/active
+     toggle" variant; audit revealed it's actually the v2 CTA
+     button-fill canonical across all 3 lattice tiers (SavedMallCardV2
+     "Find Your Way" + shelf "Bookmark Booth" + find "Save the Find" +
+     LocationActions "Take Trip" + post/edit greenBorder accent).
+     David: "all buttons should use this v2.accent.greenDark." Value
+     collapses #3E694F → #1F4A31. Saved-state hierarchy preserved by
+     the bg-to-cream flip pattern, not by greenMid's distinct hex.
+
+     v2.accent.green-soft PRESERVED — soft accent surface tint
+     (highlighted-bg, e.g. welcome card, copied-flash). */
   --th-v2-accent-green:      #1F4A31;
   --th-v2-accent-green-dark: #1F4A31;
   --th-v2-accent-green-soft: #E8EEE6;
-  --th-v2-accent-green-mid:  #3E694F;
+  --th-v2-accent-green-mid:  #1F4A31;
 
   --th-v2-brown:      #6A513E;
   --th-v2-brown-soft: #B8A996;

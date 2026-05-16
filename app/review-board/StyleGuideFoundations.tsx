@@ -269,8 +269,8 @@ function ColorSection() {
         <ColorSwatch
           token="v2.accent.greenMid"
           value={v2.accent.greenMid}
-          hex="#3E694F"
-          notes="Intentional variant — &quot;saved/active toggle&quot; state bg."
+          hex="#1F4A31"
+          notes="Resolves to canonical. v2 CTA button-fill across all 3 lattice tiers."
         />
         <ColorSwatch
           token="v2.accent.greenSoft"
