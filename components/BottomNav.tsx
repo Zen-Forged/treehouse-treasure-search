@@ -258,6 +258,18 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
     padding: 3,
     display: "flex", alignItems: "center", gap: 24,
+    // Session 168 round 5 finding 2 part 2 — David iPhone QA: "highlight
+    // area still slides out of the component." Round 4's `initial={false}`
+    // killed the mount-from-bottom-at-angle enter, but the cross-tab
+    // layoutId animation path can still visually escape the nav's rounded
+    // bounds (spring undershoot + layoutId resizing between different-
+    // width tabs interpolates the pill through space outside its target).
+    // `overflow: hidden` clips anything that escapes to the rounded nav
+    // container — structural safety net. Geometry note: the nav's 18px
+    // radius + 3px padding leaves a 15px inner radius which is exactly
+    // 1px more than the pill's 14px radius, so the pill sits flush inside
+    // without visible clipping of its rounded corners during steady state.
+    overflow: "hidden",
   };
 
   return (
@@ -330,20 +342,25 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
                   // highlight animation for the selected nav icon should
                   // stay contained in the nav bar component and only move
                   // left/right. It's currently animating in from the bottom
-                  // and coming in at an angle." Root cause: without
-                  // `initial={false}`, framer-motion runs its default mount
-                  // animation (opacity 0 + transform offset) on the FIRST
-                  // mount of the pill (cold page load OR first nav-to-tab
-                  // after the pill last unmounted) — visible as enter-from-
-                  // bottom-at-angle before settling. `initial={false}`
-                  // suppresses the initial enter animation so the pill
-                  // paints at its target position on first mount; subsequent
-                  // tab changes still get the smooth layoutId-driven slide
-                  // because both source + destination wrappers are mounted
-                  // in the React tree on each render (see comment block
-                  // above for layoutId mechanics).
+                  // and coming in at an angle." `initial={false}` suppresses
+                  // the default mount enter animation (opacity 0 + transform
+                  // offset) on first ever mount.
+                  //
+                  // Session 168 round 5 finding 2 part 2 — David iPhone QA:
+                  // "highlight area still slides out of the component."
+                  // Added (a) `layout="position"` to constrain layoutId
+                  // animation to position-only (pill snaps to new size,
+                  // slides in position only — no size-interpolation
+                  // diagonal-path artifact); (b) spring → tween transition
+                  // for deterministic motion (no undershoot/overshoot from
+                  // the prior stiffness 500 / damping 40 spring which sat
+                  // at ~0.89 damping ratio, technically underdamped).
+                  // Combined with `overflow: hidden` on the nav container
+                  // above, the pill is structurally constrained to slide
+                  // left/right within the nav's rounded bounds only.
                   initial={false}
-                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  layout="position"
+                  transition={{ type: "tween", duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
                   style={{
                     position: "absolute",
                     inset: 0,
