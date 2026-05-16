@@ -236,8 +236,16 @@ export default function TabsChrome() {
           so drawerOpen===true implies isHome — no separate pathname gate
           needed. MastheadBackButton primitive reused with onClick prop
           (session 157 pattern) so handler runs closeDrawer instead of
-          router.back(). */}
-      {drawerOpen && (
+          router.back().
+          Session 169 round 4 — Review Board Finding 3: back button also
+          renders on /flagged (Saved). David: "no back button showing up
+          on saved page when navigate from Explore to Saved." Saved is a
+          destination reachable from Explore via BottomNav nav; floating
+          back overlay at the same slot routes back to / (Explore). Drawer
+          state is Home-only so on /flagged the back overlay always
+          routes router.push("/") via fallback. Two render conditions
+          consolidated: drawer-close OR Saved-page back. */}
+      {(drawerOpen || pathname === "/flagged") && (
         <div
           style={{
             position: "fixed",
@@ -246,7 +254,11 @@ export default function TabsChrome() {
             zIndex:   OVERLAY_Z,
           }}
         >
-          <MastheadBackButton onClick={closeDrawer} variant="overlay" />
+          <MastheadBackButton
+            onClick={drawerOpen ? closeDrawer : undefined}
+            fallback="/"
+            variant="overlay"
+          />
         </div>
       )}
 
