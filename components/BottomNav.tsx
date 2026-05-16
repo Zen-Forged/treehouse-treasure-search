@@ -282,7 +282,29 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
         return (
           <button
             key={tab.key}
-            onClick={() => router.push(tab.href)}
+            onClick={() => {
+              // Session 168 round 6 — David iPhone QA: "when navigating to
+              // the booth page the hero image does not load from the top."
+              // Root cause: /my-shelf has persistent scroll-restoration
+              // (sessions 85+86) that fires on ANY mount via readScrollY()
+              // from localStorage + sessionStorage. The restoration was
+              // designed for /find/[id] back-nav (return to the tile you
+              // tapped), but it also fires when navigating to /my-shelf
+              // via the BottomNav Booth tab — landing the page at a
+              // previously-saved scrollY instead of the top.
+              //
+              // Fix: clear the my-shelf scroll storage on BottomNav Booth
+              // tap before navigating. /find/[id] back-nav still restores
+              // correctly because the storage is re-populated by /my-shelf's
+              // persistScroll listeners after first visit; the clear here
+              // only fires on the explicit tab-tap entry path. Key string
+              // matches MY_SHELF_SCROLL_KEY in app/my-shelf/page.tsx.
+              if (tab.key === "booth") {
+                try { localStorage.removeItem("treehouse_my_shelf_scroll"); } catch {}
+                try { sessionStorage.removeItem("treehouse_my_shelf_scroll"); } catch {}
+              }
+              router.push(tab.href);
+            }}
             style={{
               // flex: 1 retires — pill is intrinsic width; each tab sizes to
               // its icon + label. gap on parent nav handles spacing.
