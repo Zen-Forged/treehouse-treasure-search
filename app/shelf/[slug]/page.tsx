@@ -45,7 +45,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Heart } from "lucide-react";
-import { PiBookmarkSimple, PiBookmarkSimpleFill } from "react-icons/pi";
+import { PiBookmarkSimpleBold, PiBookmarkSimpleFill } from "react-icons/pi";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { setPostCache } from "@/lib/findContext";
 import { getSession, isAdmin } from "@/lib/auth";
@@ -473,7 +473,7 @@ export default function PublicShelfPage() {
                 >
                   {boothBookmarked
                     ? <PiBookmarkSimpleFill size={14} aria-hidden />
-                    : <PiBookmarkSimple size={14} aria-hidden />}
+                    : <PiBookmarkSimpleBold size={14} aria-hidden />}
                   {boothBookmarked ? "Remove Bookmark" : "Bookmark Booth"}
                 </button>
               </div>
