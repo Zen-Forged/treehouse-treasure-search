@@ -105,11 +105,23 @@ const WORDMARK_DEFAULT = (
 // masthead bottom edge sits 1px ABOVE where the spacer + strip top expect
 // (= paddingTop + 72 + 12 = paddingTop + 84). Pre-session-156 the 85 was
 // correct (paddingTop + 72 + 12 + 1px border). Now 84 closes the seam.
+//
+// Session 168 round 7 — David iPhone QA: "on /my-shelf the hero image
+// still is not sitting under the masthead." paddingBottom 12 → 0 below
+// removes the cream breathing-room slab between wordmark bottom and the
+// first below-masthead content (BoothHero photo on /my-shelf and /shelf,
+// FlagPhoto on /find/[id], form chrome elsewhere). The 12px was set
+// when a hairline borderBottom (retired session 156) needed visual
+// breathing room beneath it; with no border, the wordmark + below-content
+// can abut tightly. Calc updates 84 → 72 to keep spacer in sync with
+// the actual masthead-paint height (was paddingTop + 72 + 12; now
+// paddingTop + 72 + 0).
+//
 // Exported as the canonical SSOT for any future surface that needs to compute
 // layout against the masthead footprint (fixed overlays, scroll-snap targets,
 // etc.). The spacer inside this component already reserves the height for
 // content rendered after <StickyMasthead /> in the React tree.
-export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 84px)";
+export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 72px)";
 
 export default function StickyMasthead({
   left,
@@ -145,7 +157,13 @@ export default function StickyMasthead({
           // Was hardcoded #f2ecd8 since session 132 frosted-glass retire.
           background: v2.bg.main,
           paddingTop: "max(14px, env(safe-area-inset-top, 14px))",
-          paddingBottom: 12,
+          // Session 168 round 7 — David iPhone QA: "the hero image still
+          // is not sitting under the masthead." 12 → 0 removes the cream
+          // gap below the wordmark so below-masthead content (BoothHero,
+          // FlagPhoto, form chrome) abuts the wordmark tightly. Spacer
+          // calc in MASTHEAD_HEIGHT updates 84 → 72 to match the new
+          // actual masthead-paint height. See lengthy comment block above.
+          paddingBottom: 0,
           paddingLeft: 18,
           paddingRight: 18,
         }}
