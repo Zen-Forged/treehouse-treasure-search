@@ -404,7 +404,11 @@ export function BoothTitleBlock({
     // v2 chrome vocabulary (v2.surface.warm + v2.border.light + green
     // glyph; mirrors HomeFeedTile/StarFavoriteBubble/BookmarkBoothBubble
     // affordance-bubble shape at the smaller 32×32 self-edit size).
-    <div style={{ padding: "36px 22px 4px", textAlign: "center" }}>
+    // Review Board Finding 4 (session 169) — top padding 36 → 16 (canonical
+    // space.s16). David: "Position the a curated booth text higher so it
+    // sits closer to the hero image but with some padding." Shared primitive
+    // — change inherits across /shelf/[slug] + /my-shelf consumers.
+    <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
       <div
         style={{
           fontFamily: FONT_CORMORANT,

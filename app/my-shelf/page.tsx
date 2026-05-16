@@ -299,7 +299,7 @@ function Skeleton() {
         className="booth-shimmer"
         style={{ borderRadius: radius.lg, minHeight: 260, width: "100%" }}
       />
-      <div style={{ padding: "36px 22px 6px" }}>
+      <div style={{ padding: "16px 22px 6px" }}>
         <div className="booth-shimmer" style={{ height: 14, width: 120, borderRadius: 4, marginBottom: 8 }} />
         <div className="booth-shimmer" style={{ height: 34, width: 240, borderRadius: 6 }} />
       </div>
