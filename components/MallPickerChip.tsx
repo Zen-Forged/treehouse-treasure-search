@@ -30,7 +30,7 @@
 import * as React from "react";
 import { PiMapPinFill, PiCaretDown } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT } from "@/lib/tokens";
-import { STICKY_THIN_HEIGHT } from "@/components/HomeHero";
+import { CHIP_TOP, CHIP_Z } from "@/lib/chromeTokens";
 
 interface MallPickerChipProps {
   mallName: string;
@@ -53,14 +53,17 @@ const CHEVRON_SIZE      = 18;
 const CHEVRON_LEFT_GAP  = 10;
 const PIN_NAME_GAP      = 8;
 
-// Session 166 dial 2 — chip becomes position:sticky so it stays visible
-// below hero's sticky-collapsed strip during scroll AND during drawer-open
-// state (paired with TabsChrome's auto-scroll on drawer-open).
-// MallMapDrawer imports this constant for its top:calc geometry.
+// Session 166 dial 2 — chip becomes position:sticky.
+// Session 167 chrome-unification — sticky-top changes from STICKY_THIN_HEIGHT
+// (HomeHero's collapsed bottom edge) to CHIP_TOP (= MASTHEAD_HEIGHT - 30).
+// Chip now sticky-pins 30px ABOVE the masthead bottom edge with z-index above
+// the hero strip, OVERLAYING the bottom 30px of the photo to "trim" it per
+// David's verbatim "scroll over the top of the bottom portion of the hero
+// image to trim the bottom of the photo." See chrome-unification-design D5.
 //
 // Height = TOP_PADDING + max(PIN_SIZE, NAME_FONT_SIZE * 1.3, CHEVRON_SIZE)
 //        + BOTTOM_PADDING = 12 + 29 + 6 = 47px. Rounded to 48 for safe
-// integer arithmetic in downstream consumers.
+// integer arithmetic in downstream consumers (e.g. MallMapDrawer's top calc).
 export const CHIP_VISIBLE_HEIGHT_PX = 48;
 
 export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps) {
@@ -68,20 +71,22 @@ export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps)
     <div
       style={{
         padding:    `${TOP_PADDING}px ${HORIZ_PADDING}px ${BOTTOM_PADDING}px`,
-        // Sticky-pinned below hero strip. As page scrolls past hero, chip
-        // detaches from flow and pins at top:STICKY_THIN_HEIGHT_PX (90px).
-        // bg matches v2.bg.main so feed content doesn't bleed through
-        // when chip is pinned over scrolling feed. zIndex 11 sits above
-        // hero (z:10) so chip is never covered by hero strip overlap;
-        // drawer's top:calc accounts for chip height so they don't
-        // overlap when drawer is open.
+        // Sticky-pinned 30px above masthead bottom edge, with z-index above
+        // hero strip. Chip's body extends downward from CHIP_TOP, occluding
+        // the bottom 30px of the photo behind it. Upward box-shadow casts a
+        // subtle shadow ONTO the photo it covers, reinforcing the "layered
+        // over" reading. Per chrome-unification design D5 + D15.
         position:   "sticky",
-        top:        STICKY_THIN_HEIGHT,
-        zIndex:     11,
-        // Session 166 dial 8 — chip sticky bg follows (tabs)/-surfaces
-        // tier so seam between feed-scrolling-under-chip and the chip
-        // strip itself stays visually continuous.
+        top:        CHIP_TOP,
+        zIndex:     CHIP_Z,
+        // (tabs)/-surfaces tier so seam between feed-scrolling-under-chip
+        // and the chip strip itself stays visually continuous below the
+        // chip's body. Chip sits on v2.bg.tabs cream.
         background: v2.bg.tabs,
+        // Upward box-shadow per D15 — the chip is layered ABOVE the photo
+        // (not below the photo) so its shadow casts UP onto the photo it's
+        // covering, not DOWN onto content below.
+        boxShadow:  "0 -2px 8px rgba(42,26,10,0.10)",
       }}
     >
       <button
