@@ -8,6 +8,72 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.171.0] — 2026-05-17
+
+### Session 171 — iPhone QA dial bundle ×2 + wordmark swap ×2 + contrast audit (Audit B) + vendor-value priority gate memory + Shape A gameplan locked
+
+14 runtime commits + 1 close. David opened with `/session-open`; standup recommended iPhone QA on production v0.170.0. David redirected with **6-item iPhone QA finding bundle on session 170 Shape B re-architecture**: (1) restore Flag the Find button under Price (reverses session 170 Arc 3 retirement on dual-affordance model), (2) tint embedded map snapshot toward cartographic cream palette, (3) increase "Purchase this item at" eyebrow weight, (4) darker mall name color, (5) booth name weight bump, (6) bold variant of booth icon project-wide. Triage cost shape A (6 commits sequenced smallest→largest); 2 load-bearing clarifications via AskUserQuestion (save model dual vs single; map palette CSS-filter vs container-bg vs Mapbox-Studio). Bundle shipped clean; David: "clean."
+
+Pivoted to wordmark swap (`treehouse_updated.png` → overwrites `wordmark.png`); David then re-swapped with cropped version (`treehouse_wordmark.png`) when first version rendered ~10% narrower than original at established display heights. Both swaps optimized via pngquant (176KB → 40KB / 173KB → 41KB, ~77% reductions matching session 104 + 164 brand-asset-optimization precedent).
+
+Second iPhone QA round surfaced **5 new findings + launch-blocking contrast audit ask**: (1) BoothHero hero image flickers on /shelf load — paint in if possible, (2) /shelf scroll-restore should activate only on back-nav not forward-from-/find, (3) bold variant of bookmark icon, (4) reduce mall-name-to-address gap in MallBlock, (5) darker color for "A curated booth by" + **"We need to do a full audit on contrast and legibility for this to launch"**. Per `feedback_recurring_phrase_signals_system` ✅ Promoted, item 5's "this continues to be hard to read" + "I see this also on other pages" + explicit launch-blocker framing = system-level concern. Triage cost shape Audit B (Explore-agent scan → prioritized offender doc) picked over Audit A (defer) and Audit C (lint:contrast script).
+
+Explore agent dispatched in **background parallel** with foreground dial-bundle shipping (first firing of this parallelism pattern — async agent did read-only audit while 5 commits + audit-doc commit shipped in foreground). Audit produced 47 offenders across 19 files (16 Tier 1 critical small italic on secondary/muted; 18 Tier 2 high small upright on muted; 9 Tier 3 borderline; 4 bonus dotted-underline pattern; systemic recommendation to retire `v2.text.muted` as a text-color token entirely).
+
+David's **meta-reflection** at session close: "for about the last 30 sessions I've been what I'd consider 'pixel prompting'... I want to create a team who are experts in UI/UX design and helps make the right decisions together without a lot of my input." Surfaced 3 strategic concerns (map nav topology / found-state ephemerality + onboarding gap / color consolidation 100-shades-of-green) + vendor-value priority concern (paid users are vendors; prioritize vendor-experience + vendor-promotion features over shopper polish). Restated interpretation; proposed gameplan Shape A (4 moves: design-reviewer agent + launch-gaps doc + strategic-vs-tactical session split + color consolidation arc). David picked **Shape A** with the load-bearing trust contract: *"as long as the explanation can point to sound reasoning from a UI/UX design process I'm good with the calls you make."* Vendor-value priority captured as project memory file [`project_vendor_value_first_prioritization.md`](memory/project_vendor_value_first_prioritization.md) — now auto-loaded into every future session-opening standup.
+
+### Added
+
+- **`components/DestinationHero.tsx`** dial bundle — `fontWeight: 600` on eyebrow (C1), `color: v2.text.secondary` on mall subtitle both rendering paths (C2), `fontWeight: 600` on vendor name (C3), CSS `filter: "sepia(0.4) saturate(1.1) hue-rotate(-8deg)"` on Mapbox static snapshot to push light-v11 toward cartographic warm-cream (C4 — Cost-shape A per David's Q2 pick over container-bg + Mapbox Studio paths).
+- **Flag the Find button under Price on `/find/[id]`** — full-width primary CTA restoring session-169 round-2 button as DUAL AFFORDANCE with photograph corner save bubble (bounded surface-locked reversal of session 170 Arc 3 thesis "the corner bubble IS the page's primary CTA"). Both affordances toggle same `isSaved` state via React reactivity. Visual: v2.accent.greenMid bg + cream text + outline FlagGlyph (unsaved) → v2.surface.input bg + greenMid text + filled FlagGlyph + 1px border (saved). Padding 10/9 keeps height constant across border toggle. Explore Booth from the prior pair does NOT return per David's singular ask.
+- **`docs/contrast-audit.md`** — Audit B deliverable; 47 prioritized offenders across 19 files with file:line + element + font + size + current-token → suggested-mapping. Tier 1 (16 critical) / Tier 2 (18 high) / Tier 3 (9 borderline) / Bonus (4 dotted-underline). Systemic recommendations: retire `v2.text.muted` as text color (preserve for icons + dividers + placeholders); italic serif at ≤15px on warm-cream fails 40-65 demographic (session 46 IM Fell precedent extends to Cormorant + Lora); retire dotted-underline pattern for body text. Recommended fix-bundle sequencing: 4 arcs (Tier 1 ship / Tier 2 sweep / Bonus retire / optional token enforcement). Input for follow-on fix-bundle session.
+- **`memory/project_vendor_value_first_prioritization.md`** — NEW project memory capturing David's vendor-value priority gate articulated at session close. Auto-loaded into every future session; runs at session-opening standup as "Does this add vendor value or assist vendors in promoting to shoppers? If not, can it be deferred?" Pairs with `project_treehouse_thesis_digital_to_physical_bridge` + `project_layered_engagement_share_hierarchy`. Includes explicit vendor-value candidate backlog (Share My Shelf revival / vendor profile enrichment / Stripe integration / Analytics+KPIs / vendor onboarding).
+- **Global `popstate` listener** installed once-per-tab via module-scope `installPopstateMarker()` on `/shelf/[slug]` mount. Writes `Date.now()` to `sessionStorage` key `th_recent_popstate` on real popstate events (Next.js internal pushState doesn't fire native popstate per `feedback_nextjs_internal_history_calls_clobber_flags` ✅ Promoted). Listener persists across route changes (deliberately not cleaned up — global session-state writer, not per-component state).
+- **HTML5 paint-in hints on `<BoothHero>` `<img>`** — `fetchPriority="high"` + `decoding="async"` + browser-cache preloader via `new Image().src = heroImageUrl` in dedicated useEffect once URL is known. Two-layer paint-in: warm-nav re-mounts paint from HTTP cache instantly; cold-start gets ~30-50% faster paint via fetch-priority hint. Closes visible flicker on `/shelf` cold load.
+
+### Changed
+
+- **Wordmark asset `/public/wordmark.png`** swapped twice in same session — first to `treehouse_updated.png` (1211×721, 1.679:1 aspect, ~10% narrower than original script wordmark), then re-swapped to cropped `treehouse_wordmark.png` (1092×601, 1.817:1 aspect, ~3% narrower — much closer to original footprint). Visual identity shift: refined serif Roman "treehouse" + small-caps "FINDS" with hairline rules + sapling glyph above (vs prior script-italic "treehouse" + leaf-on-stem). URL contract `/wordmark.png` preserved so all 5 runtime consumers + email pipeline + 13 mockup/doc references inherit automatically. Final size: 107KB → 41KB (~62% reduction across both swaps via pngquant per session 104 + 164 brand-asset-optimization precedent).
+- **`PiStorefront` → `PiStorefrontBold` sweep** across 4 surfaces: BottomNav (Booth tab role-conditional, size 22) · DestinationHero (eyebrow above destination card, size 18) · `/login` (vendor sign-in action card, size 20) · `v2/AccordionBoothSection` (Saved page accordion booth header, size 22). Mirrors session 169 PiLeaf → PiLeafBold project-wide sweep. 2 doc-rot comments updated in same commit per `feedback_dead_code_cleanup_as_byproduct`; 1 historical-retirement comment intentionally preserved at `app/find/[id]/page.tsx:69` for greppability.
+- **`PiBookmarkSimple` → `PiBookmarkSimpleBold` sweep** across 2 surfaces: `BookmarkBoothBubble` (BoothHero photo top-right bookmark bubble, size 22) · `/shelf/[slug]` (admin-only inline "Bookmark Booth" button, size 14). All 3 engagement-tier bubbles now render at Bold weight when unsaved (FlagGlyph PiLeafBold + BookmarkBoothBubble PiBookmarkSimpleBold + StarFavoriteBubble PiStar) — visual lattice cohesion across find/booth/mall tiers per `project_layered_engagement_share_hierarchy`.
+- **`/shelf/[slug]` scroll-restore** gated on real popstate via the new `th_recent_popstate` sessionStorage marker. Within 1000ms window of marker timestamp = back-nav → restore `pendingScrollY`; outside window OR no marker (forward-nav / fresh deep-link / hard refresh) → `scrollTo(0, 0)`. Marker consumed after read so sibling pages don't reuse same back-nav signal. Closes the "/shelf doesn't load from top when navigating forward from /find" bug class.
+- **`BoothPage` `<MallBlock>` mall name `lineHeight`**: `1.3` → `1.15`. Tightens half-leading sum from ~6.3px to ~4.9px visual gap (~22% reduction) between mall name and address. Continues session 153 R10A tightening to the previously-unaddressed half-leading layer. Single-line text (not clamped) so `feedback_lora_lineheight_minimum_for_clamp` doesn't apply.
+- **`BoothPage` "A curated booth by" eyebrow color**: `v2.text.secondary` → `v2.text.primary` (the audit's canonical Tier 1 example). Single instance fix; remaining 46 offenders carry as fix-bundle session candidates via `docs/contrast-audit.md`.
+
+### Fixed
+
+- **`BoothHero` hero image flicker on `/shelf` load** via preloader + fetchPriority + decoding hints (see Added).
+- **`/shelf` scroll position restoring on forward-nav** via popstate-gated restore (see Changed).
+- **`package-lock.json` drift** swept clean alongside close (was modified by mid-session `npm install` to resolve `html2canvas-pro` pre-existing local-env miss per `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted — 11th cumulative firing).
+
+### iPhone QA watch-items
+
+**Bundle 1 (6 commits, dial-class):**
+- "Purchase this item at" + vendor name read at proper weight without overshoot; if Cormorant 600 feels heavy, dial to 500
+- Mall subtitle reads at secondary not muted; if still quiet, bump to primary
+- Map snapshot tints toward warm cream not muddy brown; dial-up sepia(0.55) saturate(1.2) if still grey; dial-down sepia(0.3) drop hue-rotate if too brown
+- PiStorefrontBold reads cohesive with PiLeafBold on BottomNav + DestinationHero
+- Flag the Find button under Price + photograph save bubble both toggle same state on tap (either affordance, immediate reflection)
+
+**Bundle 2 (6 commits, dial-class + audit doc):**
+- MallBlock spacing on /shelf + /my-shelf reads as tightly-coupled lockup; dial address lineHeight 1.55 → 1.3 if still too loose
+- "A curated booth by" reads cleanly at primary color
+- BookmarkBoothBubble bolder + cohesive with PiLeafBold + PiStorefrontBold lattice siblings
+- BoothHero cold-cache walk on cellular — does hero paint with first frame or still flicker?
+- /shelf scroll-restore matrix: back from /find restores ✓ · forward from /find lands at top ✓ · deep-link lands at top ✓ · hard refresh lands at top ✓
+- PWA wordmark cache — hard-refresh iPhone PWA if old wordmark persists
+
+**Wordmark swap:**
+- Aspect ratio 1.875:1 → 1.817:1 (final cropped version) means ~3% narrower at same display height. Watch surfaces sized by height for any "too small" feel; per-callsite height/width prop dial is clean follow-on if needed.
+
+### Mapbox preview-token gap (17-session carry, 156→171)
+
+Production-PWA QA remains authoritative for map-snapshot consumers (DestinationHero map snapshot silently fails on `*.vercel.app` previews per Mapbox token URL allowlist excluding `*` wildcards). ~15 min HITL to provision preview-only token + set `NEXT_PUBLIC_MAPBOX_TOKEN` for Preview Vercel env.
+
+[v0.171.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.171.0
+
+---
+
 ## [v0.170.0] — 2026-05-17
 
 ### Session 170 — /find/[id] destination hero design-pass + 4-arc Shape B ship

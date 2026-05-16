@@ -32,7 +32,7 @@
 
 "use client";
 
-import { PiBookmarkSimple, PiBookmarkSimpleFill } from "react-icons/pi";
+import { PiBookmarkSimpleBold, PiBookmarkSimpleFill } from "react-icons/pi";
 import { v2 } from "@/lib/tokens";
 
 interface Props {
@@ -65,7 +65,7 @@ export default function BookmarkBoothBubble({ saved, onClick }: Props) {
       {saved ? (
         <PiBookmarkSimpleFill size={22} aria-hidden />
       ) : (
-        <PiBookmarkSimple size={22} aria-hidden />
+        <PiBookmarkSimpleBold size={22} aria-hidden />
       )}
     </button>
   );

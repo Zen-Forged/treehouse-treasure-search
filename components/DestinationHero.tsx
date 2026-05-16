@@ -38,7 +38,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PiStorefront } from "react-icons/pi";
+import { PiStorefrontBold } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT, FONT_INTER, FONT_NUMERAL } from "@/lib/tokens";
 import { mallSnapshotUrl } from "@/lib/mapStaticImage";
 
@@ -119,7 +119,7 @@ export default function DestinationHero({
                 display:              "inline-block",
                 fontFamily:           FONT_INTER,
                 fontSize:             11.5,
-                color:                v2.text.muted,
+                color:                v2.text.secondary,
                 textDecoration:       "underline",
                 textDecorationStyle:  "dotted",
                 textDecorationColor:  v1.inkFaint,
@@ -134,7 +134,7 @@ export default function DestinationHero({
               style={{
                 fontFamily: FONT_INTER,
                 fontSize:   11.5,
-                color:      v2.text.muted,
+                color:      v2.text.secondary,
                 lineHeight: 1.4,
               }}
             >
@@ -147,6 +147,7 @@ export default function DestinationHero({
             style={{
               fontFamily:    FONT_CORMORANT,
               fontSize:      20,
+              fontWeight:    600,
               color:         v2.text.primary,
               lineHeight:    1.3,
               letterSpacing: "-0.005em",
@@ -226,7 +227,7 @@ export default function DestinationHero({
   return (
     <div style={{ padding: "0 22px 28px" }}>
       {/* Eyebrow — D11: outside the card, above. Italic Cormorant 18 +
-          PiStorefront icon. Padding 0 4px 10px (small horizontal indent
+          PiStorefrontBold icon. Padding 0 4px 10px (small horizontal indent
           for typographic alignment with card; bottom gap to card). */}
       <div
         style={{
@@ -238,11 +239,12 @@ export default function DestinationHero({
           fontFamily:  FONT_CORMORANT,
           fontStyle:   "italic",
           fontSize:    18,
+          fontWeight:  600,
           color:       v2.text.secondary,
           lineHeight:  1.3,
         }}
       >
-        <PiStorefront size={18} aria-hidden style={{ flexShrink: 0 }} />
+        <PiStorefrontBold size={18} aria-hidden style={{ flexShrink: 0 }} />
         Purchase this item at
       </div>
 
@@ -288,6 +290,16 @@ export default function DestinationHero({
                 height:    "100%",
                 objectFit: "cover",
                 display:   "block",
+                // Session 171 dial #2 — push the Mapbox light-v11 default
+                // grey palette toward the project's cartographic warm-cream
+                // basemap (v1.basemap.cream #F1E9D2). Mapbox Static Images
+                // API doesn't accept the runtime palette overrides
+                // TreehouseMap applies via setPaintProperty — until a
+                // Mapbox Studio published style URL lands (carry from
+                // session 108 + 156), CSS filter is the cheapest seam.
+                // sepia warms grey → brown; hue-rotate nudges brown → cream;
+                // saturate restores color density lost to sepia.
+                filter:    "sepia(0.4) saturate(1.1) hue-rotate(-8deg)",
               }}
             />
           </Link>

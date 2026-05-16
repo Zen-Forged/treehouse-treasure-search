@@ -64,7 +64,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Pencil, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
@@ -151,6 +151,29 @@ export function BoothHero({
   // nothing to enlarge.
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  // Session 171 dial #1 — paint-in fix. David: "Anytime the /shelf is
+  // loaded it flickers the hero image we should paint this in if possible."
+  //
+  // Root cause: <img> at line ~180 mounts AFTER React commits with the
+  // resolved heroImageUrl prop. Between commit and paint, the browser
+  // starts the network fetch for the image. The "flicker" is the empty
+  // img → loaded img transition.
+  //
+  // Fix shape: warm browser cache via new Image().src as soon as
+  // heroImageUrl is known. The img mount that follows paints from the
+  // cache instantly (typically within a single frame). Doesn't affect
+  // cold-start fetch latency, but the fetchpriority="high" hint on the
+  // <img> itself (line 184) does — combined effect is "first frame
+  // painted" on warm-nav and "fastest-possible paint" on cold-start.
+  //
+  // Cleanup-free: new Image() with no DOM attachment relies on browser
+  // GC; the request stays in HTTP cache for the subsequent <img> mount.
+  useEffect(() => {
+    if (!heroImageUrl) return;
+    const preloader = new Image();
+    preloader.src = heroImageUrl;
+  }, [heroImageUrl]);
+
   return (
     <div style={{ padding: "0 10px", position: "relative" }}>
       <div
@@ -181,6 +204,15 @@ export function BoothHero({
               key={heroKey}
               src={heroImageUrl}
               alt=""
+              // Session 171 paint-in dial #1 — HTML5 hints. fetchpriority
+              // tells the browser to schedule this image early (overrides
+              // default "low" for images discovered late in the parse
+              // cycle); decoding="async" allows off-main-thread decode so
+              // paint isn't blocked. Paired with the preloader useEffect
+              // above so warm-nav re-mounts paint from the HTTP cache the
+              // preloader populated when heroImageUrl first became known.
+              fetchPriority="high"
+              decoding="async"
               style={{
                 position: "absolute",
                 inset: 0,
@@ -414,7 +446,23 @@ export function BoothTitleBlock({
           fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 16,
-          color: v2.text.secondary,
+          // Session 171 iPhone QA dial #5 immediate fix — David: "Use a
+          // darker color from the palette for the 'A curated booth by' this
+          // continues to be hard to read." Italic Cormorant at 16px loses
+          // stroke contrast faster than upright (curved letterforms have
+          // thinner mid-strokes); v2.text.secondary on v2.surface.warm
+          // failed the 40-65 demographic on production iPhone QA. Bumping
+          // one tier darker to v2.text.primary.
+          //
+          // Companion launch-blocking work: full contrast + legibility
+          // audit at docs/contrast-audit.md (session 171 Audit B) — the
+          // same pattern (≤14px / 15-16px italic / muted-secondary on
+          // warm-cream) recurs on other surfaces (login, /me, etc.) and
+          // gets a structured sweep in a follow-on session driven by that
+          // audit doc. This fix lands the specific BoothPage eyebrow
+          // referenced in the QA; the broader sweep ships per audit
+          // recommendations.
+          color: v2.text.primary,
           lineHeight: 1.3,
           margin: "0 0 4px",
         }}
@@ -558,7 +606,15 @@ export function MallBlock({
           fontFamily: FONT_CORMORANT,
           fontSize: 18,
           color: v2.text.primary,
-          lineHeight: 1.3,
+          // Session 171 dial — lineHeight 1.3 → 1.15 to tighten the gap to
+          // the address line below. Single-line text (not clamped) so
+          // feedback_lora_lineheight_minimum_for_clamp doesn't apply;
+          // descender clip risk only matters when overflow:hidden + WebKit
+          // line-clamp are in play. Mall name + address now read as one
+          // tightly-coupled lockup (continues the session 153 R10A
+          // tightening — wrapper padding bottom 4→0 + address marginTop
+          // 4→0 — to the previously-unaddressed half-leading gap).
+          lineHeight: 1.15,
           letterSpacing: "-0.005em",
           display: "flex",
           alignItems: "center",

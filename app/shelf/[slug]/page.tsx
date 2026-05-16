@@ -45,7 +45,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Heart } from "lucide-react";
-import { PiBookmarkSimple, PiBookmarkSimpleFill } from "react-icons/pi";
+import { PiBookmarkSimpleBold, PiBookmarkSimpleFill } from "react-icons/pi";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { setPostCache } from "@/lib/findContext";
 import { getSession, isAdmin } from "@/lib/auth";
@@ -80,6 +80,39 @@ import type { Post, Vendor, Mall } from "@/types/treehouse";
 // flash. Per-slug scroll key persists scroll position across the same
 // boundary so navigating between different shelves doesn't restore a
 // position from a different layout. Pure scroll behavior — no motion changes.
+//
+// Session 171 iPhone QA dial #2 — David: "the anchoring should only be
+// activated on the back button not when going forward from the /find page."
+//
+// Root cause: prior logic restored pendingScrollY on EVERY mount when set,
+// so navigating /shelf-A → /find → forward to /shelf-B (different vendor
+// strip / DestinationHero tap) would restore /shelf-B to the scroll
+// position from when the user was last on /shelf-A — wrong, the user is
+// arriving fresh on /shelf-B and expects to land at the top.
+//
+// Fix: gate the restore on a popstate marker. Real popstate (browser back
+// button / OS back gesture) fires NATIVE popstate events; Next.js
+// internal pushState/replaceState DOES NOT fire native popstate per
+// feedback_nextjs_internal_history_calls_clobber_flags ✅ Promoted. So a
+// listener that timestamps sessionStorage on popstate captures only
+// real user back-nav.
+//
+// Module-scope guard so we install the listener exactly once per tab
+// session; the listener stays registered on `window` for the lifetime
+// of the tab (deliberately not cleaned up — it's a global session-state
+// writer, not per-component state). 1000ms window is conservative enough
+// to cover slow popstate → mount → restore-effect timing without
+// false-positive across separate user actions.
+const POPSTATE_MARKER_KEY = "th_recent_popstate";
+let popstateMarkerInstalled = false;
+function installPopstateMarker() {
+  if (popstateMarkerInstalled) return;
+  if (typeof window === "undefined") return;
+  popstateMarkerInstalled = true;
+  window.addEventListener("popstate", () => {
+    try { sessionStorage.setItem(POPSTATE_MARKER_KEY, String(Date.now())); } catch {}
+  });
+}
 let cachedPublicShelf: {
   slug:   string;
   vendor: Vendor;
@@ -320,8 +353,14 @@ export default function PublicShelfPage() {
   // shelves doesn't restore a scroll position from a different shelf's
   // layout. Save on every scroll event; restore once after mount, gated on
   // data being available so the BoothPage layout is final before scrollTo.
+  //
+  // Session 171 dial #2 — install global popstate marker on first mount
+  // (module-scope guard ensures once-per-tab). Listener persists across
+  // route changes so any future back-nav lands the timestamp before
+  // /shelf/[slug] mounts to read it.
   useEffect(() => {
     if (!slug) return;
+    installPopstateMarker();
     try {
       const saved = sessionStorage.getItem(shelfScrollKey(slug));
       if (saved) {
@@ -340,9 +379,23 @@ export default function PublicShelfPage() {
   useEffect(() => {
     if (loading) return;
     if (scrollRestored.current) return;
-    if (pendingScrollY.current === null) return;
     scrollRestored.current = true;
-    const y = pendingScrollY.current;
+
+    // Session 171 dial #2 — gate the restore on real popstate (back
+    // button). Forward nav from /find/[id] OR a fresh navigation to
+    // /shelf/[slug] scrolls to top instead of restoring. Consume the
+    // marker after read so a subsequent mount on a different surface
+    // doesn't reuse the same back-nav signal.
+    let isBackNav = false;
+    try {
+      const ts = sessionStorage.getItem(POPSTATE_MARKER_KEY);
+      if (ts && Date.now() - parseInt(ts, 10) < 1000) {
+        isBackNav = true;
+        sessionStorage.removeItem(POPSTATE_MARKER_KEY);
+      }
+    } catch {}
+
+    const y = isBackNav ? (pendingScrollY.current ?? 0) : 0;
     requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
   }, [loading]);
 
@@ -473,7 +526,7 @@ export default function PublicShelfPage() {
                 >
                   {boothBookmarked
                     ? <PiBookmarkSimpleFill size={14} aria-hidden />
-                    : <PiBookmarkSimple size={14} aria-hidden />}
+                    : <PiBookmarkSimpleBold size={14} aria-hidden />}
                   {boothBookmarked ? "Remove Bookmark" : "Bookmark Booth"}
                 </button>
               </div>

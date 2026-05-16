@@ -1278,18 +1278,78 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* Session 169 round 2 CTA pair (Explore Booth + Flag the Find) retired
-          in session 170 Arc 3 per Shape B re-architecture (Frame C). The
-          page's primary CTA is now the PiLeaf save bubble in the photograph's
-          top-right corner (already present since session 97 — see save bubble
-          render above ~line 1262). Explore Booth's navigation affordance is
-          covered by the DestinationHero's tappable vendor/booth strip
-          (routes to /shelf/[vendorSlug]). Surface-locked design reversal of
-          session 169 round 2's "two butts under the price" decision per
-          feedback_surface_locked_design_reversals — explicitly surfaced
-          because session 169 was solving "primary CTA + secondary booth nav"
-          via a button pair, and Shape B solves it structurally via the
-          lattice-canonical corner bubble + tappable destination card. */}
+      {/* Flag the Find — primary CTA under the price (session 171 partial
+          restoration). Session 169 round 2 shipped this as the right half
+          of a 50/50 CTA pair (Explore Booth + Flag the Find); session 170
+          Arc 3 retired the entire pair on the thesis "the photograph corner
+          PiLeaf save bubble IS the page's primary CTA" (Shape B Q1 lock).
+          Session 171 iPhone QA on v0.170.0 production reversed that thesis:
+          the corner bubble alone reads too quiet as the primary CTA at
+          44×44; under-price button is the more discoverable second copy.
+
+          Bounded surface-locked design reversal per
+          feedback_surface_locked_design_reversals (12th cumulative firing
+          this Arc cluster + session 170's 11). The photograph corner
+          PiLeaf save bubble STAYS (lattice canonical preserved across all
+          save-able surfaces per project_layered_engagement_share_hierarchy);
+          this button COEXISTS as the discoverable second affordance. Both
+          toggle the same isSaved state via handleToggleSave — React's
+          reactivity keeps them in sync without extra wiring.
+
+          Explore Booth (the left half of the session-169 pair) does NOT
+          return per David's session-171 ask ("add the Flag the find button
+          back" — singular). Booth navigation stays covered by
+          DestinationHero's tappable vendor/booth strip.
+
+          Single full-width (no flex sibling). Saved-state color-flip
+          pattern preserved verbatim from session-157: unsaved = greenMid
+          bg + cream text + outline FlagGlyph; saved = surface.input bg
+          (matches nav bar) + greenMid text + filled FlagGlyph + 1px
+          green border. Padding 10 (unsaved) / 9 (saved) keeps total
+          height constant across the border toggle. */}
+      {(vendorName || boothNumber) && (
+        <div
+          style={{
+            padding:      "0 22px",
+            marginBottom: 22,
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleToggleSave}
+            aria-label={isSaved ? "Remove Flag" : "Flag this find"}
+            style={{
+              width:                   "100%",
+              background:              isSaved ? v2.surface.input : v2.accent.greenMid,
+              color:                   isSaved ? v2.accent.greenMid : "#fff",
+              border:                  isSaved ? `1px solid ${v2.accent.greenMid}` : "none",
+              borderRadius:            10,
+              padding:                 isSaved ? 9 : 10,
+              fontFamily:              FONT_INTER,
+              fontSize:                11,
+              fontWeight:              600,
+              letterSpacing:           "0.12em",
+              textTransform:           "uppercase",
+              display:                 "flex",
+              alignItems:              "center",
+              justifyContent:          "center",
+              gap:                     8,
+              cursor:                  "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <FlagGlyph
+              size={14}
+              style={{
+                flexShrink: 0,
+                color:      isSaved ? v2.accent.greenMid : "#fff",
+                fill:       isSaved ? v2.accent.greenMid : "none",
+              }}
+            />
+            {isSaved ? "Remove Flag" : "Flag the Find"}
+          </button>
+        </div>
+      )}
 
       {/* DestinationHero — session 170 Shape B re-architecture (Frame C
           map-led composition). Replaces the inline cartographic block

@@ -120,7 +120,7 @@ import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MdOutlineExplore } from "react-icons/md";
-import { PiLeafBold, PiStorefront } from "react-icons/pi";
+import { PiLeafBold, PiStorefrontBold } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
 import { useUserRole } from "@/lib/useUserRole";
 
@@ -213,7 +213,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       key: "booth" as NavTab,
       label: "Booth",
       href:  "/my-shelf",
-      icon:  <PiStorefront size={22} />,
+      icon:  <PiStorefrontBold size={22} />,
     }] : []),
   ];
 
