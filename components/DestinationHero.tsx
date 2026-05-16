@@ -219,8 +219,12 @@ export default function DestinationHero({
     infoStripInner
   );
 
+  // Outer horizontal padding 22px matches /find/[id] page convention
+  // (title block, prior CTA pair, prior cartographic block sibling all
+  // on 22px). Bottom 28px gives clear separation from whatever renders
+  // below.
   return (
-    <div style={{ padding: "0 16px 28px" }}>
+    <div style={{ padding: "0 22px 28px" }}>
       {/* Eyebrow — D11: outside the card, above. Italic Cormorant 18 +
           PiStorefront icon. Padding 0 4px 10px (small horizontal indent
           for typographic alignment with card; bottom gap to card). */}

@@ -84,12 +84,15 @@ import {
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { mapsUrl, boothNumeralSize } from "@/lib/utils";
-import { mallSnapshotUrl } from "@/lib/mapStaticImage";
+// mallSnapshotUrl import retired in session 170 Arc 2 — map snapshot
+// moved INSIDE <DestinationHero> per the Shape B re-architecture, so
+// this page no longer constructs the URL directly.
 import { track } from "@/lib/clientEvents";
 import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendorPostsCache, setVendorPostsCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
+import DestinationHero from "@/components/DestinationHero";
 // LocationActions retired from /find/[id] in session 157 Review Board Find #1
 // ("Take Trip" CTA replaced by "Save the Find" button). Component still
 // shipped + consumed by /shelf/[slug] and /map's PinCallout — import line
@@ -1705,265 +1708,38 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* Cartographic block (session 71 round 2 — fully collapsed) — single
-          inkWash card with italic "Find this item at" eyebrow above. XGlyph
-          spine retired since cartographic identity no longer earns its place
-          on this page (no other page carries it either). */}
+      {/* DestinationHero — session 170 Shape B re-architecture (Frame C
+          map-led composition). Replaces the inline cartographic block
+          (eyebrow + cardInner IIFE + standalone map snapshot Link) +
+          the standalone map snapshot below it. All three parts collapse
+          into one primitive that reads as the page's secondary hero.
+
+          Surface-locked design reversal of session 169 round 2 — the
+          map snapshot moved INSIDE the destination card instead of as
+          a sibling below the mall/booth card. Same tap target
+          (/map?mall=<slug>), same defensive fallback (Mapbox preview-
+          deployment silent fail), just restructured into the card per
+          design record D7+D17+D20.
+
+          Purely informational — NO CTAs inside. Page's primary CTA is
+          the PiLeaf save bubble in the photograph's top-right corner
+          (already present since session 97; CTA pair under price
+          retires in Arc 3).
+
+          Design record: docs/find-destination-hero-design.md */}
       {(vendorName || boothNumber) && (
-        <div
-          style={{
-            padding: "0 28px",
-            marginBottom: 32,
-          }}
-        >
-          {/* Session 157 Review Board Find #6 — eyebrow row simplifies to
-              the left-side descriptor only. "Visit Booth →" link relocated
-              to the "More from this booth…" carousel section header below
-              (ShelfSection). The cartographic block above the card now
-              just identifies the place; the affordance to enter the booth
-              sits where the user is browsing the booth's other finds —
-              semantically closer to the action. The cardInner Link wrapper
-              below still keeps card-tap routing to /shelf/[slug] as a
-              wider hit target. */}
-          {/* Review Board Finding 4 (session 169 round 2) — eyebrow
-              fontSize 16 → 18 + PiStorefront glyph 16 → 18 to match.
-              David: "The text for Purchase this item at is very small
-              hard to read." Pairs with the "More from this booth…"
-              eyebrow bump in same commit for cross-eyebrow consistency. */}
-          <div
-            style={{
-              display:        "inline-flex",
-              alignItems:     "center",
-              gap:            6,
-              marginBottom:   8,
-              paddingLeft:    2,
-              paddingRight:   2,
-              fontFamily:     FONT_CORMORANT,
-              fontStyle:      "italic",
-              fontSize:       18,
-              color:          v2.text.secondary,
-              lineHeight:     1.4,
-            }}
-          >
-            <PiStorefront size={18} aria-hidden style={{ flexShrink: 0 }} />
-            Purchase this item at
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-            {(vendorName || boothNumber) && (() => {
-              // Session 71 — cartographic collapse. Single inkWash card carries
-              // vendor name (IM Fell) + mall · city/state subtitle (sans, Apple
-              // Maps link) on the left, "Booth" small-caps + IM Fell numeral
-              // (Variant B parity) on the right. The parallel mall card and the
-              // inline "Visit the booth →" link from session 70 are retired.
-              const mallSubtitle = mallName
-                ? `${mallName}${mallCity ? ` · ${mallCity}${mallState ? `, ${mallState}` : ""}` : ""}`
-                : null;
-              const cardInner = (
-                <div
-                  style={{
-                    background: v2.surface.card,
-                    border: `1px solid ${v2.border.light}`,
-                    borderRadius: 10,
-                    padding: "12px 14px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto",
-                      columnGap: 12,
-                      alignItems: "center",
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      {/* Session 134 — mall location now sits ABOVE the
-                          vendor (booth) name. Postal-address shape: city
-                          first, building second. Font sizes + colors held
-                          per David's "keep the existing font size and
-                          styles as they are" call. The reordering matters
-                          because the booth/mall card identifies a physical
-                          place to visit; the natural read is "where" before
-                          "which" — like writing an address on an envelope.
-                          marginTop drift moves with the swap (was on the
-                          mall subtitle, now on the vendor name). */}
-                      {mallSubtitle && (
-                        mapLink ? (
-                          <a
-                            href={mapLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            style={{
-                              display: "inline-block",
-                              fontFamily: FONT_INTER,
-                              fontSize: 11.5,
-                              color: v2.text.muted,
-                              textDecoration: "underline",
-                              textDecorationStyle: "dotted",
-                              textDecorationColor: v1.inkFaint,
-                              textUnderlineOffset: 3,
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            {mallSubtitle}
-                          </a>
-                        ) : (
-                          <div
-                            style={{
-                              fontFamily: FONT_INTER,
-                              fontSize: 11.5,
-                              color: v2.text.muted,
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            {mallSubtitle}
-                          </div>
-                        )
-                      )}
-                      {vendorName && (
-                        <div
-                          style={{
-                            fontFamily: FONT_CORMORANT,
-                            fontSize: 18,
-                            color: v2.text.primary,
-                            // Session 82 — lineHeight 1.4 (was 1.25) for
-                            // descender clearance under overflow:hidden
-                            // (matches BoothLockupCard primitive). Preserved
-                            // for Cormorant under the same constraint.
-                            lineHeight: 1.4,
-                            letterSpacing: "-0.005em",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            marginTop: 2,
-                          }}
-                        >
-                          {vendorName}
-                        </div>
-                      )}
-                    </div>
-                    {boothNumber && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "flex-end",
-                          lineHeight: 1,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontFamily: FONT_INTER,
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: v2.accent.green,
-                            letterSpacing: "0.12em",
-                            textTransform: "uppercase",
-                            lineHeight: 1,
-                            marginBottom: 4,
-                          }}
-                        >
-                          Booth
-                        </div>
-                        <div
-                          style={{
-                            fontFamily: FONT_NUMERAL,
-                            fontSize: 26,
-                            fontWeight: 500,
-                            color: v2.accent.green,
-                            lineHeight: 1,
-                            letterSpacing: "-0.01em",
-                          }}
-                        >
-                          {boothNumber}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-              return vendorSlug ? (
-                <Link
-                  href={`/shelf/${vendorSlug}`}
-                  style={{
-                    display: "block",
-                    textDecoration: "none",
-                    WebkitTapHighlightColor: "transparent",
-                  }}
-                >
-                  {cardInner}
-                </Link>
-              ) : (
-                cardInner
-              );
-            })()}
-
-            {/* Map snapshot — small Mapbox Static Images thumbnail
-                anchored at the mall's lat/lng. Session 169 round 2
-                Review Board Finding 4: "Possibly a small snapshot of
-                the map location under the Mall location and booth."
-                Wraps in Link to /map?mall=<slug> for spatial-wayfinding
-                tap target. Gated on mallLat + mallLng + mallSlug;
-                gracefully absent when any are null (no degradation
-                affordance, just no snapshot — the mall/booth card
-                above + the Explore Booth CTA below carry the load).
-                onError fallback hides the <img> tag when Mapbox
-                rejects the request (e.g. preview deployments where
-                token URL allowlist excludes *.vercel.app per session-
-                156 carry); the wrapper Link stays so the tap target
-                still routes if image fetch silently fails. */}
-            {mallLat !== null && mallLng !== null && mallSlug && (
-              <Link
-                href={`/map?mall=${mallSlug}`}
-                aria-label={`View ${mallName ?? "this mall"} on the map`}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  aspectRatio: "2.5 / 1",
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  border: `1px solid ${v2.border.light}`,
-                  background: v2.surface.warm,
-                  textDecoration: "none",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                {(() => {
-                  const url = mallSnapshotUrl(mallLng, mallLat, 600, 240);
-                  if (!url) return null;
-                  return (
-                    <img
-                      src={url}
-                      alt=""
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        display: "block",
-                      }}
-                    />
-                  );
-                })()}
-              </Link>
-            )}
-
-            {/* Session 157 Review Board Find #1 — LocationActions
-                "Take Trip" CTA retires from /find/[id]. David's call:
-                "I want each page to have a specific action to take. So
-                on the find page I want to change the 'Take Trip' to
-                'Save the Find'." The Save the Find button now lives in
-                the slot where the hairline divider used to be (above
-                the cartographic block). LocationActions component stays
-                shipped for /shelf/[slug] + /map's PinCallout consumers
-                — only this page's render retires. Reverses R17 Arc 2
-                D19 + the session-134 Take-Trip-as-primary-CTA dial,
-                surfaced per feedback_surface_locked_design_reversals. */}
-          </div>
-        </div>
+        <DestinationHero
+          mallName={mallName}
+          mallCity={mallCity}
+          mallState={mallState}
+          mallLat={mallLat}
+          mallLng={mallLng}
+          mallSlug={mallSlug}
+          vendorName={vendorName}
+          vendorSlug={vendorSlug}
+          boothNumber={boothNumber}
+          mapLink={mapLink}
+        />
       )}
 
       {/* Owner Manage block retired v1.2 (session 31E polish). All three affordances moved to
