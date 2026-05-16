@@ -38,8 +38,25 @@ const INITIAL_STATE: UserRoleState = {
   role:      "none",
 };
 
+// Session 168 round 5 finding 3 — David iPhone QA: "Profile button, booth,
+// and booth-hero image all still flash." Two of those flashes (Profile
+// button glyph→initials AND Booth tab pop-in) both source from this hook —
+// every consumer mount starts at INITIAL_STATE (isLoading: true / role:
+// "none") and flashes the guest/no-vendor chrome for ~100-300ms before
+// detectUserRole resolves. Across a session of nav between (tabs)/
+// surfaces, both MastheadProfileButton AND BottomNav re-mount on EACH
+// route transition (they sit in the (tabs)/layout but the (tabs)/ chrome
+// is itself remounted on cross-surface nav in some App Router flows).
+//
+// Module-scope cache survives SPA session. First detectUserRole call
+// populates; subsequent mounts hydrate synchronously with the last-known
+// state — no flash on warm nav. onAuthChange still drives reactivity on
+// sign-in/sign-out so cache invalidates correctly. Mirrors the
+// cachedAuthUser pattern shipped at round 4 (app/my-shelf/page.tsx).
+let cachedRoleState: UserRoleState | null = null;
+
 export function useUserRole(): UserRoleState {
-  const [state, setState] = useState<UserRoleState>(INITIAL_STATE);
+  const [state, setState] = useState<UserRoleState>(cachedRoleState ?? INITIAL_STATE);
 
   // Review Board fixture path — synchronous hydrate, skip Supabase.
   useLayoutEffect(() => {
@@ -56,7 +73,9 @@ export function useUserRole(): UserRoleState {
       if (cancelled) return;
       const r = await detectUserRole(user);
       if (cancelled) return;
-      setState({ isLoading: false, role: r });
+      const next: UserRoleState = { isLoading: false, role: r };
+      cachedRoleState = next;
+      setState(next);
     }
 
     refresh();
