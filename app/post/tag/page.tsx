@@ -388,18 +388,26 @@ function PostTagInner() {
           </div>
         </div>
 
-        {/* Find + Tag side-by-side — find shows ✓ overlay (captured),
-            tag is dotted placeholder until extraction populates it. */}
+        {/* Review Board Finding 7 (session 169) — Find + Tag stack
+            vertically (Find on top, Tag below) + center on screen.
+            David: "Position the the tag outlined box image under the
+            photo thumbnail and center on screen."
+            Was 2-col side-by-side (Find left, Tag right) per Arc 7.2
+            ship; David's iPhone QA call moves to single-column stacked.
+            Both elements constrained to ~58% of viewport width so the
+            stack reads as deliberate composition rather than spanning
+            the full content area. */}
         <div
           style={{
             padding: "0 22px",
             display: "flex",
-            gap: 12,
-            alignItems: "flex-start",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 14,
           }}
         >
-          {/* Left column: find polaroid + check overlay + retake link */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          {/* Find polaroid + check overlay + retake link */}
+          <div style={{ width: "58%", display: "flex", flexDirection: "column", alignItems: "center" }}>
             {itemImage && (
               <div style={{ width: "100%", position: "relative" }}>
                 <PolaroidTile
@@ -461,8 +469,9 @@ function PostTagInner() {
             )}
           </div>
 
-          {/* Right column: dotted tag placeholder OR captured tag photo */}
-          <div style={{ flex: 1 }}>
+          {/* Tag dotted placeholder OR captured tag photo — same ~58%
+              width as Find polaroid above, centered. */}
+          <div style={{ width: "58%" }}>
             {!isExtracting && (
               <div
                 aria-label="Tag photo will appear here"
