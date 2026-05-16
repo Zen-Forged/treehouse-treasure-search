@@ -66,7 +66,9 @@ import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil } from "lucide-react";
-import { PiStorefront } from "react-icons/pi";
+// PiStorefront import retired in session 170 Arc 3 — was consumed by
+// the Explore Booth button (in the CTA pair that retired) and the
+// inline cartographic eyebrow (now owned by <DestinationHero>).
 import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPost, getVendorPosts } from "@/lib/posts";
@@ -1600,113 +1602,18 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* Session 169 round 2 — CTA pair (Explore Booth secondary +
-          Flag the Find primary) side-by-side under the price. David:
-          "I'm thinking of two butts under the price (a) Explore Booth
-          (secondary) (b) Flag the Find (primary)."
-
-          Replaces the session-157 single full-width Flag-the-Find
-          button. Side-by-side 50/50 via flex (David picked side-by-side
-          over stacked at session-169 round-2 Q2). Explore Booth on
-          left (secondary outlined green-on-cream) routes to /shelf/[slug];
-          Flag the Find on right (primary filled green) toggles save.
-          Both buttons inherit the saved-state color flip pattern from
-          session-157 — Flag the Find's saved state still flips bg to
-          v2.surface.input + green text + filled green icon + 1px green
-          border.
-
-          Conditional render preserves the hairline's gate (vendor or
-          booth number must exist for the find to belong to something
-          saveable). Explore Booth inner-conditional on vendorSlug (only
-          routes when a slug exists; falls back to a disabled-style
-          button if vendor exists without a slug — rare but defensive). */}
-      {(vendorName || boothNumber) && (
-        <div
-          style={{
-            padding: "0 22px",
-            marginBottom: 22,
-            display: "flex",
-            gap: 10,
-          }}
-        >
-          {/* Explore Booth — secondary outlined. Routes to /shelf/[slug].
-              Hidden when vendorSlug is null (vendor row exists but no
-              slug yet — edge case from admin creation flow). */}
-          {vendorSlug && (
-            <Link
-              href={`/shelf/${vendorSlug}`}
-              aria-label="Explore this booth"
-              style={{
-                flex: 1,
-                background:     v2.surface.input,
-                color:          v2.accent.greenMid,
-                border:         `1px solid ${v2.accent.greenMid}`,
-                borderRadius:   10,
-                padding:        9,
-                fontFamily:     FONT_INTER,
-                fontSize:       11,
-                fontWeight:     600,
-                letterSpacing:  "0.12em",
-                textTransform:  "uppercase",
-                display:        "flex",
-                alignItems:     "center",
-                justifyContent: "center",
-                gap:            8,
-                cursor:         "pointer",
-                textDecoration: "none",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <PiStorefront size={14} aria-hidden style={{ flexShrink: 0 }} />
-              Explore Booth
-            </Link>
-          )}
-
-          {/* Flag the Find — primary filled. Saved-state color-flip
-              pattern preserved from session-157 (Unsaved: solid green
-              bg + white text/icon; Saved: white bg + green text + filled
-              green icon + 1px green border). 1px border on saved
-              subtracts from height; padding compensates by -1 so total
-              footprint stays consistent across states (and stays
-              vertically-aligned with the Explore Booth sibling which
-              always has 1px border + 9px padding). */}
-          <button
-            type="button"
-            onClick={handleToggleSave}
-            aria-label={isSaved ? "Remove Flag" : "Flag this find"}
-            style={{
-              flex: 1,
-              background:     isSaved ? v2.surface.input : v2.accent.greenMid,
-              color:          isSaved ? v2.accent.greenMid : "#fff",
-              border:         isSaved ? `1px solid ${v2.accent.greenMid}` : "none",
-              borderRadius:   10,
-              padding:        isSaved ? 9 : 10,
-              fontFamily:     FONT_INTER,
-              fontSize:       11,
-              fontWeight:     600,
-              letterSpacing:  "0.12em",
-              textTransform:  "uppercase",
-              display:        "flex",
-              alignItems:     "center",
-              justifyContent: "center",
-              gap:            8,
-              cursor:         "pointer",
-              WebkitTapHighlightColor: "transparent",
-              transition:     "background 0.15s ease, color 0.15s ease",
-            }}
-          >
-            <FlagGlyph
-              size={14}
-              strokeWidth={2.0}
-              style={{
-                color: isSaved ? v2.accent.greenMid : "#fff",
-                fill:  isSaved ? v2.accent.greenMid : "none",
-              }}
-            />
-            {isSaved ? "Remove Flag" : "Flag the Find"}
-          </button>
-        </div>
-      )}
+      {/* Session 169 round 2 CTA pair (Explore Booth + Flag the Find) retired
+          in session 170 Arc 3 per Shape B re-architecture (Frame C). The
+          page's primary CTA is now the PiLeaf save bubble in the photograph's
+          top-right corner (already present since session 97 — see save bubble
+          render above ~line 1262). Explore Booth's navigation affordance is
+          covered by the DestinationHero's tappable vendor/booth strip
+          (routes to /shelf/[vendorSlug]). Surface-locked design reversal of
+          session 169 round 2's "two butts under the price" decision per
+          feedback_surface_locked_design_reversals — explicitly surfaced
+          because session 169 was solving "primary CTA + secondary booth nav"
+          via a button pair, and Shape B solves it structurally via the
+          lattice-canonical corner bubble + tappable destination card. */}
 
       {/* DestinationHero — session 170 Shape B re-architecture (Frame C
           map-led composition). Replaces the inline cartographic block
