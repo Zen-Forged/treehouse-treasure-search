@@ -47,7 +47,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // session 145 BottomNav cohesion sweep + session 137 ShareSheet
 // migrations.
 import { ArrowLeft, Loader } from "lucide-react";
-import { PiEnvelopeSimple, PiClipboard, PiStorefront, PiKey, PiQuestion } from "react-icons/pi";
+import { PiEnvelopeSimple, PiClipboard, PiStorefrontBold, PiKey, PiQuestion } from "react-icons/pi";
 import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin, detectUserRoleWithAutoClaim, tryAutoClaimVendorRows } from "@/lib/auth";
 import { isReviewMode } from "@/lib/reviewMode";
 import { supabase } from "@/lib/supabase";
@@ -627,7 +627,7 @@ function LoginInner() {
                     href="/my-shelf"
                     title="Manage my booth"
                     subtitle="Edit your shelf, post new finds, mark items sold."
-                    icon={<PiStorefront size={20} />}
+                    icon={<PiStorefrontBold size={20} />}
                   />
                 )}
                 {isAdmin(authedUser) && (

@@ -38,7 +38,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PiStorefront } from "react-icons/pi";
+import { PiStorefrontBold } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT, FONT_INTER, FONT_NUMERAL } from "@/lib/tokens";
 import { mallSnapshotUrl } from "@/lib/mapStaticImage";
 
@@ -227,7 +227,7 @@ export default function DestinationHero({
   return (
     <div style={{ padding: "0 22px 28px" }}>
       {/* Eyebrow — D11: outside the card, above. Italic Cormorant 18 +
-          PiStorefront icon. Padding 0 4px 10px (small horizontal indent
+          PiStorefrontBold icon. Padding 0 4px 10px (small horizontal indent
           for typographic alignment with card; bottom gap to card). */}
       <div
         style={{
@@ -244,7 +244,7 @@ export default function DestinationHero({
           lineHeight:  1.3,
         }}
       >
-        <PiStorefront size={18} aria-hidden style={{ flexShrink: 0 }} />
+        <PiStorefrontBold size={18} aria-hidden style={{ flexShrink: 0 }} />
         Purchase this item at
       </div>
 

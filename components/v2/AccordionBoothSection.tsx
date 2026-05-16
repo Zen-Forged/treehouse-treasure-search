@@ -7,7 +7,7 @@
 //
 // Layout per design record:
 //   Header row (clickable to toggle):
-//     [PiStorefront 22] [BOOTH N small-caps] [• dot] [italic Cormorant name] [chevron up/down]
+//     [PiStorefrontBold 22] [BOOTH N small-caps] [• dot] [italic Cormorant name] [chevron up/down]
 //   Body (when expanded):
 //     find rows (children) below header
 //
@@ -22,7 +22,7 @@
 "use client";
 
 import { useState } from "react";
-import { PiStorefront } from "react-icons/pi";
+import { PiStorefrontBold } from "react-icons/pi";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 
 interface AccordionBoothSectionProps {
@@ -67,7 +67,7 @@ export default function AccordionBoothSection({
           textAlign: "left",
         }}
       >
-        <PiStorefront
+        <PiStorefrontBold
           size={22}
           color={v2.accent.green}
           style={{ flexShrink: 0 }}
