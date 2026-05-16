@@ -579,9 +579,11 @@ function LoginInner() {
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              // Review Board Finding 11B (session 153) — sub-text 14 → 16
-              // for legibility under the 96px wordmark. Was getting lost.
-              fontSize: 16,
+              // Review Board Finding 6 (session 169) — sub-text 16 → 18.
+              // David: "Improve the readability of the text it feels small
+              // and hard to read esp on 'enter your email..' text." Second
+              // bump on this string (was 14 → 16 at session 153 Finding 11B).
+              fontSize: 18,
               color: v2.text.muted,
               lineHeight: 1.55,
               margin: "0 auto",
@@ -677,7 +679,13 @@ function LoginInner() {
                   style={{
                     fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
-                    fontSize: 12,
+                    // Review Board Finding 6 (session 169) — sub-text 12 → 14.
+                    // David: "Improve the readability of the text... esp on...
+                    // 'We'll email you..' text." 12px was too quiet for the
+                    // 40-65 demographic per the session-46 small-type sweep
+                    // rule; 14 matches the wordmark sub-text bump (16 → 18)
+                    // paired in this commit.
+                    fontSize: 14,
                     color: v2.text.muted,
                     textAlign: "center",
                     lineHeight: 1.5,

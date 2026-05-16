@@ -641,7 +641,11 @@ function PostPreviewInner() {
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              fontSize: 14,
+              // Review Board Finding 8 (session 169) — sub-text 14 → 16.
+              // David: "subtext feels really small and hard to read."
+              // Pairs with login wordmark sub-text bump (16 → 18) — same
+              // readability class shipped in the same commit.
+              fontSize: 16,
               color: v2.text.muted,
               lineHeight: 1.5,
               maxWidth: 290,
