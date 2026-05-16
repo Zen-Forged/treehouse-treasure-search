@@ -1279,7 +1279,7 @@ export default function FindDetailPage() {
                     e.stopPropagation();
                     handleToggleSave();
                   }}
-                  aria-label={isSaved ? "Unsave" : "Save"}
+                  aria-label={isSaved ? "Remove Flag" : "Flag this find"}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -1638,7 +1638,7 @@ export default function FindDetailPage() {
           <button
             type="button"
             onClick={handleToggleSave}
-            aria-label={isSaved ? "Unsave this find" : "Save this find"}
+            aria-label={isSaved ? "Remove Flag" : "Flag this find"}
             style={{
               width:          "100%",
               // Session 157 Review Board Find #1 — invert color pattern on
@@ -1680,7 +1680,7 @@ export default function FindDetailPage() {
                 fill:  isSaved ? v2.accent.greenMid : "none",
               }}
             />
-            {isSaved ? "Saved" : "Save the Find"}
+            {isSaved ? "Remove Flag" : "Flag the Find"}
           </button>
         </div>
       )}
