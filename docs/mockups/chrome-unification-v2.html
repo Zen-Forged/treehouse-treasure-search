@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chrome Unification V2 — Treehouse Finds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 24px 80px;
+    background: #1a110a;
+    color: #faf6ec;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  h1 {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    text-align: center;
+    font-size: 32px;
+    margin: 0 0 8px;
+    color: #f2ecd8;
+  }
+  .subhead {
+    text-align: center;
+    color: rgba(242,236,216,0.65);
+    font-size: 13px;
+    margin: 0 auto 8px;
+    max-width: 820px;
+    line-height: 1.6;
+  }
+  .locked {
+    text-align: center;
+    color: rgba(242,236,216,0.45);
+    font-size: 11px;
+    margin: 0 auto 36px;
+    max-width: 880px;
+    letter-spacing: 0.03em;
+    line-height: 1.7;
+  }
+  .locked strong { color: rgba(242,236,216,0.7); }
+  .locked code {
+    background: rgba(245,234,213,0.10);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+  }
+
+  .frames {
+    display: flex;
+    gap: 28px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 0 auto;
+    max-width: 1900px;
+  }
+  .frame-wrap { width: 330px; }
+  .frame-label {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 20px;
+    color: #f2ecd8;
+    margin: 0 0 4px;
+    text-align: center;
+  }
+  .frame-tag {
+    text-align: center;
+    color: rgba(242,236,216,0.55);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    margin-bottom: 14px;
+    min-height: 24px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 330px;
+    height: 720px;
+    background: #E6DECF;  /* v2.bg.tabs default */
+    border-radius: 36px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 5px #0a0604;
+  }
+  .phone.cream-main { background: #F7F3EB; }
+
+  .status-bar {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px 0;
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 60;
+    pointer-events: none;
+  }
+  .status-bar.dark  { color: #2A1E12; }
+  .status-bar.light { color: #f5ead5; }
+
+  /* Hero image shared variants — different visible slices */
+  .hero-full {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    height: 240px;  /* 33vh of 720 ≈ 237 */
+    background-image:
+      linear-gradient(180deg,
+        rgba(230,222,207,0) 0%,
+        rgba(230,222,207,0) 78%,
+        rgba(230,222,207,0.40) 92%,
+        rgba(230,222,207,0.85) 99%,
+        #E6DECF 100%),
+      url('../../public/BG.png');
+    background-size: auto, cover;
+    background-position: center, center;
+    background-repeat: no-repeat;
+  }
+  .hero-collapsing {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    height: 140px;  /* mid-scroll, partway collapsed */
+    background-image:
+      linear-gradient(180deg,
+        rgba(230,222,207,0) 0%,
+        rgba(230,222,207,0.20) 60%,
+        rgba(230,222,207,0.70) 92%,
+        #E6DECF 100%),
+      url('../../public/BG.png');
+    background-size: auto, cover;
+    background-position: center, center 80%;
+    background-repeat: no-repeat;
+  }
+  .hero-masthead {
+    /* The "masthead strip" — universal across Explore (scrolled state) + Saved + /find + /shelf.
+       Height bumped from 98 → 130 per David's refinement: logo sits comfortably mid-strip
+       with the photo extending below, then the chip overlays the bottom ~30px to "trim"
+       the photo. Non-Home surfaces show the full 130px since no chip overlays there. */
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    height: 130px;
+    background-image:
+      linear-gradient(180deg,
+        rgba(230,222,207,0) 0%,
+        rgba(230,222,207,0.18) 70%,
+        rgba(230,222,207,0.50) 95%,
+        rgba(230,222,207,0.85) 100%),
+      url('../../public/BG.png');
+    background-size: auto, cover;
+    background-position: center, center 92%;
+    background-repeat: no-repeat;
+    z-index: 30;
+  }
+
+  /* Logo (sticky journey on Home; static in masthead on other pages) */
+  .logo-element {
+    width: 165px;  /* ~50% phone width */
+    height: auto;
+    display: block;
+  }
+  .logo-in-hero-full {
+    position: absolute;
+    left: 50%;
+    top: 118px;  /* vertical center of 240px hero ≈ y 118 (with hero center at 120) */
+    transform: translate(-50%, -50%);
+    z-index: 35;
+  }
+  .logo-in-hero-collapsing {
+    /* Mid-scroll — logo has stuck at top of viewport already */
+    position: absolute;
+    left: 50%;
+    top: 48px;  /* sticky at masthead vertical center */
+    transform: translate(-50%, -50%);
+    z-index: 35;
+  }
+  .logo-in-masthead {
+    position: absolute;
+    left: 50%;
+    top: 65px;  /* vertical center of 130px masthead — logo sits high enough that
+                   the photo has visible breathing room below before chip overlay */
+    transform: translate(-50%, -50%);
+    z-index: 35;
+    width: 150px;
+  }
+  .logo-in-masthead.with-slots {
+    /* /find + /shelf — logo nudged smaller to share masthead with affordance slots */
+    width: 135px;
+  }
+
+  /* Mall picker chip — Home only */
+  .picker-chip {
+    background: #E6DECF;
+    padding: 10px 16px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 6px rgba(42,26,10,0.05);
+  }
+  .picker-chip .pin { color: #285C3C; }
+  .picker-chip .name {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 22px;
+    color: #2A1E12;
+  }
+  .picker-chip .chev { color: #5C5246; margin-left: 2px; }
+  /* Chip at rest — below 240px hero */
+  .picker-at-rest    { position: absolute; top: 240px; left: 0; right: 0; }
+  /* Chip mid-scroll — slid up to ~y 188 */
+  .picker-mid-scroll { position: absolute; top: 188px; left: 0; right: 0; }
+  /* Chip pinned — overlaps masthead bottom. Top edge at y=100 (30px above masthead bottom y=130).
+     Chip's higher z-index renders OVER the hero strip, "trimming" the photo at the chip's top edge. */
+  .picker-pinned     { position: absolute; top: 100px; left: 0; right: 0; z-index: 38; box-shadow: 0 -2px 8px rgba(42,26,10,0.10); }
+
+  /* Floating Profile bubble — light variant since masthead bg is now hero photo */
+  .profile-bubble {
+    position: absolute;
+    top: 28px;
+    right: 18px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(245,234,213,0.85);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .profile-bubble svg { color: #2A1E12; }
+
+  /* In-masthead affordances (used on /find + /shelf) */
+  .masthead-slots {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 130px;
+    padding: 14px 18px 12px;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 8px;
+    pointer-events: none;
+  }
+  .masthead-slots .slot-left, .masthead-slots .slot-right {
+    min-width: 80px;
+    display: flex; align-items: center;
+    pointer-events: auto;
+  }
+  .masthead-slots .slot-right { justify-content: flex-end; gap: 6px; }
+  .icon-bubble {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(245,234,213,0.85);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(245,234,213,0.5);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .icon-bubble svg { color: #2A1E12; }
+
+  /* Feed tile grid */
+  .tile-grid {
+    position: absolute;
+    left: 0; right: 0;
+    padding: 8px 16px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .tile {
+    background: #FFFCF5;
+    border-radius: 4px;
+    padding: 6px 6px 10px;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+  }
+  .tile-photo {
+    aspect-ratio: 4/5;
+    border-radius: 2px;
+  }
+  .tile-photo.v1 { background: linear-gradient(135deg, #8a6c4a, #3a2818); }
+  .tile-photo.v2 { background: linear-gradient(135deg, #4a3520, #221610); }
+  .tile-photo.v3 { background: linear-gradient(135deg, #6a5840, #2a1a10); }
+  .tile-photo.v4 { background: linear-gradient(135deg, #9b8268, #4a3020); }
+  .tile-meta { text-align: center; margin-top: 5px; }
+  .tile-meta .ago {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: #5C5246;
+  }
+
+  /* BottomNav */
+  .nav {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2A4536;
+    border-radius: 999px;
+    padding: 5px 7px;
+    display: flex;
+    gap: 4px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+    z-index: 20;
+  }
+  .nav-tab {
+    padding: 8px 18px;
+    border-radius: 999px;
+    color: #c8d6cc;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .nav-tab.active { background: rgba(255,255,255,0.10); color: #f5ead5; }
+
+  /* /find content */
+  .find-hero-photo {
+    position: absolute;
+    top: 110px;
+    left: 16px;
+    right: 16px;
+    aspect-ratio: 4/5;
+    background: #FFFCF5;
+    border-radius: 4px;
+    padding: 6px;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+  }
+  .find-photo-inner {
+    width: 100%; height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(135deg, #8a6c4a, #3a2818);
+  }
+  .find-postit {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: #fbf3df;
+    transform: rotate(-3deg);
+    padding: 6px 10px;
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: #2A1E12;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .find-flag-bubble {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(245,242,235,0.85);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+  .find-flag-bubble svg { color: #2A4536; }
+  .find-meta {
+    position: absolute;
+    left: 0; right: 0;
+    text-align: center;
+    color: #2A1E12;
+  }
+  .find-meta .title {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 26px;
+  }
+  .find-meta .price {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 26px;
+    color: #6e3a2c;
+    margin-top: 2px;
+  }
+  .cartographic-card {
+    position: absolute;
+    left: 16px; right: 16px;
+    background: #fbf3df;
+    border-radius: 4px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 4px rgba(42,26,10,0.06);
+    text-align: center;
+  }
+  .cartographic-card .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: #5C5246;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .cartographic-card .booth {
+    font-family: 'Cormorant', serif;
+    font-size: 17px;
+    color: #2A1E12;
+    font-weight: 600;
+  }
+  .cartographic-card .mall {
+    font-family: 'Cormorant', serif;
+    font-size: 13px;
+    color: #5C5246;
+    margin-top: 1px;
+  }
+  .cartographic-card .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .cartographic-card .actions .btn {
+    flex: 1;
+    padding: 9px;
+    border-radius: 999px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    background: #285C3C;
+    color: #f5ead5;
+  }
+
+  /* Saved content */
+  .saved-header {
+    position: absolute;
+    left: 16px; right: 16px;
+    top: 112px;
+    text-align: center;
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 16px;
+    color: #5C5246;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .saved-card {
+    background: #FFFCF5;
+    border: 1px solid #d8d0bf;
+    border-radius: 4px;
+    padding: 12px;
+    box-shadow: 0 4px 10px rgba(42,26,10,0.08);
+  }
+  .saved-card .eyebrow {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: #5C5246;
+  }
+  .saved-card .name {
+    font-family: 'Cormorant', serif;
+    font-weight: 600;
+    font-size: 17px;
+    color: #2A1E12;
+    margin-top: 2px;
+  }
+  .saved-card .addr {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: #5C5246;
+    margin-top: 2px;
+  }
+
+  /* Axis annotation pill + motion arrow */
+  .axis-pill {
+    position: absolute;
+    background: rgba(40,92,60,0.95);
+    color: #f5ead5;
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    z-index: 55;
+    font-weight: 600;
+  }
+  .motion-arrow {
+    position: absolute;
+    color: rgba(40,92,60,0.85);
+    font-size: 16px;
+    z-index: 55;
+    animation: bob 2s ease-in-out infinite;
+    font-weight: 700;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); opacity: 0.85; }
+    50% { transform: translateY(5px); opacity: 1; }
+  }
+
+  /* Specs panel */
+  .specs {
+    max-width: 1000px;
+    margin: 56px auto 0;
+    background: rgba(245,234,213,0.04);
+    border: 1px solid rgba(245,234,213,0.12);
+    border-radius: 14px;
+    padding: 28px 32px;
+  }
+  .specs h2 {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 16px;
+    color: #f2ecd8;
+  }
+  .specs ul, .specs ol {
+    color: rgba(242,236,216,0.86);
+    font-size: 13px;
+    line-height: 1.75;
+    padding-left: 22px;
+    margin: 0;
+  }
+  .specs strong { color: #f5ead5; }
+  .specs em { color: rgba(245,234,213,0.7); font-style: italic; }
+  .specs code {
+    background: rgba(245,234,213,0.10);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+  <h1>Chrome Unification — V2 (chip-overlay refinement)</h1>
+  <p class="subhead">Refined: masthead strip is <strong>130px tall</strong> with logo at vertical center (y≈65) → the photo has visible breathing room below the logo → the mall chip sticky-pins at y=100 with higher z-index, OVERLAYING the bottom ~30px of the photo to <em>trim</em> it. Logo never abuts the masthead bottom; chip "scrolls over the top of the bottom portion of the hero" exactly as you described.</p>
+  <p class="locked"><strong>Locked decisions:</strong> Q1 = Profile floating overlay top-right · Q2 = Back floating overlay top-left when drawer open · Q3 (revised) = masthead bg IS the hero photo cropped to strip height; logo sticky-pins at masthead vcenter; chip overlays masthead bottom · Q4 = logo lives in masthead only (never baked into hero photo) · /admin exempt at primitive level</p>
+
+  <div class="frames">
+
+    <!-- ========= EXPLORE — AT REST ========= -->
+    <div class="frame-wrap">
+      <div class="frame-label">Explore — at rest</div>
+      <div class="frame-tag">Hero full 33vh · logo centered in hero · chip below</div>
+      <div class="phone">
+        <div class="status-bar light"><span>11:23</span><span>58%</span></div>
+
+        <div class="hero-full"></div>
+        <img class="logo-element logo-in-hero-full" src="../../public/treehouse_transparent.png" alt="Treehouse Finds">
+
+        <div class="picker-chip picker-at-rest">
+          <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+          <span class="name">Copper Awning Flea Market</span>
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+
+        <div class="tile-grid" style="top: 296px;">
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v2"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+        </div>
+
+        <div class="profile-bubble">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.66c1.43-1.06 3.13-1.66 5-1.66s3.57.6 5 1.66"/></svg>
+        </div>
+
+        <div class="nav">
+          <div class="nav-tab active">Explore</div>
+          <div class="nav-tab">Saved</div>
+        </div>
+
+        <div class="axis-pill" style="top:88px;left:10px;">Logo @ hero center</div>
+        <div class="motion-arrow" style="top:270px;left:50%;transform:translateX(-50%);">↓</div>
+      </div>
+    </div>
+
+    <!-- ========= EXPLORE — MID-SCROLL ========= -->
+    <div class="frame-wrap">
+      <div class="frame-label">Explore — mid-scroll</div>
+      <div class="frame-tag">Logo just hit top · hero collapsing · chip rising</div>
+      <div class="phone">
+        <div class="status-bar light"><span>11:23</span><span>58%</span></div>
+
+        <div class="hero-collapsing"></div>
+        <img class="logo-element logo-in-hero-collapsing" src="../../public/treehouse_transparent.png" alt="Treehouse Finds">
+
+        <div class="picker-chip picker-mid-scroll">
+          <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+          <span class="name">Copper Awning Flea Market</span>
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+
+        <div class="tile-grid" style="top: 246px;">
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">11 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v4"></div><div class="tile-meta"><div class="ago">12 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v2"></div><div class="tile-meta"><div class="ago">12 days ago</div></div></div>
+        </div>
+
+        <div class="profile-bubble">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.66c1.43-1.06 3.13-1.66 5-1.66s3.57.6 5 1.66"/></svg>
+        </div>
+
+        <div class="nav">
+          <div class="nav-tab active">Explore</div>
+          <div class="nav-tab">Saved</div>
+        </div>
+
+        <div class="axis-pill" style="top:78px;left:10px;">Logo sticky @ top</div>
+        <div class="axis-pill" style="top:148px;right:10px;">Chip rising ↑</div>
+      </div>
+    </div>
+
+    <!-- ========= EXPLORE — FULLY SCROLLED ========= -->
+    <div class="frame-wrap">
+      <div class="frame-label">Explore — fully scrolled</div>
+      <div class="frame-tag">Masthead strip · logo centered · chip frames bottom</div>
+      <div class="phone">
+        <div class="status-bar light"><span>11:23</span><span>58%</span></div>
+
+        <div class="hero-masthead"></div>
+        <img class="logo-element logo-in-masthead" src="../../public/treehouse_transparent.png" alt="Treehouse Finds">
+
+        <div class="picker-chip picker-pinned">
+          <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+          <span class="name">Copper Awning Flea Market</span>
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+
+        <div class="tile-grid" style="top: 158px;">
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">11 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v4"></div><div class="tile-meta"><div class="ago">12 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v2"></div><div class="tile-meta"><div class="ago">12 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">13 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">13 days ago</div></div></div>
+        </div>
+
+        <div class="profile-bubble">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.66c1.43-1.06 3.13-1.66 5-1.66s3.57.6 5 1.66"/></svg>
+        </div>
+
+        <div class="nav">
+          <div class="nav-tab active">Explore</div>
+          <div class="nav-tab">Saved</div>
+        </div>
+
+        <div class="axis-pill" style="top:38px;left:10px;">Hero strip 130px</div>
+        <div class="axis-pill" style="top:102px;right:10px;">Chip trims ↑</div>
+      </div>
+    </div>
+
+    <!-- ========= SAVED ========= -->
+    <div class="frame-wrap">
+      <div class="frame-label">Saved</div>
+      <div class="frame-tag">Same masthead strip from rest · no hero · no chip</div>
+      <div class="phone">
+        <div class="status-bar light"><span>11:23</span><span>58%</span></div>
+
+        <div class="hero-masthead"></div>
+        <img class="logo-element logo-in-masthead" src="../../public/treehouse_transparent.png" alt="Treehouse Finds">
+
+        <div class="saved-header" style="top: 144px;">
+          <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M223.45,40.07a8,8,0,0,0-7.52-7.52C139.8,28.08,78.82,51,52.82,94a87.09,87.09,0,0,0-12.76,49.96c.08,3.83.43,7.54.91,11.16-7.65,8.78-13.16,19.4-13.94,32.74-.78,13.35,3.83,26.31,12.96,36.78a8.01,8.01,0,1,0,12.04-10.5c-7.07-8.1-9.85-17.83-9.27-27.34a35.13,35.13,0,0,1,3.45-13.41,76.93,76.93,0,0,0,32.62,18.95C97.74,196.16,113.86,196,128,196c43.46,0,82.62-21.49,98.65-48.99C247.7,113.59,224.86,67.18,223.45,40.07Z"/></svg>
+          6 saved finds waiting to be found
+        </div>
+
+        <div style="position:absolute;top:180px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px;">
+          <div class="saved-card">
+            <div class="eyebrow">Saved finds from</div>
+            <div class="name">America's Antique Mall</div>
+            <div class="addr">3711 Lexington Rd, Louisville, KY</div>
+            <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+              <div style="aspect-ratio:4/5;background:linear-gradient(135deg,#8a6c4a,#3a2818);border-radius:2px;"></div>
+              <div style="aspect-ratio:4/5;background:linear-gradient(135deg,#4a3520,#221610);border-radius:2px;"></div>
+              <div style="aspect-ratio:4/5;background:linear-gradient(135deg,#6a5840,#2a1a10);border-radius:2px;"></div>
+            </div>
+          </div>
+          <div class="saved-card">
+            <div class="eyebrow">Saved finds from</div>
+            <div class="name">Joe Ley Antiques</div>
+            <div class="addr">615 E Market St, Louisville, KY</div>
+            <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+              <div style="aspect-ratio:4/5;background:linear-gradient(135deg,#9b8268,#4a3020);border-radius:2px;"></div>
+              <div style="aspect-ratio:4/5;background:linear-gradient(135deg,#8a6c4a,#3a2818);border-radius:2px;"></div>
+              <div style="aspect-ratio:4/5;background:transparent;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-bubble">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.66c1.43-1.06 3.13-1.66 5-1.66s3.57.6 5 1.66"/></svg>
+        </div>
+
+        <div class="nav">
+          <div class="nav-tab">Explore</div>
+          <div class="nav-tab active">Saved</div>
+        </div>
+
+        <div class="axis-pill" style="top:38px;left:10px;">Same strip · from rest</div>
+      </div>
+    </div>
+
+    <!-- ========= /FIND/[ID] ========= -->
+    <div class="frame-wrap">
+      <div class="frame-label">/find/[id]</div>
+      <div class="frame-tag">Masthead strip · back left · share+flag right · logo center</div>
+      <div class="phone cream-main">
+        <div class="status-bar light"><span>11:23</span><span>58%</span></div>
+
+        <div class="hero-masthead"></div>
+        <img class="logo-element logo-in-masthead with-slots" src="../../public/treehouse_transparent.png" alt="Treehouse Finds">
+
+        <!-- In-masthead slots over the hero strip -->
+        <div class="masthead-slots">
+          <div class="slot-left">
+            <div class="icon-bubble">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            </div>
+          </div>
+          <div></div>
+          <div class="slot-right">
+            <div class="icon-bubble">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+            </div>
+            <div class="icon-bubble">
+              <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M223.45,40.07a8,8,0,0,0-7.52-7.52C139.8,28.08,78.82,51,52.82,94a87.09,87.09,0,0,0-12.76,49.96c.08,3.83.43,7.54.91,11.16-7.65,8.78-13.16,19.4-13.94,32.74-.78,13.35,3.83,26.31,12.96,36.78a8.01,8.01,0,1,0,12.04-10.5c-7.07-8.1-9.85-17.83-9.27-27.34a35.13,35.13,0,0,1,3.45-13.41,76.93,76.93,0,0,0,32.62,18.95C97.74,196.16,113.86,196,128,196c43.46,0,82.62-21.49,98.65-48.99C247.7,113.59,224.86,67.18,223.45,40.07Z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="find-hero-photo" style="top: 142px;">
+          <div class="find-photo-inner"></div>
+          <div class="find-postit">Booth · 42</div>
+          <div class="find-flag-bubble">
+            <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M223.45,40.07a8,8,0,0,0-7.52-7.52C139.8,28.08,78.82,51,52.82,94a87.09,87.09,0,0,0-12.76,49.96c.08,3.83.43,7.54.91,11.16-7.65,8.78-13.16,19.4-13.94,32.74-.78,13.35,3.83,26.31,12.96,36.78a8.01,8.01,0,1,0,12.04-10.5c-7.07-8.1-9.85-17.83-9.27-27.34a35.13,35.13,0,0,1,3.45-13.41,76.93,76.93,0,0,0,32.62,18.95C97.74,196.16,113.86,196,128,196c43.46,0,82.62-21.49,98.65-48.99C247.7,113.59,224.86,67.18,223.45,40.07Z"/></svg>
+          </div>
+        </div>
+
+        <div class="find-meta" style="top: 492px;">
+          <div class="title">Brass candlestick</div>
+          <div class="price">$24</div>
+        </div>
+
+        <div class="cartographic-card" style="top: 572px;">
+          <div class="eyebrow">Find this item at</div>
+          <div class="booth">America's Antique Mall</div>
+          <div class="mall">Booth 42 · 3711 Lexington Rd</div>
+          <div class="actions">
+            <div class="btn">Directions</div>
+            <div class="btn">Enter Booth →</div>
+          </div>
+        </div>
+
+        <div class="axis-pill" style="top:38px;left:10px;">Slots over hero strip</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="specs">
+    <h2>Single mental model (chip-overlay refinement)</h2>
+    <ul>
+      <li><strong>Masthead = hero photo cropped to 130px strip + logo at vertical center (y≈65).</strong> Same visual chrome across every surface (except /admin).</li>
+      <li><strong>Mall chip on Home overlays the masthead bottom edge.</strong> Chip sticky-pins at top:100 with z-index ABOVE the hero strip. Chip's top edge sits 30px ABOVE the masthead's bottom edge (y=130), so the chip "trims" the bottom of the photo by occluding it. From the user's eye: photo visible y=0 to y=100 (where chip top edge cuts it), photo extends BEHIND chip from y=100 to y=130. Logo at y=65 sits comfortably in the upper portion of the visible photo, never abutting the chip.</li>
+      <li><strong>Explore is the only surface where the hero is bigger than the strip at rest.</strong> Logo sticks at viewport-y ≈ masthead vcenter (y≈65). Hero sticky-collapses around it. Chip rises with scroll and locks into its overlay position at y=100.</li>
+      <li><strong>Saved + /find + /shelf + /me + others render the 130px strip from rest.</strong> No animation, no full hero, no chip overlay — the full 130px photo strip is visible since no chip occludes it. Just strip + logo + page content below.</li>
+      <li><strong>Affordances (Profile / Back / Share / Flag bubbles)</strong> sit OVER the hero strip with the warm-cream <code>backdrop-filter: blur</code> bubble bg for contrast on a photographic surface (light bg + dark glyph). Floating Profile + Back overlays on (tabs)/ stay as session 166 dial 9 geometry. In-masthead slots on /find + /shelf use the same bubble vocabulary.</li>
+    </ul>
+
+    <h2 style="margin-top: 24px;">Implementation arc (~7 commits)</h2>
+    <ol>
+      <li><strong>Stage assets in /public</strong>: copy <code>BG.png</code> + <code>treehouse_transparent.png</code> into the worktree; no consumers wired yet</li>
+      <li><strong>New shared primitive <code>&lt;HeroMastheadStrip&gt;</code></strong> at <code>components/HeroMastheadStrip.tsx</code>: 98px-tall strip with <code>BG.png</code> background-image positioned at <code>center 92%</code> + linear-gradient bottom-fade to surface bg + <code>treehouse_transparent.png</code> centered. Props for slot overrides (left/right) + bg-fade target color (cream-tabs vs cream-main)</li>
+      <li><strong>StickyMasthead refactor</strong>: replaces the cream <code>v2.bg.main</code> bg with mount of <code>&lt;HeroMastheadStrip&gt;</code> for the bg + slot positioning preserved verbatim. Old <code>WORDMARK_DEFAULT</code> swaps to <code>treehouse_transparent.png</code> as the centered logo. MASTHEAD_HEIGHT constant bumps from 98 → 130. /admin override: explicit <code>variant="legacy"</code> prop renders the old cream bg + old wordmark</li>
+      <li><strong>HomeHero rewrite</strong>: existing 33vh sticky-collapsing element keeps its mechanism, but loses the embedded-wordmark assumption. Logo becomes a separate sticky element with <code>position:sticky;top:calc(MASTHEAD_VERTICAL_CENTER)</code>. Hero photo asset swaps to <code>BG.png</code>. Sticky-stop point unchanged — the logo's sticky pin and the hero's sticky-collapse mechanism converge at the same MASTHEAD_HEIGHT viewport y</li>
+      <li><strong>TabsChrome wiring</strong>: HomeHero renders only on Home (its 33vh form). Saved + other (tabs)/ surfaces get <code>&lt;HeroMastheadStrip&gt;</code> directly. MallPickerChip sticky-stop changes to <code>top: 100</code> (was previously aligned to a different geometry) so it overlays the masthead's bottom 30px with z-index above the strip. Chip gains explicit z-index: 38 (above strip's 30) + upward box-shadow for layered feel</li>
+      <li><strong>app/login direct img swap</strong> from <code>/wordmark.png</code> to <code>/treehouse_transparent.png</code></li>
+      <li><strong>iPhone QA on Vercel preview</strong> across Explore (full scroll journey) + Saved + sample /find + sample /shelf + sample /me</li>
+    </ol>
+
+    <h2 style="margin-top: 24px;">Risks / open implementation questions</h2>
+    <ul>
+      <li><strong>iOS Safari sticky-overlap + z-index reliability:</strong> Home has THREE sticky elements (hero + logo + chip) converging at different y values with explicit z-index ordering (chip z=38 over hero z=30). iOS Safari has known quirks with sticky elements that have explicit z-index — sometimes the chip's "above" status gets dropped during fast scroll. Testbed validation needed via <code>/sticky-test</code> smoke route per <code>feedback_testbed_first_for_ai_unknowns</code> before consumer wiring</li>
+      <li><strong>Logo's sticky journey:</strong> logo is a SIBLING of hero at the layout level (not a child), so it CSS-sticky-pins to viewport top regardless of hero's scroll state. Math: <code>position:sticky;top:calc(max(14px,safe-area)+51px)</code> (= masthead vertical center at 130px strip). Logo's at-rest position derived from its natural document flow position (above hero in source order with a negative-margin offset) so it APPEARS centered in the full 33vh hero at scroll=0, then sticky-engages at threshold</li>
+      <li><strong>Bubble contrast on hero strip:</strong> BG.png has dark woodgrain center + lighter edges. Logo over center reads fine (transparent PNG with warm-brown ink). Bubbles in slot positions (left + right) sit over edges of the photo which may be brighter — light-bubble-bg + dark-glyph should still read. iPhone QA will tell. The 130px strip gives more vertical room for the affordances too — they're now sitting in a taller chrome with breathing room above + below the 44px buttons</li>
+      <li><strong>Bottom-fade target color varies per surface:</strong> Home + Saved use <code>v2.bg.tabs</code> (#E6DECF) — the masthead's bottom edge bleeds INTO the (tabs)/ surface bg. /find + /shelf + /me use <code>v2.bg.main</code> (#F7F3EB) — slightly different cream. The <code>&lt;HeroMastheadStrip&gt;</code> primitive needs a <code>fadeTarget</code> prop. NOTE: on Home, the strip's bottom 30px is OCCLUDED by chip anyway, so the fade target there is moot (chip's solid bg covers it). The fade matters most on non-Home surfaces where the full 130px is visible</li>
+      <li><strong>Status-bar text color across surfaces:</strong> hero photo bg means light status-bar text. Across the whole app. Easy to set globally via theme-color meta + apple-mobile-web-app-status-bar-style. Was previously cream-bg + dark text — now needs flip</li>
+      <li><strong>Chip's drop-shadow direction is up, not down:</strong> normal cards cast shadows downward. The chip "scroll over the top of the hero" effect wants a shadow that suggests the chip is layered ABOVE the photo — so the shadow casts UPWARD onto the photo it's covering. CSS: <code>box-shadow: 0 -2px 8px rgba(42,26,10,0.10);</code>. Subtle but reinforces the "layered over" reading</li>
+    </ul>
+  </div>
+
+</body>
+</html>
