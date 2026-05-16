@@ -64,7 +64,6 @@ import {
   BoothHero,
   BoothTitleBlock,
   MallBlock,
-  DiamondDivider,
   WindowView,
   BoothCloser,
   BoothPageStyles,
@@ -429,45 +428,23 @@ export default function PublicShelfPage() {
 
             <BoothTitleBlock displayName={displayName} />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
-            <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
 
-            {/* Session 128 (refinement design D2 + D3): ViewToggle + ShelfView
-                retired. WindowView is the only find-rendering path.
-                Session 128 (refinement design D4): per-tile save bubble wired
-                via canonical PolaroidTile.topRight slot. Saves drives the
-                bubble state via useShopperSaves; toggling fires the same
-                R3 events as Home heart + /flagged unsave. */}
-            {available.length > 0 ? (
-              <WindowView
-                posts={available}
-                showAddTile={false}
-                swipeOriginPath={`/shelf/${slug}`}
-                savedIds={saves.ids}
-                onToggleSave={(postId) => saves.toggle(postId, !saves.isSaved(postId))}
-              />
-            ) : (
-              <EmptyState
-                subtitle="Nothing on the shelf yet — check back soon."
-                clearance={48}
-              />
-            )}
-
-            {/* Session 157 Review Board Booth #1 + #2 — Bookmark Booth
-                button replaces the BoothCloser internal hairline (David:
-                "replace the hairline divider with the bookmark button").
-                Visual flow: WindowView grid → button (where hairline was)
-                → updated closer text. The button now sits ABOVE the
-                closer; BoothCloser's internal hairline retires entirely
-                (see components/BoothPage.tsx for the closer copy update +
-                hairline retire). Reverses session 157 commit a99f56e's
-                below-closer placement per feedback_surface_locked_design_reversals
-                (same-session reversal of just-shipped placement per
-                feedback_within_session_design_record_reversal). The
-                button now visually divides the booth content from the
-                closing message + plays its primary-CTA role at the same
-                slot. */}
+            {/* Review Board Finding 3 (session 169) — Bookmark Booth
+                button relocated from below WindowView (session-157
+                placement above BoothCloser) → above WindowView,
+                replacing the <DiamondDivider> that previously sat
+                here. David: "Move the bookmark button above the
+                thumbnails replacing the thin line divider."
+                Bounded reversal of session-157 placement per
+                feedback_surface_locked_design_reversals — the
+                button now plays its primary-CTA role above the
+                booth content (where it scans first), while
+                BoothCloser closes the page in its own quiet voice.
+                DiamondDivider primitive retires from this surface
+                (still exported from components/BoothPage.tsx for any
+                future consumer; the import was already absent here). */}
             {vendor && (
-              <div style={{ padding: "28px 22px 0" }}>
+              <div style={{ padding: "22px 22px 12px" }}>
                 <button
                   type="button"
                   onClick={handleToggleBoothBookmark}
@@ -499,6 +476,27 @@ export default function PublicShelfPage() {
                   {boothBookmarked ? "Remove Bookmark" : "Bookmark Booth"}
                 </button>
               </div>
+            )}
+
+            {/* Session 128 (refinement design D2 + D3): ViewToggle + ShelfView
+                retired. WindowView is the only find-rendering path.
+                Session 128 (refinement design D4): per-tile save bubble wired
+                via canonical PolaroidTile.topRight slot. Saves drives the
+                bubble state via useShopperSaves; toggling fires the same
+                R3 events as Home heart + /flagged unsave. */}
+            {available.length > 0 ? (
+              <WindowView
+                posts={available}
+                showAddTile={false}
+                swipeOriginPath={`/shelf/${slug}`}
+                savedIds={saves.ids}
+                onToggleSave={(postId) => saves.toggle(postId, !saves.isSaved(postId))}
+              />
+            ) : (
+              <EmptyState
+                subtitle="Nothing on the shelf yet — check back soon."
+                clearance={48}
+              />
             )}
 
             <BoothCloser />
