@@ -549,13 +549,24 @@ function LoginInner() {
         </Link>
       </header>
 
+      {/* Review Board Finding 5 (session 169) — content sat low because
+          flex `justifyContent: "center"` was vertically-centering the
+          form group between the back+help header (top) and BottomNav
+          (bottom). David: "centered vertically but is accounting for
+          the masthead height which is blank making it seem low."
+          Switched to top-anchored via `justifyContent: "flex-start"` +
+          explicit `paddingTop: 24` so the wordmark sits closer to the
+          header. Form group reads as "anchored at the top of the page"
+          (matches the post/tag + post/preview + vendor-flow top-
+          anchored rhythm per feedback_admin_flow_one_screen_progression
+          ✅ Promoted) instead of "floating in space below the masthead." */}
       <div
         style={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          padding: "0 24px 8px",
+          justifyContent: "flex-start",
+          padding: "24px 24px 8px",
           minHeight: 0,
         }}
       >
