@@ -119,7 +119,7 @@ export default function DestinationHero({
                 display:              "inline-block",
                 fontFamily:           FONT_INTER,
                 fontSize:             11.5,
-                color:                v2.text.muted,
+                color:                v2.text.secondary,
                 textDecoration:       "underline",
                 textDecorationStyle:  "dotted",
                 textDecorationColor:  v1.inkFaint,
@@ -134,7 +134,7 @@ export default function DestinationHero({
               style={{
                 fontFamily: FONT_INTER,
                 fontSize:   11.5,
-                color:      v2.text.muted,
+                color:      v2.text.secondary,
                 lineHeight: 1.4,
               }}
             >
