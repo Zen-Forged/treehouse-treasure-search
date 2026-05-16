@@ -64,7 +64,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Pencil, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
@@ -151,6 +151,29 @@ export function BoothHero({
   // nothing to enlarge.
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  // Session 171 dial #1 — paint-in fix. David: "Anytime the /shelf is
+  // loaded it flickers the hero image we should paint this in if possible."
+  //
+  // Root cause: <img> at line ~180 mounts AFTER React commits with the
+  // resolved heroImageUrl prop. Between commit and paint, the browser
+  // starts the network fetch for the image. The "flicker" is the empty
+  // img → loaded img transition.
+  //
+  // Fix shape: warm browser cache via new Image().src as soon as
+  // heroImageUrl is known. The img mount that follows paints from the
+  // cache instantly (typically within a single frame). Doesn't affect
+  // cold-start fetch latency, but the fetchpriority="high" hint on the
+  // <img> itself (line 184) does — combined effect is "first frame
+  // painted" on warm-nav and "fastest-possible paint" on cold-start.
+  //
+  // Cleanup-free: new Image() with no DOM attachment relies on browser
+  // GC; the request stays in HTTP cache for the subsequent <img> mount.
+  useEffect(() => {
+    if (!heroImageUrl) return;
+    const preloader = new Image();
+    preloader.src = heroImageUrl;
+  }, [heroImageUrl]);
+
   return (
     <div style={{ padding: "0 10px", position: "relative" }}>
       <div
@@ -181,6 +204,15 @@ export function BoothHero({
               key={heroKey}
               src={heroImageUrl}
               alt=""
+              // Session 171 paint-in dial #1 — HTML5 hints. fetchpriority
+              // tells the browser to schedule this image early (overrides
+              // default "low" for images discovered late in the parse
+              // cycle); decoding="async" allows off-main-thread decode so
+              // paint isn't blocked. Paired with the preloader useEffect
+              // above so warm-nav re-mounts paint from the HTTP cache the
+              // preloader populated when heroImageUrl first became known.
+              fetchPriority="high"
+              decoding="async"
               style={{
                 position: "absolute",
                 inset: 0,
