@@ -24,18 +24,32 @@ Run the full Treehouse Finds session-closing protocol per `MASTER_PROMPT.md` §S
    - Save new user preferences, feedback corrections, or project facts as memory files per the memory-system guidance
    - Never save memory content directly in `MEMORY.md` — always separate file + index entry
 
-4. **Git:**
+4. **Versioning (Shape A — annotated tags + CHANGELOG, set up session 167):**
+   - Determine the new version: `v0.{session}.0` (e.g. session 167 → `v0.167.0`). Patch increments (`v0.167.1`, `v0.167.2`) only if a mid-session hotfix was shipped on top of the main session ship.
+   - **Bump `package.json`** `"version"` field to the new value (string replace).
+   - **Prepend a CHANGELOG.md entry** under the latest version's header using the [Keep a Changelog](https://keepachangelog.com) shape established at v0.167.0. Required sections (omit any that are empty): `### Added` / `### Changed` / `### Removed` / `### Fixed` / `### Deprecated`. Open with a one-paragraph "what shipped" summary, end with `### iPhone QA watch-items` if any. Always include the `[vX.Y.Z]: https://github.com/.../releases/tag/vX.Y.Z` reference link at the bottom of the entry.
+   - Both updates are part of the close commit (step 5).
+
+5. **Git:**
    - `git status` + `git diff --stat HEAD` — audit what changed
    - Commit with a message following the repo's existing style (see `git log --oneline -10`). Treehouse pattern: `feat(scope): ...` or `docs: session N close — ...` — NO `Co-Authored-By` line (matches 45+ prior commits)
    - Push the current branch
    - If on a worktree, open a PR to `main` via `gh pr create` — include a test plan checklist + notes for future sessions
    - **Squash-merge the PR immediately** via `gh pr merge <num> --squash --delete-branch` — David relies on Vercel preview as the pre-merge safety net (preview builds before the PR opens), so the close-protocol ships through to main without an additional confirmation prompt. If the worktree's local branch deletion fails (`'main' is already checked out at...`), the GitHub-side merge still succeeds and the warning is harmless — leave the local branch alone; `git fetch --prune` cleans up next time main is checked out.
+   - **Tag the merge commit** with the new version:
+     ```bash
+     MERGE_SHA=$(gh pr view <num> --json mergeCommit -q '.mergeCommit.oid')
+     git tag -a v0.{session}.0 "$MERGE_SHA" -m "v0.{session}.0 — <one-line summary matching PR title>"
+     git push origin v0.{session}.0
+     ```
+     Annotated (`-a`) — not lightweight — so the tag carries metadata + a message. Verify with `git tag -ln1 v0.{session}.0`.
 
-5. **Deliver close summary:**
+6. **Deliver close summary:**
    - One paragraph: what shipped, what's next, any open risks
    - Flag any 🚧 BLOCKED items (e.g., Notion roadmap update when MCP isn't wired)
    - Provide the session N+1 starting-point in one line so David knows how to resume
    - Include the merge-commit SHA on main so David can verify
+   - Include the new version tag (e.g., `Tagged v0.167.0`) so David can reference + roll back to it
 
 ## Do NOT
 
@@ -45,6 +59,8 @@ Run the full Treehouse Finds session-closing protocol per `MASTER_PROMPT.md` §S
 - Do NOT update Notion Roadmap unless Notion MCP is loaded — flag as 🚧 BLOCKED and note it's automatable once wired
 - Do NOT prompt for confirmation between PR creation and merge — David explicitly opts the close-protocol into auto-merge so `/session-close` is a single-prompt command (session 125 close → PR #4 merged via this rule)
 - Do NOT force-push to main, EVER — squash-merge via `gh pr merge` is the only acceptable path
+- Do NOT skip the version bump + CHANGELOG entry — those are the Shape A versioning contract; if the session is a pure docs/exploration pass with no code shipped, still bump (e.g., to `v0.{session}.0`) so the timeline stays continuous + the CHANGELOG entry reads "Internal — no user-visible changes"
+- Do NOT delete or rewrite existing version tags, EVER — tags are immutable references for rollback. If a mistake was made, ship a NEW patch version that supersedes it
 
 ## Claude Code notes
 
