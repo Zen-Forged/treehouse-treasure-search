@@ -558,7 +558,15 @@ export function MallBlock({
           fontFamily: FONT_CORMORANT,
           fontSize: 18,
           color: v2.text.primary,
-          lineHeight: 1.3,
+          // Session 171 dial — lineHeight 1.3 → 1.15 to tighten the gap to
+          // the address line below. Single-line text (not clamped) so
+          // feedback_lora_lineheight_minimum_for_clamp doesn't apply;
+          // descender clip risk only matters when overflow:hidden + WebKit
+          // line-clamp are in play. Mall name + address now read as one
+          // tightly-coupled lockup (continues the session 153 R10A
+          // tightening — wrapper padding bottom 4→0 + address marginTop
+          // 4→0 — to the previously-unaddressed half-leading gap).
+          lineHeight: 1.15,
           letterSpacing: "-0.005em",
           display: "flex",
           alignItems: "center",
