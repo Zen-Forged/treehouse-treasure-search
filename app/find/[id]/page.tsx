@@ -362,13 +362,19 @@ function ShelfSection({
         }}
       >
         {/* Review Board Finding 4 (session 169 round 2) — eyebrow
-            fontSize 16 → 18 (David: "same with more from this booth"). */}
+            fontSize 16 → 18 (David: "same with more from this booth").
+            Review Board Finding 4 (session 169 round 4) — color
+            v2.text.muted (#A39686) → v2.text.secondary (#5C5246).
+            David: "on Find page the More from this booth... text is
+            too light use one of the darker colors." Matches the
+            "Purchase this item at" eyebrow voice in the same scroll
+            (both now v2.text.secondary at fontSize 18). */}
         <div
           style={{
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 18,
-            color: v2.text.muted,
+            color: v2.text.secondary,
           }}
         >
           More from this booth…
