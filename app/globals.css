@@ -60,11 +60,18 @@
   --th-v1-postcard-bg:     #fbf3dd;
   --th-v1-postcard-border: rgba(42,26,10,0.10);
 
-  /* v1 ink scale */
-  --th-v1-ink-primary:  #2a1a0a;
-  --th-v1-ink-mid:      #4a3520;
-  --th-v1-ink-muted:    #6b5538;
-  --th-v1-ink-faint:    rgba(42,26,10,0.28);
+  /* v1 ink scale — Session 168 foundation consolidation.
+     v1.ink-primary/mid/muted values collapse to the v2.text.* canonical
+     values so the v1 + v2 + v0.2 ink hierarchies render identically.
+     v1.ink-faint collapses from rgba(42,26,10,0.28) to solid #A39686
+     (matches v2.text.muted) — the rgba was load-bearing on varied bgs
+     and may read off in iPhone QA; flag any specific surface that needs
+     a softer ghost-text variant for follow-on. v1.ink-hairline PRESERVED
+     (it's a divider/border token, not text — 64 consumers all dividers). */
+  --th-v1-ink-primary:  #2B211A;
+  --th-v1-ink-mid:      #5C5246;
+  --th-v1-ink-muted:    #A39686;
+  --th-v1-ink-faint:    #A39686;
   --th-v1-ink-hairline: rgba(42,26,10,0.18);
 
   /* v1 voice + chrome */
@@ -195,10 +202,13 @@
   --th-c-empty-tile:   #dedad2;
   --th-c-border:       rgba(26,24,16,0.09);
   --th-c-border-light: rgba(26,24,16,0.05);
-  --th-c-text-primary: #1c1a14;
-  --th-c-text-mid:     #4a4840;
-  --th-c-text-muted:   #8a8476;
-  --th-c-text-faint:   #b4ae9e;
+  /* v0.2 text scale — Session 168 foundation consolidation. Same canonical
+     v2.text.* values as v1.ink-* above so admin + parked-surface text
+     reads identically to the v2 chrome consumers. */
+  --th-c-text-primary: #2B211A;
+  --th-c-text-mid:     #5C5246;
+  --th-c-text-muted:   #A39686;
+  --th-c-text-faint:   #A39686;
   --th-c-green:        #1e4d2b;
   --th-c-green-light:  rgba(30,77,43,0.08);
   --th-c-green-solid:  rgba(30,77,43,0.90);
