@@ -107,6 +107,23 @@ const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
 // vendorId so multi-booth picker switching never restores stale posts to the
 // wrong booth. Pure scroll behavior — no motion changes.
 let cachedMyShelf: { vendorId: string; posts: Post[] } | null = null;
+
+// Session 168 round 4 finding 3 — David iPhone QA: "When switching to the
+// Booth page as vendor the loading glitches most likely due to auth gate
+// but it should be seamless once logged in." Root cause: page mounts with
+// authReady=false → renders `null` (blank) at line 725 → getSession()
+// resolves async → setAuthReady(true) triggers next render with skeleton.
+// The blank-then-skeleton sequence reads as a glitch when the user is
+// already signed in.
+//
+// Fix mirrors the cachedMyShelf pattern above — module-scope user cache
+// survives nav between (tabs)/ surfaces (Booth tab → other tab → Booth
+// tab) so the second visit hydrates synchronously with authReady=true on
+// first render. getSession() still runs in the background; if the session
+// has expired (cache stale), the existing redirect-to-/login path catches
+// it. Cleared explicitly on sign-out (null session) so a subsequent visit
+// post-logout doesn't flash content for the wrong user before redirecting.
+let cachedAuthUser: User | null = null;
 const MY_SHELF_SCROLL_KEY = "treehouse_my_shelf_scroll";
 
 // Session 85 — write to BOTH localStorage and sessionStorage. iOS Safari
@@ -288,8 +305,12 @@ function MyBoothInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
-  const [user,          setUser]          = useState<User | null>(null);
-  const [authReady,     setAuthReady]     = useState(false);
+  // Session 168 round 4 finding 3 — synchronous hydrate from cachedAuthUser
+  // (declared at module scope) so warm-auth Booth-tab nav doesn't flash a
+  // blank screen. getSession() in the useEffect below still runs to refresh
+  // / detect expired sessions; cache is just a render seed.
+  const [user,          setUser]          = useState<User | null>(cachedAuthUser);
+  const [authReady,     setAuthReady]     = useState(cachedAuthUser !== null);
 
   // Multi-booth state (session 35)
   const [vendorList,    setVendorList]    = useState<Vendor[]>([]);
@@ -339,7 +360,14 @@ function MyBoothInner() {
       return;
     }
     getSession().then(s => {
-      if (!s?.user) { router.replace("/login"); return; }
+      if (!s?.user) {
+        // Clear stale cache so a future Booth-tab visit doesn't flash the
+        // signed-out user's chrome before redirecting.
+        cachedAuthUser = null;
+        router.replace("/login");
+        return;
+      }
+      cachedAuthUser = s.user;
       setUser(s.user);
       setAuthReady(true);
     });
