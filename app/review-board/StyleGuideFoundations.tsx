@@ -210,7 +210,7 @@ function GreenDriftCallout() {
           textTransform: "uppercase",
         }}
       >
-        Load-bearing drift example
+        Drift resolved · Session 168
       </div>
       <div
         style={{
@@ -220,12 +220,12 @@ function GreenDriftCallout() {
           lineHeight: 1.55,
         }}
       >
-        Three distinct &quot;primary green&quot; values coexist across tiers, all
-        canonically named, all in active use. When a v1 surface renders next
-        to a v2 surface, the greens are visibly different. The style guide
-        makes the drift explicit; resolution happens in Shape C arc 3
-        (admin v0.2 → v2 migration) and beyond. Pick the green for the tier
-        your surface belongs to.
+        All three primary greens (v1.green / v2.accent.green / colors.green)
+        now resolve to the single canonical hex <strong>#1F4A31</strong> at
+        the :root layer. Token names preserved for backwards-compat;
+        v2.accent.greenDark is the preferred name for new work. Intentional
+        variants kept distinct: greenMid for &quot;saved/active toggle&quot; bg,
+        greenSoft for soft accent surfaces.
       </div>
     </div>
   );
@@ -236,47 +236,47 @@ function ColorSection() {
     <SectionShell
       id="color"
       title="Color"
-      subtitle="Five canonical groupings. Greens lead because tier-coexistence creates visible drift on surfaces where v1 + v2 chrome paint side-by-side."
+      subtitle="Five canonical groupings. Greens lead because the 3-tier drift was resolved at session 168 — all primary-green tokens now resolve to a single canonical hex via :root."
     >
       <GreenDriftCallout />
 
-      <ColorGroupTitle>Greens · 3 tiers</ColorGroupTitle>
+      <ColorGroupTitle>Greens · canonical + variants</ColorGroupTitle>
       <ColorRow>
-        <ColorSwatch
-          token="v1.green"
-          value={v1.green}
-          hex="#1e4d2b"
-          notes="v1 surfaces — /find/[id], /map, /post flow."
-        />
-        <ColorSwatch
-          token="v2.accent.green"
-          value={v2.accent.green}
-          hex="#285C3C"
-          notes="v2 surfaces — Home, Saved, /shelf, /me, /welcome."
-        />
-        <ColorSwatch
-          token="colors.green"
-          value={colors.green}
-          hex="#1e4d2b"
-          notes="v0.2 admin only. Shares value with v1.green via :root."
-        />
-        <ColorSwatch
-          token="v2.accent.greenMid"
-          value={v2.accent.greenMid}
-          hex="#3E694F"
-          notes="v2 standardized button fill."
-        />
         <ColorSwatch
           token="v2.accent.greenDark"
           value={v2.accent.greenDark}
           hex="#1F4A31"
-          notes="v2 hover/active variant."
+          notes="Canonical primary. Preferred name for new work."
+        />
+        <ColorSwatch
+          token="v2.accent.green"
+          value={v2.accent.green}
+          hex="#1F4A31"
+          notes="Resolves to canonical. Most-consumed name today."
+        />
+        <ColorSwatch
+          token="v1.green"
+          value={v1.green}
+          hex="#1F4A31"
+          notes="Resolves to canonical. Used by v1 surfaces."
+        />
+        <ColorSwatch
+          token="colors.green"
+          value={colors.green}
+          hex="#1F4A31"
+          notes="Resolves to canonical. Used by v0.2 admin only."
+        />
+        <ColorSwatch
+          token="v2.accent.greenMid"
+          value={v2.accent.greenMid}
+          hex="#1F4A31"
+          notes="Resolves to canonical. v2 CTA button-fill across all 3 lattice tiers."
         />
         <ColorSwatch
           token="v2.accent.greenSoft"
           value={v2.accent.greenSoft}
           hex="#E8EEE6"
-          notes="v2 active-state bg (favorited, copied, etc.)."
+          notes="Intentional variant — soft accent surface tint."
         />
       </ColorRow>
 
@@ -323,8 +323,8 @@ function ColorSection() {
         <ColorSwatch
           token="v2.bg.main"
           value={v2.bg.main}
-          hex="#F7F3EB"
-          notes="v2 body + page chrome."
+          hex="#E6DECF"
+          notes="Unified v2 body + page + masthead chrome. v2.bg.tabs alias resolves to the same value."
         />
         <ColorSwatch
           token="v2.surface.card"
@@ -340,29 +340,31 @@ function ColorSection() {
         />
       </ColorRow>
 
-      <ColorGroupTitle>Ink + text ramps</ColorGroupTitle>
-      <ColorRow>
-        <ColorSwatch token="v1.inkPrimary"  value={v1.inkPrimary}  hex="#2a1a0a" />
-        <ColorSwatch token="v1.inkMid"      value={v1.inkMid}      hex="#4a3520" />
-        <ColorSwatch token="v1.inkMuted"    value={v1.inkMuted}    hex="#6b5538" />
-        <ColorSwatch token="v1.inkFaint"    value={v1.inkFaint}    hex="rgba(42,26,10,0.28)" />
-        <ColorSwatch token="v1.inkHairline" value={v1.inkHairline} hex="rgba(42,26,10,0.18)" />
-      </ColorRow>
+      <ColorGroupTitle>Ink + text ramps · canonical 3-step + hairline</ColorGroupTitle>
       <ColorRow>
         <ColorSwatch
           token="v2.text.primary"
           value={v2.text.primary}
           hex="#2B211A"
+          notes="Canonical body + heading. v1.inkPrimary + colors.textPrimary resolve here."
         />
         <ColorSwatch
           token="v2.text.secondary"
           value={v2.text.secondary}
           hex="#5C5246"
+          notes="Canonical metadata + eyebrow. AA-contrast on bg.main. v1.inkMid + colors.textMid resolve here."
         />
         <ColorSwatch
           token="v2.text.muted"
           value={v2.text.muted}
           hex="#A39686"
+          notes="Canonical placeholder + disabled. v1.inkMuted + v1.inkFaint + colors.textMuted + colors.textFaint resolve here."
+        />
+        <ColorSwatch
+          token="v1.inkHairline"
+          value={v1.inkHairline}
+          hex="rgba(42,26,10,0.18)"
+          notes="Divider/border only — NOT text. 64 consumers. Preserved through ink consolidation."
         />
       </ColorRow>
     </SectionShell>

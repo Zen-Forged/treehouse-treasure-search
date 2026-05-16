@@ -63,8 +63,17 @@ const INITIAL_STATE: ShopperAuthState = {
   shopper:   null,
 };
 
+// Session 168 round 5 finding 3 — module-scope cache mirrors the
+// cachedRoleState pattern in lib/useUserRole.ts (round 5) and the
+// cachedAuthUser pattern in app/my-shelf/page.tsx (round 4). Suppresses
+// the MastheadProfileButton glyph→initials flash on warm nav between
+// (tabs)/ surfaces — every consumer re-mount used to start at
+// INITIAL_STATE (isLoading: true / no shopper) and flash CircleUser
+// before the shoppers fetch settled.
+let cachedShopperAuthState: ShopperAuthState | null = null;
+
 export function useShopperAuth(): ShopperAuthState {
-  const [state, setState] = useState<ShopperAuthState>(INITIAL_STATE);
+  const [state, setState] = useState<ShopperAuthState>(cachedShopperAuthState ?? INITIAL_STATE);
 
   // Review Board (session 150) — fixture-substitute. Hydrate state
   // synchronously before paint so /me + /login auth-gate redirects
@@ -88,6 +97,12 @@ export function useShopperAuth(): ShopperAuthState {
     if (isReviewMode()) return; // fixture state populated above
     let cancelled = false;
 
+    // Single settle point so cache + React state stay in lockstep.
+    function commit(next: ShopperAuthState) {
+      cachedShopperAuthState = next;
+      setState(next);
+    }
+
     async function loadShopper(userId: string) {
       const { data: row, error } = await supabase
         .from("shoppers")
@@ -100,11 +115,11 @@ export function useShopperAuth(): ShopperAuthState {
         // their own row should always succeed. Log + treat as no-shopper
         // so the user lands in the claim flow rather than a black box.
         console.error("[useShopperAuth] fetch:", error.message);
-        setState({ isLoading: false, isAuthed: true, shopper: null });
+        commit({ isLoading: false, isAuthed: true, shopper: null });
         return;
       }
       if (row) {
-        setState({
+        commit({
           isLoading: false,
           isAuthed:  true,
           shopper: {
@@ -115,7 +130,7 @@ export function useShopperAuth(): ShopperAuthState {
           },
         });
       } else {
-        setState({ isLoading: false, isAuthed: true, shopper: null });
+        commit({ isLoading: false, isAuthed: true, shopper: null });
       }
     }
 
@@ -125,7 +140,7 @@ export function useShopperAuth(): ShopperAuthState {
       if (data.session?.user) {
         loadShopper(data.session.user.id);
       } else {
-        setState({ isLoading: false, isAuthed: false, shopper: null });
+        commit({ isLoading: false, isAuthed: false, shopper: null });
       }
     });
 
@@ -135,7 +150,7 @@ export function useShopperAuth(): ShopperAuthState {
       if (user) {
         loadShopper(user.id);
       } else {
-        setState({ isLoading: false, isAuthed: false, shopper: null });
+        commit({ isLoading: false, isAuthed: false, shopper: null });
       }
     });
 

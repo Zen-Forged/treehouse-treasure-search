@@ -105,11 +105,27 @@ const WORDMARK_DEFAULT = (
 // masthead bottom edge sits 1px ABOVE where the spacer + strip top expect
 // (= paddingTop + 72 + 12 = paddingTop + 84). Pre-session-156 the 85 was
 // correct (paddingTop + 72 + 12 + 1px border). Now 84 closes the seam.
+//
+// Session 168 round 7 — David iPhone QA: "on /my-shelf the hero image
+// still is not sitting under the masthead." paddingBottom 12 → 0
+// removed the cream breathing-room slab.
+//
+// Session 168 round 8 — David: "it looks like the height of the
+// masthead changed so now there is no padding between the hero image
+// and logo." Overshot at 0; wordmark and BoothHero photo were touching
+// with no breathing room. Dialed to 8 — the canonical `space.s8`
+// inline-default value per lib/tokens.ts comments ("inline default
+// (most form padding, list-item spacing)"). Gives a clear visual
+// separation between the wordmark and the next-section content
+// without reading as a cream slab. Calc updates 72 → 80 to keep
+// spacer in sync with the new masthead-paint height (paddingTop +
+// 72 + 8).
+//
 // Exported as the canonical SSOT for any future surface that needs to compute
 // layout against the masthead footprint (fixed overlays, scroll-snap targets,
 // etc.). The spacer inside this component already reserves the height for
 // content rendered after <StickyMasthead /> in the React tree.
-export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 84px)";
+export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 80px)";
 
 export default function StickyMasthead({
   left,
@@ -145,7 +161,12 @@ export default function StickyMasthead({
           // Was hardcoded #f2ecd8 since session 132 frosted-glass retire.
           background: v2.bg.main,
           paddingTop: "max(14px, env(safe-area-inset-top, 14px))",
-          paddingBottom: 12,
+          // Session 168 round 7 → 8 — David iPhone QA convergence:
+          // 12 (too gappy) → 0 (too tight) → 8 (canonical space.s8).
+          // See lengthy comment block above the MASTHEAD_HEIGHT export.
+          // Spacer calc in MASTHEAD_HEIGHT mirrors paddingBottom — both
+          // must move together.
+          paddingBottom: 8,
           paddingLeft: 18,
           paddingRight: 18,
         }}

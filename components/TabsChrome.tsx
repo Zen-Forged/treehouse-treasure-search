@@ -128,6 +128,28 @@ export default function TabsChrome() {
     }
   }, [drawerOpen]);
 
+  // Session 168 round 4 finding 1 — David iPhone QA: "If map is expanded
+  // and the user selects another page (i.e. saved) and navigates back to
+  // explore the map should be collapsed. Currently, it's saving the
+  // expanded map state." Root cause: MapDrawerProvider lives at the app
+  // root layout (lib/useMapDrawer.tsx) so drawerOpen state survives
+  // (tabs)/ route transitions. The drawer's *render* is Home-scoped
+  // (showChipAndDrawer = isHome below), but when the user navigates back
+  // to Home with drawerOpen still true, the drawer re-mounts open.
+  //
+  // Fix: auto-close on transition away from Home. TabsChrome owns the
+  // (tabs)/ chrome contract and already consumes useMapDrawer, so the
+  // close-on-leave-Home rule lives here rather than in the provider
+  // itself (per provider file-top: "non-(tabs) pages don't open the
+  // drawer today, but the context exists in case future surfaces want
+  // to disclose the map" — closing in the provider would prevent any
+  // future non-Home consumer from holding the drawer open across nav).
+  useEffect(() => {
+    if (pathname !== "/" && drawerOpen) {
+      closeDrawer();
+    }
+  }, [pathname, drawerOpen, closeDrawer]);
+
   const isHome = pathname === "/";
   const q      = searchParams.get("q") ?? "";
 

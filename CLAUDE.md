@@ -67,95 +67,130 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 167 (2026-05-16) — Chrome-unification design pass + archive + Shape A versioning shipped (v0.167.0) + worktree cleanup — 2 runtime ships + 1 close (NO chrome change to production)
+## ✅ Session 168 (2026-05-16) — Foundation unification (greens + inks + bg) + BottomNav pill restructure + 9 iPhone-QA-driven dial rounds — 16 runtime commits + 1 close
 
-David opened with `/session-open`; standup recommended David's larger vision from session 166 close (non-Explore pages adopt StickyMasthead WITH hero photo as background; wordmark "locks" into masthead on Home scroll). David confirmed hero asset (`BG.png` reference-res 475×268) + new wordmark (`treehouse_transparent.png` 815×399 RGBA) were ready in `/public/`. Initial design pass V1 mockup compounded **22 variables before David could see a frame** (9-way pre-V1 decision tree + 3-frame V1 spanning 7 axes + 7-row tradeoff matrix + 6 dial Qs). David: *"too many variables to account for. How can I give better guidance? Do I really just need to create a figma mockup of each screen and what I'm looking for? My initial thought is that the explore page shows the full hero image and then when it's scrolled the thinner masthead locks into place. When you navigate to the other pages then the thinner masthead with the graphic just always loads without the scroll effect."* — design pass cancelled.
+David opened with `/session-open`; standup recommended asset-swap-only chrome iteration as primary per session 167 close's larger vision. David redirected to a **NEW initiative**: unification pass on foundation colors (greens + inks), explicit preference for `v2.accent.greenDark` (#1F4A31), constraint that selected colors must remain intentional when they differ. Audit-first per `feedback_visibility_tools_first` ✅ Promoted localized 8 token-tier greens (2 near-duplicate primaries + drift) + 14 ink tokens across 3 tiers (same 4 semantic roles duplicated 3×). Per `feedback_pre_mockup_prose_model_first` ✅ Promoted (David's stated preference + constraints = clear prose model; no mockup needed; **2nd cumulative firing post-promotion at session 167**), surfaced cost shapes A/B/C; David picked Shape A (value-only collapse, zero consumer code changes) + answered 3 product questions (collapse v2.accent.green to greenDark / collapse v1.inkFaint to text.muted / defer v1/v0.2 token API renames). Then 9 rounds of iPhone-QA-driven dial cycles compounded across the session — **the longest single-session refinement chain on record**.
 
-### NEW MEMORY PROMOTED AT FIRST FIRING: `feedback_pre_mockup_prose_model_first.md`
+### Memory firings cumulative through session 168
 
-Honest reflection on what went wrong on my end (NOT David's articulation): the mockup-first reflex compounded variables faster than David could absorb. His two-sentence prose model gave cleaner direction in 30 seconds than 45 minutes of mockup-eliciting Qs had. Captured rule + promoted-via-memory at first firing per `feedback_recurring_phrase_signals_system.md` ✅ Promoted (David's "too many variables / cancel this" matches the recurring-phrase signal exactly). The rule: **ASK for prose mental model FIRST when feature shape is unclear in initial framing — if clear, prose IS the design (skip V1 phase); if vague, run the full design pass.** 22-variable budget rule + 22-variable cancel signal handling. Sub-pattern of `feedback_reference_first_when_concept_unclear.md` ✅ Promoted forming a clean 2x2 with concept-clarity × prose-vs-mockup default.
+- **NEW MEMORY PROMOTED:** [`feedback_module_scope_cache_for_warm_nav_hydration.md`](memory/feedback_module_scope_cache_for_warm_nav_hydration.md) — **4 firings this session** (cachedAuthUser + cachedRoleState + cachedShopperAuthState + cachedVendorBundle); promoted well past the standard 2nd-firing threshold per `feedback_tech_rule_promotion_destination`. Module-scope cache survives SPA session; useState reads cache sync; useEffect populates on each settle; clear on sign-out. Sub-pattern of `feedback_synthesize_existing_row_to_reuse_flow_infra` extended from row-level to state-level synthesis.
+- `feedback_pre_mockup_prose_model_first` ✅ Promoted at session 167 — **2nd cumulative firing this session** (David's "v2.accent.greenDark preference + intentional-differentiation constraint" was clear prose; skipped mockup phase; shipped directly). Promotion-strength validated as load-bearing operating mode.
+- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — **16 firings this session (~424+ cumulative)**.
+- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory — 3 cost shapes A/B/C surfaced for foundation collapse; David picked A.
+- `feedback_visibility_tools_first` ✅ Promoted — **5+ firings**: audit before round 1 (lint:colors + parallel agent for green/ink consumer counts) + audit at round 2 (greenMid 5-surface consumer audit) + audit at round 6 (wordmark.png read for transparent-padding theory) + grep scans before each round.
+- `feedback_surface_locked_design_reversals` ✅ Promoted — **2+ firings this session**: greenMid "intentional saved/active toggle variant" classification (round 1) explicitly reversed in round 2 with audit-traceable rationale.
+- `feedback_kill_bug_class_after_3_patches` ✅ Promoted-via-memory — fired at round 5 BottomNav pill (3 patches at rounds 3-4 → restructure to canonical single-pill computed-position pattern).
+- `feedback_cap_speculative_patching_at_3_rounds` ✅ Promoted — fired at round 6 hero-not-under-masthead (4th patch attempt → audit-first read wordmark.png file + grep StickyMasthead consumers instead of patching).
+- `feedback_user_clarification_restate_interpretation` ✅ Promoted — multiple firings (David's prose interpretation restated before drafting in each round).
+- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — overflow:hidden retiral at BottomNav restructure (round 5).
+- `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 close — **8th cumulative firing** (html2canvas-pro local-env miss at session start; npm install resolved).
+- `feedback_treehouse_no_coauthored_footer` ✅ Promoted — honored all 16 runtime commits + this close.
+- `feedback_session_close_auto_merges_pr` ✅ Promoted — about to fire on this close.
 
-### Audit-first scoping + design pass re-do against prose model
+### Round 1 — Foundation greens + inks consolidation (Shape A)
 
-Per `feedback_visibility_tools_first` ✅ Promoted, dispatched audit of every in-scope surface's current chrome (Home, Saved, /find, /shelf, /me, /login, etc.); produced **"what stays / what changes / what needs your call" table** mapping David's 3 rules against current production substrate. Surfaced 4 open questions where prose model collided with reality: Q1 Profile button location (floating overlay vs masthead slot); Q2 Back button same question; Q3 Home masthead behavior (always visible vs arrives on scroll); Q4 wordmark presence in hero photo. David locked: Q1=(b) floating overlay stays · Q2=(b) floating overlay stays · Q3=(b) masthead arrives on scroll · Q4=(iii) wordmark only in masthead.
+2 commits sequenced smallest→largest:
+- `2649b5d` ink consolidation: v1.inkPrimary `#2a1a0a` → `#2B211A` · v1.inkMid `#4a3520` → `#5C5246` · v1.inkMuted `#6b5538` → `#A39686` · v1.inkFaint `rgba(42,26,10,0.28)` → solid `#A39686` · v0.2 textPrimary/Mid/Muted/Faint → matching v2.text.* values. Preserved: v1.inkHairline (divider/border, 64 consumers, NOT text) + v1.priceInk (brand voice).
+- `3b67f43` green consolidation: v1.green `#1e4d2b` + colors.green `#1e4d2b` + v2.accent.green `#285C3C` → all `#1F4A31` (David's pick). 6 rgba derivations updated to (31,74,49) source RGB. v2.accent.greenDark stays #1F4A31 (alias). Preserved: greenSoft (soft accent) + greenMid (claimed "intentional toggle variant" — reversed in round 2). Style guide refreshed: `<GreenDriftCallout>` body flipped from "drift exists; pick your tier" → "drift resolved; v2.accent.greenDark preferred for new work" + ink section restructured to canonical 3-step + hairline.
 
-V1 chrome-unification mockup (`docs/mockups/chrome-unification-v1.html` — 5 surfaces: Explore at rest + scrolled, Saved, /find/[id], /shelf/[slug]) → David: *"closer"* + refinement *"I don't actually want the logo to hit the bottom of the hero image, rather I want the mall selector component to appear to scroll over the top of the bottom portion of the hero image to trim the bottom of the photo. Is that possible?"* V2 chip-overlay refinement (`docs/mockups/chrome-unification-v2.html` — masthead bumped 98→130px tall; logo at vcenter y≈65 sits with photo extending below; chip sticky-pins at y=100 with z-index above strip + upward `box-shadow: 0 -2px 8px` per D15) → David: *"lets give it a shot."*
+### Round 2 — greenMid follow-up (David's iPhone QA)
 
-### 5-commit chrome ship to worktree branch (NOT main)
+David: *"All buttons should use this v2.accent.greenDark (find your way) button does not have this applied."* Per `feedback_visibility_tools_first` audit revealed **greenMid was MISCLASSIFIED at the round 1 design pass** as a toggle-state variant — actual audit: greenMid is the v2 CTA button-fill canonical across **5 surfaces (all 3 lattice tiers)**: SavedMallCardV2 "Find Your Way" / shelf "Bookmark Booth" + saved-state border/text / find "Save the Find" + saved-state + heart icon / LocationActions "Take Trip" / post/edit greenBorder. Single commit `7779f6c`: greenMid `#3E694F` → `#1F4A31`. Surfaced explicitly per `feedback_surface_locked_design_reversals` — design-pass-time classifications are themselves reversible without losing system integrity. Saved-state hierarchy preserved by bg-to-cream flip pattern, not by greenMid's distinct hex.
 
-Build clean across all 47 routes at every commit boundary; pushed to Vercel preview. Sequenced smallest+most-isolated first per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — 5 firings this session (cumulative ~413+):
+### Round 3 — 4-finding bundle (Saved walk)
 
-- `fbe7f26` Design pass: chrome unification design record + V1/V2 mockups + BG.png + treehouse_transparent.png + dead-code retire
-- `8bf01b4` Add `lib/chromeTokens.ts` — shared geometry constants (MASTHEAD_HEIGHT, LOGO_TOP, CHIP_TOP, STRIP_Z, CHIP_Z, `stripBackgroundImage()`)
-- `31c8d8d` StickyMasthead refactor — adopts strip aesthetic (BG.png cropped + cream-fade), wordmark → treehouse_transparent.png, MASTHEAD_HEIGHT safe-area+84 → safe-area+116. Inherits across 7 consumers
-- `b2510fb` **Coupled commit** (5 files): HomeHero rewrite (drop SearchBar, BG.png swap, simplify) + TabsChrome rewire (Saved mounts StickyMasthead, sibling sticky logo on Home, chip overlay geometry) + MallPickerChip sticky-top → CHIP_TOP + MallMapDrawer drawer-top recalc + `/home-hero-test` smoke route retire. **Net −212 LOC.** Per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted (4-file scale).
-- `821f424` /login wordmark img swap
+David walked /flagged on Vercel preview, surfaced 4 findings. 4 commits sequenced smallest→largest:
+- `68b2e31` Finding 4: SavedEmptyState "Open Explore" → "Explore" + `<MdOutlineExplore>` icon (mirrors BottomNav Explore-tab vocabulary)
+- `05c9342` Finding 2: BottomNav layoutId pill `initial={false}` to prevent default mount enter
+- `4bf9345` Finding 1: TabsChrome `useEffect` auto-close drawer when `pathname !== "/"` (preserves provider's future cross-surface use cases per provider file-top)
+- `4d0c0bd` Finding 3: `/my-shelf` module-scope `cachedAuthUser` to suppress blank-screen flash on warm-auth Booth nav (**first firing of new module-scope-cache memory pattern**)
 
-### David's pivotal call — don't promote to production, iterate from production baseline
+### Round 4 — Finding 2 + 3 still flashing
 
-David: *"Okay, so I don't want to implement any of these changes in production. I'd rather start back with the latest version in production and iterate from that one. What's the best way to do this?"* Cost-shape triage on branch fate (3 options: archive-rename / park / delete) + versioning preservation (3 options: cherry-pick / redo / discard). David picked **Archive-rename + cherry-pick versioning to fresh branch**.
+David QA: Finding 2 pill still slides at angle; Finding 3 Profile button + Booth tab + BoothHero image still flash. 4 commits sequenced smallest→largest:
+- `788c415` Finding 2 round 5: BottomNav 3-axis structural fix (overflow:hidden + tween + layout=position) — attempt to constrain layoutId animation
+- `dccb0df` Finding 3 round 5a: useUserRole module-scope `cachedRoleState` (**2nd firing**)
+- `c035ea2` Finding 3 round 5b: useShopperAuth module-scope `cachedShopperAuthState` + `commit()` helper across 5 settle points (**3rd firing**)
+- `0fad747` Finding 3 round 5c: /my-shelf `cachedVendorBundle` keyed by userId — vendor + hero + mall bundle paints BoothHero composition in one frame (**4th firing**)
 
-Mechanics executed: pushed worktree HEAD to `archive/chrome-unification-v1` on origin (work preserved under sensible name for future revival) → deleted `claude/jovial-williamson-474480` on origin → switched worktree to fresh branch `chore/shape-a-versioning` off origin/main → cherry-picked `a4cccc9` (versioning infra commit) → amended CHANGELOG.md to scope to versioning-only (chrome-unification entry retired since chrome doesn't ship) → PR [#47](https://github.com/Zen-Forged/treehouse-treasure-search/pull/47) → squash-merged to main as `34d6a70` → tagged `v0.167.0` annotated on merge SHA → pushed tag. **Chrome work preserved on origin at `archive/chrome-unification-v1` (SHA `a4cccc9`); production main untouched by chrome change.**
+### Round 5 — Pill STILL slides (kill the bug class)
 
-### Versioning discipline question + Shape A setup
+Per `feedback_kill_bug_class_after_3_patches` ✅ Promoted — rounds 3+4 attempted 2 patches on layoutId pattern; both failed. Switched to **canonical single-pill computed-position pattern** used by Material Design tabs / Vercel docs nav / Linear view switcher. 2 commits:
+- `050091e` BottomNav Booth onClick clears `treehouse_my_shelf_scroll` storage before `router.push("/my-shelf")` — surgical fix for hero-not-anchoring (was scroll-restoration firing on tab nav, designed for /find/[id] back-nav)
+- `0b1c7da` BottomNav restructure: hoist pill to single nav-level `<motion.div>` (sibling of all tab buttons) + `getBoundingClientRect`-driven `x` + `width` measurement + useLayoutEffect re-measure on `active` change + window-resize listener. Tabs get `position:relative + zIndex:1` to sit above pill. Pill `pointerEvents:none`. `overflow:hidden` retired (no longer needed; also unclips Saved badge). +114 / −77 LOC.
 
-Earlier mid-session, David: *"1 important question comes up as I look at this, which is how do I start controlling versioning better. How can you help me with that"* Cost-shape triage surfaced **4 shapes** (A tags+CHANGELOG / B + GitHub Releases / C + Vercel promotion gate / D + visual regression). Pre-beta cadence + investor narrative needs aligned on A. David picked Shape A. Sub-decision on naming scheme: **session-aligned `v0.{session}.{patch}`** so versions map directly to CLAUDE.md session blocks. Hotfix lane via patch increments. v1.0.0 at beta launch.
+### Round 6 — Hero STILL not anchoring (visibility-tools-first escalation)
 
-Shape A implementation (now live in production via PR #47):
-- **CHANGELOG.md** at repo root (Keep a Changelog format; first entry v0.167.0)
-- **package.json** version bumped 0.1.0 (Next.js scaffold default) → 0.167.0
-- **.claude/commands/session-close.md** updated with new step 4 (Versioning) before Git step + post-merge tagging step in Git block + 2 new "Do NOT" rules. Every future `/session-close` now auto-bumps version + prepends CHANGELOG entry + tags merge SHA
+Per `feedback_cap_speculative_patching_at_3_rounds` ✅ Promoted — 4th patch attempt on hero-not-under-masthead. Stopped patching; escalated to audit-first. Read wordmark.png file (1500×800, minimal transparent padding). Grepped StickyMasthead consumers. Confirmed nothing renders between `<Masthead>` + `<BoothHero>`. **Localized gap source**: StickyMasthead `paddingBottom: 12` set when masthead carried hairline borderBottom (retired session 156) for visual breathing room beneath the border. Border gone → slab persisted without semantic purpose. Single coupled commit `f62a5e3`: `paddingBottom 12 → 0` + `MASTHEAD_HEIGHT "calc(safe + 84px)" → "calc(safe + 72px)"` (spacer must match actual paint height; both must move together).
 
-### Worktree cleanup operational pass
+### Round 7 — Overshot (now too tight)
 
-David: *"cleanup"* → `gh pr list --state merged --base main --limit 100` + worktree-list-porcelain per-branch lookup loop retired 43 of 46 merged worktrees in single pass. Round 2 deleted 6 additional orphan refs (5 no-PR/no-WT branches + claude/jovial-williamson-474480 since work preserved on origin under archive ref). **From 48 worktrees + 52 local claude/* branches → 5 worktrees + 3 branches.** 3 unmerged worktrees flagged for David's discretion (`vigorous-hypatia-3b8f29` OPEN PR — active session; `gifted-archimedes-23a31c` + `interesting-golick-212096` no-PR — could be aborted or in-flight; David: *"leave for now"*). `archive/chrome-unification-v1` ref verified on origin at `a4cccc9` post-cleanup.
+David QA: *"looks like the height of the masthead changed so now there is no padding between the hero image and logo."* Single commit `be97e71`: `paddingBottom 0 → 8` (canonical `space.s8` per lib/tokens.ts) + `MASTHEAD_HEIGHT 72 → 80`. **Convergence-via-iteration dial: 12 → 0 → 8.** When user can compare two extreme values, the right answer is geometrically between, and shipping endpoints is faster than guessing the middle.
 
-### Memory firings cumulative through session 167
+### Round 8 — Background unification (David's ask)
 
-- **NEW: `feedback_pre_mockup_prose_model_first` ✅ Promoted-via-memory at first firing** — load-bearing operating mode for ANY future UI ask. Caused immediate behavior change within session (cancel → prose-first → audit-first → V1 with right scope).
-- `feedback_recurring_phrase_signals_system` ✅ Promoted — fired on "too many variables / cancel this" signal → triggered the new memory promotion.
-- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory — **3 firings this session** at META level: (1) branch fate triage (3 options); (2) versioning scheme triage (3 options); (3) Shape A vs B/C/D versioning shape triage (4 options). NEW pattern observed: cost-shape triage at META level for tooling/process asks (not just visual/UI). Sub-pattern extension worth tracking.
-- `feedback_user_clarification_restate_interpretation` ✅ Promoted — multiple firings (sub-decision Qs surfaced explicitly before each cost-shape execution).
-- `feedback_visibility_tools_first` ✅ Promoted — audit-first impact table for David's prose model; gh + git porcelain queries for worktree cleanup scoping.
-- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — 5 firings this session (~413+ cumulative).
-- `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted-via-memory — 1 firing this session (commit `b2510fb` 5-file coupled rewire).
-- `feedback_revert_to_clean_baseline_before_pivot` ✅ Promoted — David's "iterate from production baseline" was a textbook firing.
-- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — chrome rewire retired `/home-hero-test` smoke route; worktree cleanup retired 43+ dormant worktrees.
-- `feedback_executing_actions_with_care` (system prompt) — branch deletion + cherry-pick + version-bump decisions all surfaced as cost-shape Qs before destructive ops.
-- `feedback_treehouse_no_coauthored_footer` ✅ Promoted — honored on all commits + this close.
-- `feedback_session_close_auto_merges_pr` ✅ Promoted — fired on PR #47 merge (chore/shape-a-versioning); about to fire again on this close PR.
+David: *"unify the background color on all surfaces and masthead to var(--th-v2-bg-tabs)."* Same Shape A pattern as round 1+2. Single commit `e083ffd`:
+- `--th-v2-bg-main` `#F7F3EB` → `#E6DECF` (matches v2.bg.tabs canonical; ~37 v2 surface consumers + StickyMasthead chrome inherit)
+- body bg (globals.css + layout.tsx pair) → `#E6DECF` (must move together to avoid intermediate flash)
+- `--th-v1-basemap-cream` → `#E6DECF` (cartographic land base follows; preserves session 155 "basemap.cream = bg.main" alignment intent)
+- Style guide swatch label refreshed: hex + notes ("Unified v2 body + page + masthead chrome")
+- v2.bg.tabs API name preserved as alias resolving to #E6DECF per defer-rename rule
 
-### 4 NEW Tech Rule candidate patterns (single firings — promote on 2nd firing)
+Out of scope: v2.bg.paper #FFFCF5 (paper-card tier) + v2.bg.soft #F1EBDD (soft accent tier) + --th-c-bg #f5f2eb (v0.2 admin whole-cloth scheme).
 
-1. **Cost-shape triage at META level for tooling/process asks** — extended from design asks to tooling/process. Fired 3× this session (branch fate / versioning preservation / versioning shape). Sub-pattern of `feedback_triage_cost_shape_before_design_pass.md` ✅ Promoted.
-2. **Archive-then-fresh-branch flow for cancelled exploration** — when multi-commit exploration ends with "don't merge, iterate from production": push HEAD to `archive/*` ref → delete original `claude/*` ref → cherry-pick keepers to fresh branch off main → ship fresh branch. Preserves work without polluting main + makes future revival a `git checkout archive/*` away.
-3. **Worktree cleanup operational pattern** — `gh pr list --state merged --base main` + worktree-list-porcelain per-branch lookup loop scales cleanly to 40+ stale worktrees. Per-branch lookup avoids awk multi-line interpolation bugs.
-4. **Shape A versioning as canonical pre-beta pattern** — annotated tags + CHANGELOG.md + per-session bump wired into `/session-close`. Reference pattern for any future Treehouse-style project: lightest viable versioning that composes upward (B/C/D layer in cleanly when user-facing risk warrants).
+### 5 NEW Tech Rule candidate patterns (single firings, all promote on 2nd firing)
+
+1. **Convergence-via-iteration dial pattern** — 12 → 0 → 8 captures "ship endpoints; user picks middle." Canonical for any dimension where user can compare two extreme values geometrically. Faster than guessing the middle.
+2. **Canonical single-pill computed-position primitive** — Material Design tabs / Vercel docs nav / Linear view switcher. Hoist active-state visual to container-level absolute element + measure via `getBoundingClientRect`. More robust than per-element layoutId for cross-sibling animations. Pattern: `tabRefs` + `pillGeom` useState + useLayoutEffect re-measure + window-resize listener + `pointerEvents:none`.
+3. **Misclassified design-pass intent corrected via iPhone QA** — round 1 classified greenMid as "intentional toggle variant"; iPhone QA + 5-surface audit revealed canonical CTA fill. Even clear-prose design passes have audit assumptions worth validating via user QA. Sub-pattern of `feedback_surface_locked_design_reversals` — design-pass-time classifications are themselves reversible.
+4. **3-axis structural fix as escalation step before full restructure** — when ambiguous CSS layout bug isn't localizable to single cause + previous patch failed, ship 3 structural axes in one commit (overflow:hidden + layout=position + spring→tween). If still fails, kill the bug class via complete restructure. 3-tier escalation pattern (patches → multi-axis → restructure).
+5. **Coupled :root value + body inline style flip in same commit** — body bg has TWO sources (`:root` rule in globals.css AND inline style in app/layout.tsx as the structural pairing per session 143). Both MUST move together in single commit to avoid intermediate-state flash. Generalizes to any token where a value lives in both CSS + JS.
 
 ### Roadmap delta
 
-**18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level — this session shipped substrate (versioning) + operational hygiene (worktree cleanup) + preserved exploration (chrome archive). Not feature roadmap.
+**18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level — visual system consolidation + UX refinement, not feature roadmap.
 
-Production gained `v0.167.0` tag at `34d6a70` (CHANGELOG.md + package.json bump + session-close protocol). Production did NOT gain chrome-unification — preserved at `archive/chrome-unification-v1` on origin.
+Substrate added: foundation values consolidated (3 greens + 6 inks now resolve to 4 + 4 canonical) · unified bg `#E6DECF` across all v2 surfaces · NEW `feedback_module_scope_cache_for_warm_nav_hydration` memory file · module-scope cache pattern across 3 hooks + 1 page (cachedAuthUser / cachedRoleState / cachedShopperAuthState / cachedVendorBundle) · canonical single-pill BottomNav primitive · TabsChrome auto-close-drawer-on-nav-away rule · BottomNav scroll-storage clearing for tab-nav-to-Booth.
 
-### Carries opening into session 168
+Substrate removed: layoutId-pill pattern on BottomNav (replaced by canonical single-pill) · v2.accent.green/greenMid distinct hex (collapsed to #1F4A31) · v1.ink-*/colors.text-* distinct hex (collapsed to v2.text.* values) · 12px masthead paddingBottom slab (now 8 — clear breath without slab feel) · overflow:hidden on nav container.
 
-🚧 **NEW (167→168): Chrome-unification revival path** — `archive/chrome-unification-v1` on origin has 6 commits (design record + V1/V2 mockups + BG.png + treehouse_transparent.png + chromeTokens module + StickyMasthead refactor + coupled HomeHero/TabsChrome/MallPickerChip/MallMapDrawer rewire + login wordmark swap). Smaller-scope iteration recommended per `feedback_pre_mockup_prose_model_first.md` ✅ Promoted: start with just the asset swaps (`wordmark.png` → `treehouse_transparent.png` + `home-hero.png` → `BG.png`) WITHOUT the chip-overlay + sibling-sticky-logo + Saved-chrome-change scope. iPhone QA after asset swap; evolve from there.
+### Carries opening into session 169
 
-🚧 **NEW (167→168): 2 unmerged worktrees** — `gifted-archimedes-23a31c` + `interesting-golick-212096`. No PR, could be aborted or in-flight. David's call when next encountering them.
+🚧 **NEW (168→169): Vercel preview QA on round 9 bg unification** — flip from #F7F3EB → #E6DECF is system-wide across ~37 v2 surfaces. Watch items: /find/[id] post-it stamp contrast against warmer bg (v1.postit #fefae8 unchanged; verify still reads); /shelf/[slug] BoothHero composition; form-page bg on /me + /login + /vendor-request + /welcome; Mapbox land base on /map (basemap.cream follows so land + chrome continuous); /admin UNCHANGED on purpose (v0.2 namespace).
 
-🚧 **NEW (167→168+): 4 NEW Tech Rule candidate patterns** from session 167 — cost-shape triage at META level for tooling/process asks / archive-then-fresh-branch flow for cancelled exploration / worktree cleanup operational pattern / Shape A versioning as canonical pre-beta pattern.
+🚧 **NEW (168→169): 5 NEW Tech Rule candidate patterns** from session 168 — Convergence-via-iteration dial / Canonical single-pill computed-position primitive / Misclassified design-pass intent corrected via iPhone QA / 3-axis structural fix as escalation step / Coupled :root + inline-style flip in single commit. All single firings; promote on 2nd firing.
 
-🚧 [Continues all open carries from sessions 156-166; see prior tombstones.]
+🚧 **NEW (168→169): Inline-hex consumer sweep (Shape B follow-on for foundation colors)** — round 1+2 collapsed token values; ~14 inline `#1e4d2b` + 2 inline `#285C3C` + 19 inline `rgba(30,77,43,*)` + 2 inline `rgba(40,92,60,*)` (HomeFeedTile selected glow) consumers remain on old hex. Visual delta is small for shadows/glows; admin event-color tags + email CTAs + brand themeColor meta + isSaved heart + BottomNav internal const + 2 style-guide swatches will visibly drift relative to token consumers. Easy Shape B sweep when ready.
+
+🚧 **CARRY (167→169): Chrome-unification revival path** — `archive/chrome-unification-v1` on origin has 6 commits ready for revival. Per session 167 carry: smaller-scope iteration recommended — start with just the asset swaps (BG.png + treehouse_transparent.png) without the chip-overlay + sibling-sticky-logo + Saved-chrome-change scope.
+
+🚧 **CARRY (167→169): 2 unmerged worktrees** (`gifted-archimedes-23a31c` + `interesting-golick-212096`) — no PR; carry from session 167.
+
+🚧 [Continues all open carries from sessions 156-167; see prior tombstones.]
 
 ### Commits this session
 
-2 runtime ships + 1 close, all on main:
-- `34d6a70` — PR [#47](https://github.com/Zen-Forged/treehouse-treasure-search/pull/47) Set up Shape A versioning (a4cccc9 cherry-picked from archive/chrome-unification-v1). **Tagged `v0.167.0`.**
-- Worktree cleanup (operational hygiene; not a commit — `gh` + git ops).
-- This close commit — PR [#48](https://github.com/Zen-Forged/treehouse-treasure-search/pulls) (about to land). **Tagged `v0.167.1`.**
+16 runtime commits + 1 close. **Tagged `v0.168.0`** on close merge SHA.
 
-Chrome-unification 5 commits exist on `archive/chrome-unification-v1` on origin (not on main): design pass + chromeTokens + StickyMasthead refactor + coupled chrome rewire + login wordmark swap. Vercel preview URL for that branch still valid for design-record archaeology.
+Round 1 foundation (2 commits): `2649b5d` ink consolidation · `3b67f43` green consolidation + style guide refresh.
+Round 2 greenMid (1 commit): `7779f6c` greenMid → canonical.
+Round 3 Saved walk (4 commits): `68b2e31` SavedEmptyState · `05c9342` BottomNav initial=false · `4bf9345` TabsChrome drawer auto-close · `4d0c0bd` /my-shelf cachedAuthUser.
+Round 4 hook caches + nav containment (4 commits): `788c415` BottomNav 3-axis fix · `dccb0df` useUserRole cache · `c035ea2` useShopperAuth cache · `0fad747` /my-shelf cachedVendorBundle.
+Round 5 BottomNav restructure (2 commits): `050091e` scroll-storage clear · `0b1c7da` canonical pill restructure.
+Round 6+7 masthead dial (2 commits): `f62a5e3` paddingBottom 12 → 0 · `be97e71` paddingBottom 0 → 8.
+Round 8 bg unification (1 commit): `e083ffd` v2.bg.main + body + basemap → #E6DECF.
+
+### Net change toward investor narrative
+
+Meaningful operational beat about discipline at scale. The 16-commit single-session ship across foundation tokens (Shape A token collapse) + 9 iPhone-QA-driven dial cycles + kill-the-bug-class restructure (BottomNav pill) + canonical-pattern adoption + system-wide bg unification demonstrates that the operating-system rules compose cleanly across BOTH design-pass execution AND iterative refinement AND structural-fix-via-restructure escalation. The convergence-via-iteration dial pattern (12 → 0 → 8) is itself a discipline data point — when user can compare two extreme values, the right answer is geometrically between, and shipping endpoints is faster than guessing the middle. The escalation cascade fired cleanly mid-session: round 5 fired `feedback_kill_bug_class_after_3_patches` → round 6 fired `feedback_cap_speculative_patching_at_3_rounds` — the operating system handling its own escalation cascade in 2 sequential rounds is a meaningful posture data point. The compounding investor shape continues: each session of disciplined refinement stacks onto a project posture where the system + the operating system are both measurably easier to evolve safely as project age increases. Foundation unification + module-scope cache pattern primitive give NEXT chrome work (chrome-unification revival from archive) a clean substrate to compose onto.
+
+---
+
+## ✅ Session 167 (2026-05-16) — Chrome-unification design pass archived + Shape A versioning shipped (v0.167.0) + worktree cleanup — 2 runtime ships + 1 close (rotated to mini-block session 168 close)
+
+> Full block rotated out at session 168 close. Net: 2 runtime ships on main (Shape A versioning + close) + 1 preserved exploration (chrome-unification 6 commits archived to `archive/chrome-unification-v1` on origin per David's "iterate from production baseline" call). **NEW MEMORY promoted at first firing: `feedback_pre_mockup_prose_model_first.md`** — 22-variable design pass V1 mockup compounded variables faster than David could absorb; cancelled → David's 2-sentence prose model gave cleaner direction. Re-do via prose model + audit-first impact table + V1 chrome-unification mockup (5 surfaces) → V2 chip-overlay refinement → 5-commit chrome ship to worktree branch + push to Vercel preview (NOT main). Cost-shape triage on branch fate + versioning preservation → David picked **Archive-rename + cherry-pick versioning to fresh branch**. Worktree HEAD pushed to `archive/chrome-unification-v1`; cherry-picked versioning infra to fresh branch `chore/shape-a-versioning` → PR [#47](https://github.com/Zen-Forged/treehouse-treasure-search/pull/47) → squash-merged as `34d6a70` → tagged `v0.167.0`. Earlier mid-session David: *"how do I start controlling versioning better"* → cost-shape triage on 4 shapes (A tags+CHANGELOG / B + GitHub Releases / C + Vercel promotion gate / D + visual regression) → David picked Shape A, session-aligned `v0.{session}.{patch}` scheme. Shape A implementation now live: CHANGELOG.md + package.json bump + `.claude/commands/session-close.md` versioning step + post-merge tagging. Worktree cleanup: 48 → 5 worktrees + 52 → 3 local claude/* branches retired. 4 NEW Tech Rule candidates: cost-shape triage at META level for tooling/process asks (3 firings) / archive-then-fresh-branch flow / worktree cleanup operational pattern / Shape A versioning as canonical pre-beta pattern. PR [#48](https://github.com/Zen-Forged/treehouse-treasure-search/pull/48) shipped close as `09478a0`; tagged `v0.167.1`.
+
+_(Session 167 detailed beat narrative removed at session 168 close — see git history at commit `09478a0` for the full beat-by-beat narrative.)_
 
 ---
 
@@ -254,34 +289,37 @@ _(Session 151 tombstone rotated off at session 156 close — see git history at 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-05-16 (session 167 close — Chrome-unification design pass archived + Shape A versioning shipped v0.167.0 + worktree cleanup. **2 runtime ships + 1 close. NO chrome change to production.** David opened `/session-open`; recommended David's larger vision from session 166 close. 22-variable design pass V1 mockup → David: *"too many variables to account for. How can I give better guidance?"* → design pass cancelled. NEW MEMORY PROMOTED AT FIRST FIRING: `feedback_pre_mockup_prose_model_first.md` — when user has a clear picture, prose IS the design; skip V1 mockup phase + implement directly. 22-variable budget rule. Re-do via prose model + audit-first impact table + V1 chrome-unification mockup (5 surfaces) → David: "closer" + chip-overlay refinement → V2 → David: "lets give it a shot." 5-commit chrome ship to worktree branch + push to Vercel preview (NOT main). David: *"I don't want to implement any of these changes in production. I'd rather start back with the latest version in production and iterate from that one."* Cost-shape triage on branch fate + versioning preservation → David picked **Archive-rename + cherry-pick versioning to fresh branch**. Worktree HEAD pushed to `archive/chrome-unification-v1` on origin (work preserved for future revival) → original `claude/jovial-williamson-474480` deleted on origin → switched to fresh branch `chore/shape-a-versioning` off origin/main → cherry-picked versioning infra → amended CHANGELOG to scope to versioning-only → PR [#47](https://github.com/Zen-Forged/treehouse-treasure-search/pull/47) → squash-merged to main as `34d6a70` → tagged `v0.167.0` annotated. Earlier mid-session David asked: *"how do I start controlling versioning better"* → cost-shape triage on 4 shapes (A tags+CHANGELOG / B + GitHub Releases / C + Vercel promotion gate / D + visual regression) → David picked **Shape A**, session-aligned `v0.{session}.{patch}` scheme. Shape A implementation (now live): CHANGELOG.md at repo root + package.json bump + .claude/commands/session-close.md updated with versioning step + post-merge tagging. Worktree cleanup operational pass: 48 → 5 worktrees + 52 → 3 local claude/* branches retired. 3 unmerged worktrees flagged for David's discretion. **NEW Tech Rule candidate patterns observed**: cost-shape triage at META level for tooling/process asks (3 firings) / archive-then-fresh-branch flow / worktree cleanup operational pattern / Shape A versioning as canonical pre-beta pattern.)
+> Last updated: 2026-05-16 (session 168 close — **Foundation unification (greens + inks + bg) + BottomNav pill restructure to canonical pattern + 9 iPhone-QA-driven dial rounds = 16 runtime commits + 1 close.** David opened `/session-open`; standup recommended asset-swap-only chrome iteration as primary per session 167 close. David redirected to NEW initiative: unification pass on foundation colors (greens + inks). Per `feedback_pre_mockup_prose_model_first` ✅ Promoted (David's clear prose model — preference for v2.accent.greenDark + intentional-differentiation constraint), surfaced cost shapes A/B/C; David picked Shape A (value-only collapse). Round 1: 3 greens (v1.green + colors.green + v2.accent.green) → #1F4A31 + 6 inks (v1.ink* + colors.text*) → v2.text.* canonical values + style guide refreshed (2 commits). Round 2: greenMid follow-up — David: *"all buttons should use this v2.accent.greenDark."* Audit revealed greenMid MISCLASSIFIED as toggle variant; actually canonical CTA fill across 5 surfaces. Single commit collapsed #3E694F → #1F4A31. Rounds 3-4: 4-finding bundle (SavedEmptyState copy + icon · BottomNav layoutId initial=false · TabsChrome drawer auto-close · /my-shelf cachedAuthUser) + 4 follow-on caches (BottomNav 3-axis structural fix + useUserRole + useShopperAuth + /my-shelf cachedVendorBundle). **NEW MEMORY PROMOTED:** `feedback_module_scope_cache_for_warm_nav_hydration.md` — 4 firings in single session. Round 5: pill STILL slides → per `feedback_kill_bug_class_after_3_patches` ✅ Promoted, restructured BottomNav to canonical single-pill computed-position pattern (Material Design / Vercel docs nav / Linear). Round 6: hero STILL not anchoring → per `feedback_cap_speculative_patching_at_3_rounds` ✅ Promoted, escalated to audit-first; localized gap source as StickyMasthead paddingBottom 12 slab from session 156 borderBottom retiral. Coupled fix: paddingBottom 12 → 0 + MASTHEAD_HEIGHT calc 84 → 72. Round 7: overshot → 0 → 8 (canonical space.s8). Convergence-via-iteration dial 12 → 0 → 8. Round 8: David asked bg unification → flipped v2.bg.main #F7F3EB → #E6DECF (matches v2.bg.tabs canonical) + body bg + basemap.cream + style guide swatch. **5 NEW Tech Rule candidate patterns observed**: Convergence-via-iteration dial / Canonical single-pill computed-position primitive / Misclassified design-pass intent corrected via iPhone QA / 3-axis structural fix as escalation step / Coupled :root + inline-style flip in single commit.)
 
-**Working tree:** clean (after close commit). **Build:** green (`npx tsc --noEmit` + `next build` clean at every commit boundary; 47 routes compile). **Beta gate:** unblocked. **Production:** `main` @ `34d6a70` (session 167 versioning shipped via PR #47) + `v0.167.0` tag. **Net change this session on production:** 1 runtime ship (Shape A versioning) + 1 close ship + worktree cleanup operation. **Chrome-unification work preserved on origin at `archive/chrome-unification-v1` (SHA `a4cccc9`)** — 6 commits including design record + V1/V2 mockups + new assets (BG.png + treehouse_transparent.png) + chromeTokens module + StickyMasthead refactor + coupled chrome rewire + login wordmark swap. Vercel preview URL for that branch still valid for design-record archaeology. **Versioning is now live**: `v0.167.0` tag on production; every future `/session-close` auto-bumps version + prepends CHANGELOG entry + tags merge SHA.
+**Working tree:** clean (after close commit). **Build:** green (`npx tsc --noEmit` + `next build` clean at every commit boundary; 47 routes compile). **Beta gate:** unblocked. **Production:** `main` @ TBD (session 168 close merge SHA via PR #49) + `v0.168.0` tag. **Net change this session on production:** 16 runtime commits (foundation greens + inks consolidation · greenMid follow-up · 4-finding Saved walk · 4 hook caches + nav containment · BottomNav restructure to canonical pattern · masthead paddingBottom dial 12 → 0 → 8 · bg unification #F7F3EB → #E6DECF). All previous session 167 substrate intact; chrome-unification work still preserved at `archive/chrome-unification-v1` on origin (not promoted this session either).
 
-**Lint baselines unchanged from session 163** (no consumer-side token migration this session — chrome restructure works at substrate layer, not v0.2/v1→v2 migration):
-- `lint:spacing` → 332 / `lint:colors` → 428 / `lint:fonts` → 633 / `lint:radius` → 144 / `lint:shadows` → 35
-- **Total in-scope: 1,572 across 128 scanned files** (unchanged).
+**Lint baselines refreshed at session 168 close** (net +62 from session 167 — new BottomNav restructure + hook cache plumbing added some inline values; not v2 migration related):
+- `lint:spacing` → 339 / `lint:colors` → 472 / `lint:fonts` → 644 / `lint:radius` → 144 / `lint:shadows` → 35
+- **Total in-scope: 1,634 across 128 scanned files** (was 1,572 at session 167; +62 net).
 
-Roadmap: **18 R-rows total. 13 ✅ Shipped (R1, R3, R4a/b/c, R5a, R7, R10, R11, R12, R16, R17, R18), 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level (chrome restructure is operational + substrate, not feature roadmap).
+Roadmap: **18 R-rows total. 13 ✅ Shipped (R1, R3, R4a/b/c, R5a, R7, R10, R11, R12, R16, R17, R18), 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level (visual system consolidation + UX refinement, not feature roadmap).
 
-Substrate added this session: `components/TabsChrome.tsx` (~190 LOC orchestrator) + `components/MallPickerChip.tsx` (~95 LOC primitive) + new `v2.bg.tabs` token (`#E6DECF` (tabs)/-surfaces tier; 37 non-(tabs)/ consumers of v2.bg.main untouched) + NEW `--th-safe-area-inset-top` CSS var bridge in globals.css (env() readable from JS for device-aware geometry) + safe-area-aware `STICKY_THIN_HEIGHT` calc string + Profile/Back overlays at /find / /shelf StickyMasthead-matching positions. Substrate removed: `<HomeChrome>` + `<MallStrip>` + `<SearchBarRow>` + `/home-chrome-test` smoke route. **Net ~−636 LOC**. **Cumulative firings**: smallest→largest ~408+ (18 this session); design-record-as-execution-spec **27th cumulative**; single-coupled-commit 4 firings; schema-forced-deviation **6th cumulative**; pre-existing local-env miss **7th cumulative**; within-session-design-record-reversal 2 firings.
+Substrate added this session: 3 greens + 6 inks now resolve to 4 + 4 canonical values · unified bg `#E6DECF` across all v2 surfaces · NEW `feedback_module_scope_cache_for_warm_nav_hydration` memory file · module-scope cache pattern across 3 hooks + 1 page (cachedAuthUser / cachedRoleState / cachedShopperAuthState / cachedVendorBundle) · canonical single-pill BottomNav primitive · TabsChrome auto-close-drawer-on-nav-away rule · BottomNav scroll-storage clearing for tab-nav-to-Booth. Substrate removed: layoutId-pill pattern on BottomNav · v2.accent.green/greenMid distinct hex · v1.ink-*/colors.text-* distinct hex · 12px masthead paddingBottom slab · overflow:hidden on nav container. **Cumulative firings**: smallest→largest ~424+ (16 this session); module-scope-cache **promoted-via-memory at 4 firings**; pre-mockup-prose-model **2nd cumulative firing** (promotion-strength validated); kill-the-bug-class fired round 5; cap-speculative-patching fired round 6; pre-existing local-env miss **8th cumulative**.
 
-### 🚧 Recommended next session — Iterate from production v0.167.0 baseline
+### 🚧 Recommended next session — iPhone QA on session 168 production foundation ship
 
-Per session 167's "iterate from production baseline" call, next session opens fresh from `main` @ `34d6a70` + `v0.167.0` tag. Chrome-unification work archived to `archive/chrome-unification-v1` on origin (preserved for future revival; not promoted to production this session).
+Per session 168 ships, next session opens fresh from `main` + `v0.168.0` tag. **Primary recommendation:** **iPhone QA walk on production v0.168.0** validating the 16 commits shipped across foundation tokens (greens collapsed to greenDark / inks to v2.text.* / bg unified to #E6DECF) + BottomNav canonical pill restructure + masthead paddingBottom 8 dial + module-scope cache pattern flash-suppression. Watch items per the 5 round-9 follow-ups listed in the session block.
 
-**Primary recommendation:** **Smaller-scope chrome iteration** per `feedback_pre_mockup_prose_model_first.md` ✅ Promoted (NEW this session). Start with just the asset swaps from the archive — no scope creep:
-1. **Asset swap only**: copy `BG.png` + `treehouse_transparent.png` from `archive/chrome-unification-v1` → main; swap `home-hero.png` → `BG.png` in HomeHero; swap `wordmark.png` → `treehouse_transparent.png` in StickyMasthead default + /login direct img. ~2-3 commits. iPhone QA on production-PWA. If asset swap reads clean, evolve from there (one structural axis at a time).
-2. **NO chip-overlay yet, NO sibling-sticky-logo yet, NO Saved-chrome-change yet** — those were the scope items that compounded into 22 variables. Each can land in its own focused session if asset swap proves the visual direction.
-
-**If chrome iteration is not the priority,** alternatives ranked by leverage:
-- **Tier B B7 — `v2.shadow.*` tier extraction** — 3rd inline-shadow consumer (session 165 carousel `boxShadow` in `544a088`) is design-pass trigger
-- **Shape C arc 3 — `app/admin/page.tsx` v0.2 → v1/v2 migration** — largest in-scope debt cluster (~265 violations); uses live style guide as canonical reference; resolves admin green-drift
-- **Mapbox preview-only token setup** — **13-session carry now** (156→167); ~15 min HITL; unblocks preview-QA loop for any future Mapbox-touching feature
-- **iPhone QA on production v0.167.0** — Shape A versioning + chrome from session 166 is on production; full smoke walk to confirm no regressions
+**If QA passes clean,** alternatives ranked by leverage:
+- **Inline-hex consumer sweep (Shape B follow-on for foundation colors)** — Round 1+2 collapsed token values; ~14 inline `#1e4d2b` + 2 inline `#285C3C` + 19 inline `rgba(30,77,43,*)` + 2 inline `rgba(40,92,60,*)` (HomeFeedTile selected glow) consumers remain on old hex. Mostly low-visibility (shadows/glows + admin event-color tags + email CTAs + brand themeColor meta + isSaved heart + BottomNav internal const + 2 style-guide swatches); easy sweep.
+- **Asset-swap-only chrome iteration** (carry from session 167) — smaller-scope path toward David's larger vision. Copy `BG.png` + `treehouse_transparent.png` from `archive/chrome-unification-v1` → main. Swap `home-hero.png` → `BG.png` in HomeHero + `wordmark.png` → `treehouse_transparent.png` in StickyMasthead default + /login direct img. ~2-3 commits. Now that bg is unified to #E6DECF + foundation greens canonical, chrome work composes onto a clean substrate.
+- **Tier B B7 — `v2.shadow.*` tier extraction** — 3rd inline-shadow consumer trigger still active (carry from session 167).
+- **Shape C arc 3 — `app/admin/page.tsx` v0.2 → v1/v2 migration** — largest in-scope debt cluster (~265 violations); uses /review-board style guide as canonical reference; resolves admin green-drift; foundation collapse this session means admin will inherit canonical greens once migrated.
+- **Mapbox preview-only token setup** — **14-session carry now** (156→168); ~15 min HITL.
 
 ### 🚧 Operational follow-ups carrying
 
+- 🚧 **NEW (168→169): iPhone QA on session 168 production foundation ship** — primary recommended next move. Watch items: /find/[id] post-it stamp contrast against warmer bg (v1.postit #fefae8 unchanged); /shelf/[slug] BoothHero composition; form-page bg on /me + /login + /vendor-request + /welcome; Mapbox land base on /map (basemap.cream follows so land + chrome continuous); /admin UNCHANGED on purpose (v0.2 namespace); BottomNav pill canonical pattern slides cleanly L↔R between Explore/Saved/Booth tabs; masthead 8px breathing room reads right; module-scope cache flash-suppression validates seamless warm-nav across Profile button + Booth tab + BoothHero composition.
+- 🚧 **NEW (168→169): 5 NEW Tech Rule candidate patterns from session 168** — Convergence-via-iteration dial / Canonical single-pill computed-position primitive / Misclassified design-pass intent corrected via iPhone QA / 3-axis structural fix as escalation step / Coupled :root + inline-style flip in single commit. All single firings; promote on 2nd firing.
+- 🚧 **NEW (168→169): Inline-hex consumer sweep (Shape B for foundation colors)** — see Recommended next session above. Easy Shape B sweep when ready.
+- 🚧 **CARRY (167→169): Chrome-unification revival path** — `archive/chrome-unification-v1` on origin has 6 commits ready for revival per session 167 carry; smaller-scope asset-swap-only iteration recommended.
+- 🚧 **CARRY (167→169): 2 unmerged worktrees** (`gifted-archimedes-23a31c` + `interesting-golick-212096`) — no PR; David's call when next encountered.
+- 🚧 **CARRY (167→169): 4 NEW Tech Rule candidate patterns from session 167** — cost-shape triage at META level for tooling/process asks (3 firings) / archive-then-fresh-branch flow / worktree cleanup operational pattern / Shape A versioning as canonical pre-beta pattern.
 - 🚧 **NEW (165→166): Round 3 iPhone QA on round-2 ship** — primary recommended next move. Watch items: pulse centered around user pin · Reset clears callout + scope · Reset stays tappable when callout open · carousel selected card reads as "in focus" · MallMatchChip surfaces correctly + tap scopes.
 - 🚧 **NEW (165→166): NEW-4 Shape B follow-on if round 3 reads "still not enough"** — render selected card as sibling overlay outside scroll container, position-matched via JS scroll offset. ~2 commits + ~30 min. Documented in commit `544a088` body as committed follow-on.
 - 🚧 **CARRY (164→166): Arc 2 — `<MallPickerChip>` primitive in isolation** — depends on round 3 + (optional Shape B) pass. ~2 commits: primitive at `components/MallPickerChip.tsx` (PinIcon green-filled + Cormorant 22px name + chev per D10-D11) + smoke route extension.
@@ -345,35 +383,41 @@ Per session 167's "iterate from production baseline" call, next session opens fr
 
 ### Alternative next moves (top 5)
 
-1. **Asset-swap-only chrome iteration** — smallest-scope path toward David's larger vision. Copy `BG.png` + `treehouse_transparent.png` from `archive/chrome-unification-v1` → main. Swap `home-hero.png` → `BG.png` in HomeHero + `wordmark.png` → `treehouse_transparent.png` in StickyMasthead default + /login direct img. ~2-3 commits. iPhone QA on production-PWA. NO chip-overlay / sibling-sticky-logo / Saved-chrome-change yet — those scope items compounded into 22 variables this session.
-2. **Tier B B7 — `v2.shadow.*` tier extraction** — 3rd inline-shadow consumer (session 165 carousel `boxShadow` in `544a088`) is design-pass trigger.
-3. **Shape C arc 3 — `app/admin/page.tsx` v0.2 → v1/v2 migration** — ~265 violations, largest in-scope debt cluster; uses /review-board style guide as canonical reference; resolves admin green-drift.
-4. **Mapbox preview-only token setup** — **13-session carry now** (156→167); ~15 min HITL; unblocks preview-QA loop for Mapbox-touching features.
-5. **iPhone QA on production v0.167.0** — Shape A versioning + session 166 chrome live on production; full smoke walk to confirm no regressions.
+1. **iPhone QA on production v0.168.0** — 16 commits shipped this session across foundation tokens + BottomNav restructure + masthead dial + bg unification + 4 module-scope caches. Primary follow-on to verify nothing regressed under the warmer #E6DECF bg.
+2. **Inline-hex consumer sweep (Shape B for foundation colors)** — ~14 inline `#1e4d2b` + 2 inline `#285C3C` + 19 inline `rgba(30,77,43,*)` + 2 inline `rgba(40,92,60,*)` consumers still on old hex. Sweep when ready.
+3. **Asset-swap-only chrome iteration** (carry from session 167) — smaller-scope path toward David's larger vision. Foundation now unified; chrome work composes onto a clean substrate.
+4. **Tier B B7 — `v2.shadow.*` tier extraction** — 3rd inline-shadow consumer trigger met (carry from session 167).
+5. **Shape C arc 3 — `app/admin/page.tsx` v0.2 → v1/v2 migration** — largest in-scope debt cluster (~265 violations); admin will inherit canonical greens via the foundation collapse once migrated.
 
 Full alternatives + operational backlog in [`docs/queued-sessions.md`](docs/queued-sessions.md).
 
-### Session 168 opener (pre-filled — iterate from v0.167.0 production baseline)
+### Session 169 opener (pre-filled — iPhone QA on v0.168.0 production foundation)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Sentry · Vercel · Mapbox GL JS
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md (session 167 full block — chrome-unification design pass archived to archive/chrome-unification-v1 + Shape A versioning shipped v0.167.0 + worktree cleanup 48→5; NEW MEMORY promoted at first firing: feedback_pre_mockup_prose_model_first.md; 4 NEW Tech Rule candidates), CONTEXT.md. Then run the session opening standup from MASTER_PROMPT.md.
+Read CLAUDE.md (session 168 full block — foundation unification greens + inks + bg = 16 runtime commits + 1 close shipped via PR #49 tagged v0.168.0; NEW MEMORY promoted: feedback_module_scope_cache_for_warm_nav_hydration.md; 5 NEW Tech Rule candidates), CONTEXT.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Session 167 closed with two operational ships on production main (Shape A versioning v0.167.0 + session close v0.167.1) + ONE preserved exploration (chrome-unification 6 commits archived to archive/chrome-unification-v1 on origin, NOT promoted to production per David's "iterate from production baseline" call). Production main is at session 166 chrome + new versioning infrastructure. Versioning is now live: every /session-close auto-bumps version + prepends CHANGELOG entry + creates annotated tag.
+CURRENT ISSUE: Session 168 closed 16-commit ship across foundation tokens (3 greens collapsed to v2.accent.greenDark #1F4A31 / 6 inks collapsed to v2.text.* canonical / bg unified #F7F3EB → #E6DECF) + BottomNav restructure to canonical single-pill computed-position pattern + masthead paddingBottom dial 12 → 0 → 8 + 4 module-scope caches (cachedAuthUser + cachedRoleState + cachedShopperAuthState + cachedVendorBundle). 9 iPhone-QA-driven dial rounds in single session (longest refinement chain on record). NEW MEMORY promoted at 4 firings: feedback_module_scope_cache_for_warm_nav_hydration.md. Operating-system escalation cascade fired: round 5 kill-the-bug-class → round 6 cap-speculative-patching, both within same session.
 
-RECOMMENDED PRIMARY WORK FOR SESSION 168: smaller-scope chrome iteration per feedback_pre_mockup_prose_model_first.md ✅ Promoted. Start with just the asset swaps from the archive (NO chip-overlay, NO sibling-sticky-logo, NO Saved-chrome-change yet — those compounded into 22 variables in session 167):
-  1. ASSET SWAP — copy BG.png + treehouse_transparent.png from archive/chrome-unification-v1 → main. Swap home-hero.png → BG.png in HomeHero + wordmark.png → treehouse_transparent.png in StickyMasthead default + /login direct img. ~2-3 commits.
-  2. iPhone QA on production-PWA after asset swap; evolve from there one structural axis at a time if visual direction reads clean.
+RECOMMENDED PRIMARY WORK FOR SESSION 169: iPhone QA walk on production v0.168.0 to verify the foundation ship reads clean on real device. Watch items:
+  - /find/[id] post-it stamp contrast against warmer #E6DECF bg (v1.postit #fefae8 unchanged; verify still reads)
+  - /shelf/[slug] BoothHero composition + post-it readability
+  - Form-page bg on /me + /login + /vendor-request + /welcome (warmer cream now)
+  - Mapbox land base on /map (basemap.cream follows so land + chrome continuous)
+  - /admin UNCHANGED on purpose (v0.2 namespace); verify no accidental drift
+  - BottomNav canonical pill slides cleanly L↔R between Explore/Saved/Booth (vendor) — no corner artifact, contained in nav
+  - Masthead 8px breathing room reads right (not too tight, not too gappy)
+  - Module-scope cache flash-suppression: tap Booth from another tab as vendor → Masthead + BoothHero + title + mall all paint in one frame, no skeleton flash
 
-NON-CHROME ALTERNATIVES if chrome iteration is not the priority:
-  - Tier B7 v2.shadow.* extraction (3rd inline-shadow consumer trigger met; carousel selected boxShadow in 544a088)
-  - Shape C arc 3 admin /admin page v0.2 → v1/v2 migration (largest in-scope debt cluster, ~265 violations)
-  - Mapbox preview-only token setup (13-session carry; ~15 min HITL)
-  - iPhone QA on production v0.167.0 (smoke walk to confirm no regressions from Shape A + chrome from session 166)
+NON-QA ALTERNATIVES if QA passes clean:
+  - Inline-hex consumer sweep (Shape B for foundation colors) — ~37 inline hex/rgba consumers on old foundation values; mostly low-visibility
+  - Asset-swap-only chrome iteration (carry from session 167) — composes onto clean substrate now
+  - Tier B7 v2.shadow.* extraction (3rd consumer trigger met)
+  - Shape C arc 3 admin /admin page v0.2 → v1/v2 migration
 
-CARRY-FORWARDS: 4 NEW Tech Rule candidate patterns from session 167 (cost-shape triage at META level for tooling/process asks / archive-then-fresh-branch flow / worktree cleanup operational pattern / Shape A versioning as canonical pre-beta pattern). All carries from sessions 156-166 still apply. 2 unmerged worktrees in repo (gifted-archimedes-23a31c + interesting-golick-212096) — no PR, David's call if next encountered.
+CARRY-FORWARDS: 5 NEW Tech Rule candidates from session 168 (Convergence-via-iteration dial / Canonical single-pill computed-position primitive / Misclassified design-pass intent corrected via iPhone QA / 3-axis structural fix as escalation step / Coupled :root + inline-style flip in single commit). All carries from sessions 156-167 still apply (chrome-unification revival path + 2 unmerged worktrees + Mapbox preview token setup 14-session carry).
 
 SCHEDULED AGENT: trig_017455nMVrTTZb6PxYnYcYZY fires Thu May 21 9:00 AM EDT — checks if VendorCTACard still unused → opens cleanup PR if so.
 ```

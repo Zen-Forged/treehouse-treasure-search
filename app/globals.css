@@ -60,22 +60,34 @@
   --th-v1-postcard-bg:     #fbf3dd;
   --th-v1-postcard-border: rgba(42,26,10,0.10);
 
-  /* v1 ink scale */
-  --th-v1-ink-primary:  #2a1a0a;
-  --th-v1-ink-mid:      #4a3520;
-  --th-v1-ink-muted:    #6b5538;
-  --th-v1-ink-faint:    rgba(42,26,10,0.28);
+  /* v1 ink scale — Session 168 foundation consolidation.
+     v1.ink-primary/mid/muted values collapse to the v2.text.* canonical
+     values so the v1 + v2 + v0.2 ink hierarchies render identically.
+     v1.ink-faint collapses from rgba(42,26,10,0.28) to solid #A39686
+     (matches v2.text.muted) — the rgba was load-bearing on varied bgs
+     and may read off in iPhone QA; flag any specific surface that needs
+     a softer ghost-text variant for follow-on. v1.ink-hairline PRESERVED
+     (it's a divider/border token, not text — 64 consumers all dividers). */
+  --th-v1-ink-primary:  #2B211A;
+  --th-v1-ink-mid:      #5C5246;
+  --th-v1-ink-muted:    #A39686;
+  --th-v1-ink-faint:    #A39686;
   --th-v1-ink-hairline: rgba(42,26,10,0.18);
 
   /* v1 voice + chrome */
   --th-v1-price-ink:      #6a4a30;
   --th-v1-icon-bubble:    rgba(42,26,10,0.06);
-  --th-v1-green:          #1e4d2b;
+  /* v1.green — Session 168 foundation consolidation. Canonical green hex
+     collapses to David's preference v2.accent.green-dark #1F4A31 (was
+     #1e4d2b); aligns with the v0.2 green collapse below + v2.accent.green
+     collapse in the v2 block. rgba derivations updated to match new
+     (31,74,49) source RGB. */
+  --th-v1-green:          #1F4A31;
   --th-v1-red:            #8b2020;
   --th-v1-red-bg:         rgba(139,32,32,0.07);
   --th-v1-red-border:     rgba(139,32,32,0.18);
   --th-v1-on-green:       #fff;
-  --th-v1-green-disabled: rgba(30,77,43,0.40);
+  --th-v1-green-disabled: rgba(31,74,49,0.40);
 
   /* v1.2 form input + amber notice */
   --th-v1-ink-wash:     rgba(255,253,248,0.70);
@@ -103,11 +115,14 @@
   --th-v1-icon-xl:       24px;
 
   /* v1 R10 cartographic basemap. Session 155 refinement: cream realigned
-     to match v2.bg.main (#F7F3EB) so the map's land base reads continuous
-     with the masthead + strip chrome. Reverses the session-145 v1.basemap.*
+     to match v2.bg.main so the map's land base reads continuous with the
+     masthead + strip chrome. Session 168 round 9 — v2.bg.main flipped to
+     #E6DECF (was #F7F3EB) per David's system-wide bg unification ask;
+     basemap.cream follows so the cartographic land base stays continuous
+     with the surrounding chrome. Reverses the session-145 v1.basemap.*
      preservation lock — when the v2.basemap.* sub-arc lands (parked carry),
      these values will fold into a proper v2 cartographic palette. */
-  --th-v1-basemap-cream:  #F7F3EB;
+  --th-v1-basemap-cream:  #E6DECF;
   --th-v1-basemap-cream2: #e6d9b8;
   --th-v1-basemap-water:  #c5d6c4;
   --th-v1-basemap-water2: #aac3aa;
@@ -117,15 +132,23 @@
   /* v1 shadow stack */
   --th-v1-shadow-polaroid:          0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
   --th-v1-shadow-polaroid-pin:      0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16);
-  --th-v1-shadow-cta-green:         0 2px 12px rgba(30,77,43,0.22);
-  --th-v1-shadow-cta-green-compact: 0 2px 10px rgba(30,77,43,0.18);
+  --th-v1-shadow-cta-green:         0 2px 12px rgba(31,74,49,0.22);
+  --th-v1-shadow-cta-green-compact: 0 2px 10px rgba(31,74,49,0.18);
   --th-v1-shadow-sheet-rise:        0 -8px 30px rgba(30,20,10,0.28);
   --th-v1-shadow-card-subtle:       0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06);
   --th-v1-shadow-postcard:          0 4px 14px rgba(42,26,10,0.16), 0 1px 2px rgba(42,26,10,0.08);
   --th-v1-shadow-callout:           0 8px 20px rgba(42,26,10,0.22), 0 2px 6px rgba(42,26,10,0.10);
 
   /* ── v2 — field-guide migration ── */
-  --th-v2-bg-main:       #F7F3EB;
+  /* Session 168 round 9 — David: "unify the background color on all
+     surfaces and masthead to var(--th-v2-bg-tabs)." v2.bg.main flipped
+     from #F7F3EB → #E6DECF (matches v2.bg.tabs canonical). System-wide
+     impact: every v2 surface (~37 consumers — Saved, Home, Find, /shelf,
+     /me, /welcome, /login, /vendor-request, post-flow, admin, review-
+     board) + StickyMasthead chrome + body bg now read as the warmer
+     (tabs)-tier cream. v2.bg.tabs token name preserved as an alias
+     resolving to the same value; both names safe for new work. */
+  --th-v2-bg-main:       #E6DECF;
   --th-v2-bg-paper:      #FFFCF5;
   --th-v2-bg-soft:       #F1EBDD;
   /* Session 166 dial 10 — safe-area-inset-top exposed as a CSS var so JS
@@ -168,10 +191,30 @@
   --th-v2-text-secondary: #5C5246;
   --th-v2-text-muted:     #A39686;
 
-  --th-v2-accent-green:      #285C3C;
+  /* v2.accent.green — Session 168 foundation consolidation. Was #285C3C
+     (the de-facto primary at 77 consumers); collapses to David's preference
+     v2.accent.green-dark #1F4A31 so the "two coexisting primary greens"
+     (legacy #1e4d2b + bright #285C3C) become a single canonical hex.
+     v2.accent.green-dark stays at #1F4A31 — both names now resolve to
+     the same value; greenDark API preserved for backwards-compat + any
+     future deliberate deeper-tone divergence.
+
+     Session 168 round 2 (iPhone QA finding) — v2.accent.green-mid was
+     mischaracterized at the initial design pass as a "saved/active
+     toggle" variant; audit revealed it's actually the v2 CTA
+     button-fill canonical across all 3 lattice tiers (SavedMallCardV2
+     "Find Your Way" + shelf "Bookmark Booth" + find "Save the Find" +
+     LocationActions "Take Trip" + post/edit greenBorder accent).
+     David: "all buttons should use this v2.accent.greenDark." Value
+     collapses #3E694F → #1F4A31. Saved-state hierarchy preserved by
+     the bg-to-cream flip pattern, not by greenMid's distinct hex.
+
+     v2.accent.green-soft PRESERVED — soft accent surface tint
+     (highlighted-bg, e.g. welcome card, copied-flash). */
+  --th-v2-accent-green:      #1F4A31;
   --th-v2-accent-green-dark: #1F4A31;
   --th-v2-accent-green-soft: #E8EEE6;
-  --th-v2-accent-green-mid:  #3E694F;
+  --th-v2-accent-green-mid:  #1F4A31;
 
   --th-v2-brown:      #6A513E;
   --th-v2-brown-soft: #B8A996;
@@ -195,14 +238,20 @@
   --th-c-empty-tile:   #dedad2;
   --th-c-border:       rgba(26,24,16,0.09);
   --th-c-border-light: rgba(26,24,16,0.05);
-  --th-c-text-primary: #1c1a14;
-  --th-c-text-mid:     #4a4840;
-  --th-c-text-muted:   #8a8476;
-  --th-c-text-faint:   #b4ae9e;
-  --th-c-green:        #1e4d2b;
-  --th-c-green-light:  rgba(30,77,43,0.08);
-  --th-c-green-solid:  rgba(30,77,43,0.90);
-  --th-c-green-border: rgba(30,77,43,0.20);
+  /* v0.2 text scale — Session 168 foundation consolidation. Same canonical
+     v2.text.* values as v1.ink-* above so admin + parked-surface text
+     reads identically to the v2 chrome consumers. */
+  --th-c-text-primary: #2B211A;
+  --th-c-text-mid:     #5C5246;
+  --th-c-text-muted:   #A39686;
+  --th-c-text-faint:   #A39686;
+  /* v0.2 green family — Session 168 foundation consolidation. Same
+     canonical #1F4A31 as v1.green + v2.accent.green above; rgba
+     derivations updated to match new (31,74,49) source RGB. */
+  --th-c-green:        #1F4A31;
+  --th-c-green-light:  rgba(31,74,49,0.08);
+  --th-c-green-solid:  rgba(31,74,49,0.90);
+  --th-c-green-border: rgba(31,74,49,0.20);
   --th-c-red:          #8b2020;
   --th-c-red-bg:       rgba(139,32,32,0.07);
   --th-c-red-border:   rgba(139,32,32,0.18);
@@ -233,8 +282,10 @@
   body {
     /* Session 143 — body bg migrates to v2.bg.main (was v1.paperCream
        #f2ecd8). Pairs with app/layout.tsx inline style. Structural fix
-       at the body layer kills the per-page page-bg dial bug class. */
-    background-color: #F7F3EB;
+       at the body layer kills the per-page page-bg dial bug class.
+       Session 168 round 9 — value follows v2.bg.main flip to #E6DECF
+       (unified bg per David's "all surfaces and masthead" ask). */
+    background-color: #E6DECF;
     color: #1a1a18;
   }
 
