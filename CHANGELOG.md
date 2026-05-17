@@ -8,6 +8,60 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.178.0] — 2026-05-17
+
+### Session 178 — F2 Map page extraction implementation Arcs 1-4 end-to-end (8 commits against locked design record, 0 re-scoping) + 3 QA dial commits (/map masthead bg + v1.iconBubble solid + /find/[id] paired-glyph swap)
+
+11 runtime commits + 1 close. David: *"F2 Map page extraction."* Pure execution against `docs/map-page-extraction-design.md` (locked session 176 C2, 20 frozen decisions D1–D20 + Frame A bordered window + 4-arc sequencing). **29th cumulative firing of `feedback_design_record_as_execution_spec` ✅ Promoted crosses the load-bearing operating mode threshold David's session 177 CURRENT ISSUE called out** — Arc 1 shipped clean across 3 commits, Arcs 2–4 then shipped clean across 5 more, zero re-scoping mid-flight, only one schema-forced extension surfaced explicitly (MallPickerChip `stickyTop` prop) per `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted. David's mid-PR iPhone QA walk surfaced 3 dial bundles compressed into this same session per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted: (1) /map masthead bg → `v2.surface.warm` matches /find exactly; (2) `v1.iconBubble` token rgba → solid `#EFEBDF` system-wide via session 144 Layer 1 CSS-var refactor + `overlay` variant retire on both masthead-button primitives; (3) /find/[id] paired-glyph swap (`PiStorefrontBold` ↔ `PiMapPinFill`) + 4-sub-dial visual unify across cartographic eyebrow + carousel header.
+
+### Added
+
+- **`/map` dedicated route** at `app/(tabs)/map/page.tsx`. Reverses session 109's /map page deletion + retires session 155's drawer-overlay reshape; revives the pre-155 "contained window" feel. Composition top-to-bottom per D9 + D10 + D11 + Frame A: `<StickyMasthead bg={v2.surface.warm}>` with `<MastheadBackButton fallback="/" />` + wordmark + `<MastheadProfileButton />` matches /find/[id] exactly · `<MallPickerChip stickyTop={0}>` mirror of Home's strip · `<MapPageBody>` Frame A bordered window · `<MapCarousel open={true}>` always-visible page-level sibling per D15.
+- **`components/MapPageBody.tsx`** (~160 LOC) — Frame A bordered window primitive composing `<TreehouseMap>` + inline `<MapControlPill>` overlay. 1px solid v2.border.medium + 14px radius + 14px page padding + drop shadow + MapControlPill anchored top-right inside the window per D5 + D14. Pure presentation; consumer owns peekedMallId + resetKey state.
+- **`components/MapPageTransition.tsx`** (~30 LOC) — framer-motion slide-up enter wrapper per D4. `initial={{y:"100%"}} animate={{y:0}}` with MOTION_BOTTOM_SHEET timing — preserves the muscle-memory drawer-enter cadence users built across sessions 154-177. Wraps only MapPageBody (not the full page) so position:fixed StickyMasthead + position:sticky MallPickerChip don't fight transform-creates-containing-block during animation. Enter-only scope; exit deferred per risk R5.
+- **`app/map-page-test/page.tsx`** smoke route — primitive-isolated validation of Frame A geometry with 3 mock KY malls + console.log handlers + bottom-shelf stand-in. Per `feedback_testbed_first_for_ai_unknowns` ✅ Promoted (5th cumulative firing post-promotion).
+- **`stickyTop` optional prop on `<MallPickerChip>`** — additive contract extension per `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted (5th cumulative firing); default = `HERO_BOTTOM_EDGE` for Home consumer; /map passes `0` since there's no hero above the chip per D11.
+- **3 new R3 analytics events** scoped to /map: `filter_applied` with `source: "map_page_pin"` (PinCallout commit per D7) / `source: "map_page_sheet"` (MallSheet picker tap per D6) / `source: "map_page_reset"` (Reset pill tap).
+- **Module-scope `cachedMalls` cache** in `app/(tabs)/map/page.tsx` per `feedback_module_scope_cache_for_warm_nav_hydration` ✅ Promoted at session 168 (6th cumulative firing post-promotion). Eliminates chip text flicker on warm-nav cycles.
+- **Auto-peek useEffect** on `/map` — selected mall surfaces PinCallout immediately on mount.
+- **`<MallSheet>` revived from dormant** (20 sessions since session 158 when MallMapDrawer became canonical) — file-top revival comment + audit notes. Mounted as scope picker on `/map` per D6. Visual vocabulary preserved verbatim; `findCounts` intentionally omitted on /map consumer.
+
+### Changed
+
+- **/map masthead bg** dialed `v2.bg.tabs` → `v2.surface.warm` per David's QA: *"I'd like this page to use the masthead that's used on the /find page."* Matches /find/[id] + /shelf/[slug] exactly. Within-session refinement per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128.
+- **`v1.iconBubble` token value** flipped `rgba(42,26,10,0.06)` → `#EFEBDF` (solid) per David: *"Instead of them being transparent variations, can we just change the buttons to #efebdf without transparency? This keep the color accurate across headers regardless of the BG."* Single `--th-v1-icon-bubble` CSS-var edit cascades to **16+ inline consumer surfaces + 2 primitives + IconBubble in /find/[id]** automatically via session 144 Layer 1 token foundation refactor — zero per-callsite edits for the bg change itself. David verbatim per `feedback_user_provided_verbatim_values_ship_as_is` ✅ Promoted. First proper cross-arc demonstration of the Layer 1 refactor's payoff at scale.
+- **Home `<MallPickerChip>` onTap handler** swaps from `toggleDrawer()` to `router.push('/map')` per D1.
+- **`/find/[id]` cartographic eyebrow icon swap** `PiStorefrontBold` → `PiMapPinFill` + text "Purchase this item at" → "Visit location to purchase find" + typography unify (dropped fontWeight 600 + lineHeight 1.3 so eyebrow matches carousel header below exactly). David verbatim per `feedback_user_provided_verbatim_values_ship_as_is` ✅ Promoted.
+- **`/find/[id]` "More from this booth…" carousel header** gains `PiStorefrontBold` icon prefix + text rename to "More finds from this booth" (ellipsis dropped). The two header icons effectively SWAP positions — pin-glyph moves UP to cartographic eyebrow ("the place"); booth-glyph moves DOWN to carousel header ("the booth"). Reads as deliberate paired-structure vocabulary across the scroll.
+- **PinCallout Explore CTA on /map** commits scope + `router.push('/')` per D7 — "let me see what's there" routes to Explore feed with new scope active. `useSavedMallId` cross-instance broadcast ensures Home chip hydrates synchronously on next nav with no flash through all-Kentucky.
+
+### Removed
+
+- **`components/MallMapDrawer.tsx` (399 LOC)** — wrapper retired. Inner composition logic moved to MapPageBody at Arc 1.1.
+- **`lib/useMapDrawer.tsx` (64 LOC)** — MapDrawerContext + MapDrawerProvider retired. Map scope-picker moved to dedicated /map route; cross-component drawer-open state no longer needed.
+- **`MapDrawerProvider` import + wrapper** from `app/layout.tsx`.
+- **TabsChrome substantial simplification** — `useMapDrawer` destructure + `<MallMapDrawer>` JSX mount (~50 LOC with handlers + analytics) + close-on-leave-Home useEffect (session 168 round 4 fix) all retire. Back-overlay conditional simplifies; `showChipAndDrawer` → `showChip` rename for accuracy.
+- **`variant` prop on `<MastheadBackButton>` + `<MastheadProfileButton>`** + all `overlay` branches. Was load-bearing only because transparent default vanished against HomeHero photo (session 169 round 4 Review Board Finding 2); with default now solid #EFEBDF, visibility concern is gone; variant is dead substrate per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted. 2 TabsChrome callsites + `v2` imports (unused) all drop.
+- **`CHIP_VISIBLE_HEIGHT_PX` export** from `components/MallPickerChip.tsx` — constant existed only for MallMapDrawer's top:calc geometry; no remaining consumer.
+- **Search-context MallMatchChip drawer-overlay slot** (session 165 Shape A dual-slot pattern). Home's inline MallMatchChip in `app/(tabs)/page.tsx` is the surviving consumer + carries `search_mall_match` analytics forward unchanged.
+
+### Fixed
+
+- **MallPickerChip `stickyTop` extension** addresses /map's "no hero above the chip" case — chip pins flush below masthead at `top:0` instead of HERO_BOTTOM_EDGE (would be wrong anchor on /map).
+- **`feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161** — **12th cumulative firing** (html2canvas-pro parked dep from session 152; `npm install` resolved in 1 round-trip at Arc 1.1 commit boundary).
+
+### iPhone QA watch-items
+
+- **F2 /map page D1–D20 validation** — StickyMasthead matches /find · MallStrip pin to top:0 · Frame A bordered window geometry + MapControlPill placement · slide-up transition perception ("drawer expanded" vs "page jump") · MallSheet picker open + close + commit · pin tap → callout → Explore commits scope + routes to / synchronously · Reset clears scope + dismisses peek + fitBounds re-fires · D7 "exit no slide-down" trade-off perception on back-nav.
+- **Cross-surface `v1.iconBubble` solid #EFEBDF** verification on 16+ consumer surfaces.
+- **/find/[id] paired-glyph + copy** — pin glyph + "Visit location to purchase find" / booth glyph + "More finds from this booth" / typography unified.
+- **F2 Tier B dials post-QA** — MapControlPill placement · chip caret (chevron-down → chevron-right) · slide-up exit (deferred per risk R5).
+- **Mapbox preview-only token** still pending (25-session carry; 156→178) — /map silently fails tile fetches on Vercel preview; production-PWA QA is fallback. ~15 min HITL closes permanently.
+
+[v0.178.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.178.0
+
+---
+
 ## [v0.177.0] — 2026-05-17
 
 ### Session 177 — iPhone QA bundle on production v0.176.0: /find/[id] map filter retire + carousel revival + Explore this Booth CTA + hero compression magnitude dial

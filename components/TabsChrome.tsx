@@ -46,11 +46,9 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import HomeHero from "@/components/HomeHero";
 import MallPickerChip from "@/components/MallPickerChip";
-import MallMapDrawer from "@/components/MallMapDrawer";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadBackButton from "@/components/MastheadBackButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { useMapDrawer } from "@/lib/useMapDrawer";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import type { Mall } from "@/types/treehouse";
@@ -91,7 +89,6 @@ export default function TabsChrome() {
   const searchParams = useSearchParams();
 
   const [mallId, setMallId] = useSavedMallId();
-  const { drawerOpen, closeDrawer, toggleDrawer } = useMapDrawer();
   const [malls, setMalls] = useState<Mall[]>(() => cachedMalls ?? []);
 
   useEffect(() => {
@@ -101,56 +98,34 @@ export default function TabsChrome() {
     });
   }, []);
 
-  // Session 175 Option α retired session 166 dial 3 drawer-open auto-scroll
-  // (formerly here). Rationale: the auto-scroll forced scrollY to the
-  // hero's sticky-engagement threshold so the hero would collapse out of
-  // the drawer's render area on drawer-open at scrollY=0. With Option α
-  // the hero stays full 33vh sticky at top:0 throughout scroll — the
-  // drawer pins at HERO_BOTTOM_EDGE + chip height (= 33vh + 48px ≈ 318px)
-  // regardless of scrollY, so there's no "drawer behind hero" race to
-  // resolve. Dead-code retire per feedback_dead_code_cleanup_as_byproduct
-  // ✅ Promoted. CSS var --th-safe-area-inset-top in globals.css kept as
-  // substrate for any future safe-area-aware JS consumer (single line,
-  // zero cost).
-
-  // Session 168 round 4 finding 1 — David iPhone QA: "If map is expanded
-  // and the user selects another page (i.e. saved) and navigates back to
-  // explore the map should be collapsed. Currently, it's saving the
-  // expanded map state." Root cause: MapDrawerProvider lives at the app
-  // root layout (lib/useMapDrawer.tsx) so drawerOpen state survives
-  // (tabs)/ route transitions. The drawer's *render* is Home-scoped
-  // (showChipAndDrawer = isHome below), but when the user navigates back
-  // to Home with drawerOpen still true, the drawer re-mounts open.
+  // Session 178 F2 Arc 3.2 — useMapDrawer + close-on-leave-Home effect
+  // retire alongside MallMapDrawer. Map scope-picker moved to dedicated
+  // /map route at Arc 1; no shared drawer-open state to manage across
+  // route transitions, no "drawer still open after nav back to Home"
+  // race to resolve. Dead-code retire per
+  // feedback_dead_code_cleanup_as_byproduct ✅ Promoted.
   //
-  // Fix: auto-close on transition away from Home. TabsChrome owns the
-  // (tabs)/ chrome contract and already consumes useMapDrawer, so the
-  // close-on-leave-Home rule lives here rather than in the provider
-  // itself (per provider file-top: "non-(tabs) pages don't open the
-  // drawer today, but the context exists in case future surfaces want
-  // to disclose the map" — closing in the provider would prevent any
-  // future non-Home consumer from holding the drawer open across nav).
-  useEffect(() => {
-    if (pathname !== "/" && drawerOpen) {
-      closeDrawer();
-    }
-  }, [pathname, drawerOpen, closeDrawer]);
+  // Session 175 Option α had already retired the session 166 dial 3
+  // drawer-open auto-scroll for unrelated reasons; CSS var
+  // --th-safe-area-inset-top in globals.css kept as substrate for any
+  // future safe-area-aware JS consumer (single line, zero cost).
 
   const isHome = pathname === "/";
   const q      = searchParams.get("q") ?? "";
 
-  // Session 166 dial 7 (post-dial-6 iPhone QA round 4) — chip + drawer
-  // retire on Saved per David's "We do not need the mall-chip on the saved
-  // page as it's not filtered by location and stores all finds."
+  // Session 166 dial 7 — chip retires on Saved per David's "We do not
+  // need the mall-chip on the saved page as it's not filtered by location
+  // and stores all finds." Within-session reversal of Call 2 Option C
+  // (resolved earlier in session 166 as "hero universal across Home +
+  // Saved, SearchBar conditional on Home only"). Updated read: hero
+  // universal, chip Home-only since R18 (session 121) retired mall-scoping
+  // for Saved content. Hero stays universal as identity beat per Option C
+  // original intent.
   //
-  // Within-session reversal of Call 2 Option C (resolved earlier this
-  // session as "hero universal across Home + Saved, SearchBar conditional
-  // on Home only"). Updated read: hero universal, chip + drawer also
-  // Home-only since chip has no functional purpose on Saved (R18 session
-  // 121 retired mall-scoping for Saved content; chip would be a dead
-  // affordance there). Hero stays universal as identity beat per Option C
-  // original intent. Surfaced explicitly per
-  // feedback_surface_locked_design_reversals ✅ Promoted.
-  const showChipAndDrawer = isHome;
+  // Session 178 F2 Arc 3.2 — variable rename `showChipAndDrawer` → `showChip`
+  // since MallMapDrawer retired this arc (chip is the only Home-only
+  // conditional now).
+  const showChip = isHome;
 
   // Session 157 — search URL plumbing pattern preserved verbatim from
   // SearchBarRow.tsx. Typing in search always replaces to "/" regardless
@@ -201,6 +176,20 @@ export default function TabsChrome() {
     : null;
   const mallName = selectedMall ? selectedMall.name : "All Kentucky locations";
 
+  // Session 178 F2 Arc 1.2 — /map renders its own chrome (StickyMasthead +
+  // MallPickerChip + MapPageBody + MapCarousel) since the (tabs)/ HomeHero
+  // pattern doesn't apply on the map page (no hero photo, standard masthead
+  // per D9 + D10). TabsChrome early-returns null on /map so we don't
+  // double-render the floating Profile overlay, HomeHero, or MallPickerChip.
+  // Placed AFTER all hook calls per React rules-of-hooks — hooks must run
+  // unconditionally so a route transition between (tabs)/ children doesn't
+  // change the hook order. This early-return is a temporary scaffold —
+  // Arc 3.2 simplifies TabsChrome substantially when MallMapDrawer +
+  // useMapDrawer retire (the drawer composition was TabsChrome's primary
+  // purpose; once retired the orchestrator may collapse to a thin layout
+  // shim or fold into (tabs)/layout.tsx directly).
+  if (pathname === "/map") return null;
+
   return (
     <>
       <HomeHero
@@ -213,24 +202,16 @@ export default function TabsChrome() {
         onSearchChange={isHome ? handleSearchChange : undefined}
       />
 
-      {/* Session 166 Shape A commit 2 — Back button restored as floating
-          overlay at top-left of viewport WHEN drawer is open. Arc 3.1.3
-          retired StickyMasthead which removed the masthead-left back
-          slot (session 157 wiring closed the drawer on tap). Restores
-          that close-drawer affordance. Drawer is Home-only post-dial-7,
-          so drawerOpen===true implies isHome — no separate pathname gate
-          needed. MastheadBackButton primitive reused with onClick prop
-          (session 157 pattern) so handler runs closeDrawer instead of
-          router.back().
-          Session 169 round 4 — Review Board Finding 3: back button also
-          renders on /flagged (Saved). David: "no back button showing up
-          on saved page when navigate from Explore to Saved." Saved is a
-          destination reachable from Explore via BottomNav nav; floating
-          back overlay at the same slot routes back to / (Explore). Drawer
-          state is Home-only so on /flagged the back overlay always
-          routes router.push("/") via fallback. Two render conditions
-          consolidated: drawer-close OR Saved-page back. */}
-      {(drawerOpen || pathname === "/flagged") && (
+      {/* Session 166 Shape A commit 2 — Back button as floating overlay at
+          top-left of viewport on /flagged (Saved). Saved is a destination
+          reachable from Explore via BottomNav nav; floating back overlay
+          at the same slot routes back to / (Explore) via router.back()
+          with fallback.
+          Session 178 F2 Arc 3.2 — drawer-close branch retired alongside
+          MallMapDrawer. Was: render also when drawerOpen, with onClick
+          firing closeDrawer. Post-Arc-3.2 drawer no longer exists; back
+          overlay reduces to the Saved-page case only. */}
+      {pathname === "/flagged" && (
         <div
           style={{
             position: "fixed",
@@ -239,11 +220,7 @@ export default function TabsChrome() {
             zIndex:   OVERLAY_Z,
           }}
         >
-          <MastheadBackButton
-            onClick={drawerOpen ? closeDrawer : undefined}
-            fallback="/"
-            variant="overlay"
-          />
+          <MastheadBackButton fallback="/" />
         </div>
       )}
 
@@ -265,67 +242,50 @@ export default function TabsChrome() {
           zIndex:   OVERLAY_Z,
         }}
       >
-        <MastheadProfileButton variant="overlay" />
+        <MastheadProfileButton />
       </div>
 
-      {showChipAndDrawer && (
+      {showChip && (
         <MallPickerChip
           mallName={mallName}
           onTap={() => {
             // Reuses session 154 home_strip_tapped event name — same
             // semantic ("user tapped the mall picker chrome to engage map
             // wayfinding"); event-key stability avoids R3 schema drift.
+            //
+            // Session 178 F2 Arc 3.1 — handler routes to /map per design
+            // record D1. Reverses session 109's /map page deletion +
+            // retires session 155's drawer-overlay reshape; chip is the
+            // canonical entry path to the dedicated /map route.
+            //
+            // Tier B5 (chip caret visual): chevron-down currently implies
+            // "opens drawer below"; Arc 3.1 routes instead. Deferred to
+            // iPhone QA at Arc 5 — flip to chevron-right / PiArrowRight
+            // if QA flags ambiguity.
+            //
+            // Session 178 F2 Arc 3.2 — MallMapDrawer mount + all drawer
+            // handlers (onMallPick / onClear / onMallSearchPick from
+            // sessions 109 / 158 / 165) retired in same commit as
+            // useMapDrawer / MapDrawerProvider per
+            // feedback_dead_code_cleanup_as_byproduct ✅ Promoted and
+            // feedback_single_coupled_commit_when_must_move_together
+            // ✅ Promoted (drawer wrapper + handlers + context +
+            // app-layout provider all interlocked; splitting would leave
+            // intermediate commits with dangling-reference compile
+            // errors).
+            //
+            // Search-context MallMatchChip dual-slot pattern from session
+            // 165 Shape A loses the drawer-overlay slot here; Home's
+            // inline MallMatchChip mount in app/(tabs)/page.tsx
+            // (session 165) is the surviving consumer + carries the
+            // search_mall_match analytics path forward unchanged.
             track("home_strip_tapped", {
               mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
             });
-            toggleDrawer();
+            router.push("/map");
           }}
         />
       )}
-
-      {showChipAndDrawer && <MallMapDrawer
-        open={drawerOpen}
-        onClose={closeDrawer}
-        malls={malls}
-        selectedMallId={mallId}
-        query={q}
-        onMallPick={(id) => {
-          setMallId(id);
-          closeDrawer();
-          const picked = malls.find((m) => m.id === id);
-          track("filter_applied", {
-            filter_type:  "mall",
-            filter_value: picked?.slug ?? id,
-            page:         pathname,
-            source:       "map_pin",
-          });
-        }}
-        onClear={() => {
-          setMallId(null);
-          track("filter_applied", {
-            filter_type:  "mall",
-            filter_value: "all",
-            page:         pathname,
-            source:       "map_reset",
-          });
-        }}
-        onMallSearchPick={(id) => {
-          // Session 165 Shape A dual-slot — drawer-context MallMatchChip
-          // tap fires here. Scope-change + drawer-close + clear query
-          // (the typed mall name was navigation intent, not search
-          // refinement) + analytics source: "search_mall_match".
-          setMallId(id);
-          closeDrawer();
-          router.replace("/", { scroll: false });
-          const picked = malls.find((m) => m.id === id);
-          track("filter_applied", {
-            filter_type:  "mall",
-            filter_value: picked?.slug ?? id,
-            page:         pathname,
-            source:       "search_mall_match",
-          });
-        }}
-      />}
     </>
   );
 }

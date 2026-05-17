@@ -35,6 +35,22 @@ import { HERO_BOTTOM_EDGE } from "@/components/HomeHero";
 interface MallPickerChipProps {
   mallName: string;
   onTap:    () => void;
+  /**
+   * Session 178 F2 Arc 1.2 — optional sticky-pin point override. Defaults
+   * to HERO_BOTTOM_EDGE for the (tabs)/ Home consumer (chip pins flush
+   * against the hero's bottom edge). The /map page passes 0 since /map
+   * has no hero above the chip — per design record D11: "MallStrip
+   * directly below masthead, same sticky-pin behavior as Home (sticky
+   * at top:HERO_BOTTOM_EDGE-equivalent → just `top: 0` here since no
+   * hero on /map)."
+   *
+   * Schema-forced extension per
+   * feedback_schema_forced_deviation_not_design_reversal ✅ Promoted —
+   * design record D2 calls for the same chip primitive on /map but the
+   * existing primitive hardcoded HERO_BOTTOM_EDGE. Additive prop with
+   * default preserves all current consumers verbatim.
+   */
+  stickyTop?: string | number;
 }
 
 // Session 166 dial 6 (post-dial-3 iPhone QA round 3) — TOP_PADDING 22 → 12,
@@ -57,19 +73,26 @@ const PIN_NAME_GAP      = 8;
 // below hero strip during scroll. Session 175 Option α update: hero
 // no longer collapses (stays full 33vh sticky at top:0 on Home), so chip
 // pins at HERO_BOTTOM_EDGE (33vh) — the hero's bottom edge in viewport
-// space. MallMapDrawer imports this constant for its top:calc geometry.
+// space.
 //
-// Height = TOP_PADDING + max(PIN_SIZE, NAME_FONT_SIZE * 1.3, CHEVRON_SIZE)
-//        + BOTTOM_PADDING = 12 + 29 + 6 = 47px. Rounded to 48 for safe
-// integer arithmetic in downstream consumers.
-export const CHIP_VISIBLE_HEIGHT_PX = 48;
+// Session 178 F2 Arc 3.2 — CHIP_VISIBLE_HEIGHT_PX export retired
+// alongside MallMapDrawer per feedback_dead_code_cleanup_as_byproduct
+// ✅ Promoted. The constant existed only for MallMapDrawer's top:calc
+// geometry (`top: calc(HERO_BOTTOM_EDGE + CHIP_VISIBLE_HEIGHT_PX)px`);
+// with the drawer retired (Arc 3 — pulled out to dedicated /map route),
+// no remaining consumer needs it. The chip's height is internal to this
+// primitive now.
 
-export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps) {
+export default function MallPickerChip({
+  mallName,
+  onTap,
+  stickyTop = HERO_BOTTOM_EDGE,
+}: MallPickerChipProps) {
   return (
     <div
       style={{
         padding:    `${TOP_PADDING}px ${HORIZ_PADDING}px ${BOTTOM_PADDING}px`,
-        // Sticky-pinned at HERO_BOTTOM_EDGE (33vh) so it sits flush
+        // Sticky-pinned at HERO_BOTTOM_EDGE (33vh) on Home so it sits flush
         // against hero's bottom edge throughout scroll. Session 175
         // Option α — hero no longer collapses, so chip's pin point is
         // the hero's natural bottom edge, not a collapsed thin-strip
@@ -78,8 +101,10 @@ export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps)
         // sits above hero (z:10) so chip is never covered by hero on
         // any device's viewport boundary; drawer's top:calc accounts
         // for chip height so they don't overlap when drawer is open.
+        // /map page passes stickyTop={0} since there's no hero above
+        // the chip on that surface (D11 — pins flush below masthead).
         position:   "sticky",
-        top:        HERO_BOTTOM_EDGE,
+        top:        stickyTop,
         zIndex:     11,
         // Session 166 dial 8 — chip sticky bg follows (tabs)/-surfaces
         // tier so seam between feed-scrolling-under-chip and the chip
