@@ -13,50 +13,42 @@
 // link / PWA shortcut launch directly into Saved or Map).
 //
 // Session 169 round 3 — Review Board Finding 3: bg v2.surface.warm +
-// 1px v2.border.light → v1.iconBubble (rgba(42,26,10,0.06)) + no border.
-// Matches /find/[id]'s in-page IconBubble primitive exactly so back-
-// button visual reads identically across every surface that uses this
-// primitive. Sub-pattern of the "single primitive becomes the single
-// source of truth" promotion — `lib/MastheadBackButton.tsx` now mirrors
-// the /find IconBubble visual contract. Companion inline back-button
-// sweep on 14 v2 user-facing surfaces in the same commit.
+// 1px v2.border.light → v1.iconBubble. Matches /find/[id]'s in-page
+// IconBubble primitive exactly so back-button visual reads identically
+// across every surface that uses this primitive.
+//
+// Session 178 F2 QA dial 2 — v1.iconBubble token value flipped from
+// rgba(42,26,10,0.06) → #EFEBDF (solid). The `variant` prop retires
+// in this same commit per feedback_dead_code_cleanup_as_byproduct
+// ✅ Promoted — overlay variant existed only because the transparent
+// default vanished against the HomeHero photo's darker areas (session
+// 169 round 4 Review Board Finding 2). Solid #EFEBDF reads identically
+// on cream chrome AND over the photo, eliminating the transparency-
+// drift class that justified the variant. Single visual contract now.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { v1, v2 } from "@/lib/tokens";
+import { v1 } from "@/lib/tokens";
 
 interface MastheadBackButtonProps {
   /** Path to push when window.history is empty (deep links). Default "/". */
   fallback?: string;
   /**
-   * Session 157 — when present, overrides the router.back() default.
-   * Used by the (tabs) layout to close the map drawer (state lives in
-   * useMapDrawer context) instead of navigating browser history when the
-   * drawer is open on Home. Same visual contract — only the click handler
-   * changes. fallback is ignored when onClick is provided.
+   * When present, overrides the router.back() default. Same visual
+   * contract — only the click handler changes. fallback is ignored when
+   * onClick is provided. (Originally session 157 for the retired
+   * MallMapDrawer close-on-tap path; the prop survives the drawer's
+   * retirement as a generic override for any future consumer that
+   * needs custom click behavior on the masthead-left slot.)
    */
   onClick?: () => void;
-  /**
-   * Session 169 round 4 — visual variant for context-aware contrast.
-   * Default = "default" (v1.iconBubble rgba(42,26,10,0.06)). Reads well
-   * inside masthead chrome where the bubble lives on a known cream bg
-   * (v2.bg.main OR v2.surface.warm — both have decent contrast against
-   * the rgba dark tint).
-   * "overlay" = solid v2.surface.warm bg + 1px v2.border.light border.
-   * Used when the bubble floats over varied/dark backgrounds (TabsChrome
-   * floating overlays over HomeHero photo). Pre-Round-3 visual; restored
-   * here as overlay-only contract since Round-3 unification flipped the
-   * default to v1.iconBubble for masthead-slot consistency.
-   */
-  variant?: "default" | "overlay";
 }
 
 export default function MastheadBackButton({
   fallback = "/",
   onClick,
-  variant = "default",
 }: MastheadBackButtonProps = {}) {
   const router = useRouter();
 
@@ -84,8 +76,8 @@ export default function MastheadBackButton({
         display:         "flex",
         alignItems:      "center",
         justifyContent:  "center",
-        background:      variant === "overlay" ? v2.surface.warm : v1.iconBubble,
-        border:          variant === "overlay" ? `1px solid ${v2.border.light}` : "none",
+        background:      v1.iconBubble,
+        border:          "none",
         cursor:          "pointer",
         padding:         0,
         WebkitTapHighlightColor: "transparent",

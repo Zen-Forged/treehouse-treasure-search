@@ -76,7 +76,24 @@
 
   /* v1 voice + chrome */
   --th-v1-price-ink:      #6a4a30;
-  --th-v1-icon-bubble:    rgba(42,26,10,0.06);
+  /* Session 178 F2 QA dial 2 — David verbatim: "Instead of them being
+     transparent variations, can we just change the buttons to #efebdf
+     without transparency? This keep the color accurate across headers
+     regardless of the BG."
+     Was: rgba(42,26,10,0.06) — semi-transparent dark tint that read
+     correctly on cream chrome (v2.bg.main / v2.surface.warm) but vanished
+     against the HomeHero photo's darker areas, requiring the workaround
+     `overlay` variant on MastheadBackButton + MastheadProfileButton
+     (session 169 round 4 Review Board Finding 2). Flipping to solid
+     #EFEBDF eliminates the transparency-drift class entirely; the
+     `overlay` variant retires in the same commit per
+     feedback_dead_code_cleanup_as_byproduct ✅ Promoted (no longer
+     load-bearing once default reads against any bg). All 16 inline
+     consumers (login, /me, /welcome, /vendor-request, /setup, /post/*,
+     /find/[id]/edit, /my-shelf, /admin/login, /contact, etc.) +
+     MastheadBackButton + MastheadProfileButton + IconBubble (find/[id])
+     pick up the new value via this single token line edit. */
+  --th-v1-icon-bubble:    #EFEBDF;
   /* v1.green — Session 168 foundation consolidation. Canonical green hex
      collapses to David's preference v2.accent.green-dark #1F4A31 (was
      #1e4d2b); aligns with the v0.2 green collapse below + v2.accent.green

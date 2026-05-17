@@ -220,7 +220,7 @@ export default function TabsChrome() {
             zIndex:   OVERLAY_Z,
           }}
         >
-          <MastheadBackButton fallback="/" variant="overlay" />
+          <MastheadBackButton fallback="/" />
         </div>
       )}
 
@@ -242,7 +242,7 @@ export default function TabsChrome() {
           zIndex:   OVERLAY_Z,
         }}
       >
-        <MastheadProfileButton variant="overlay" />
+        <MastheadProfileButton />
       </div>
 
       {showChip && (
