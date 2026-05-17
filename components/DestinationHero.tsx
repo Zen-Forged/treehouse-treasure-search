@@ -38,7 +38,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PiStorefrontBold } from "react-icons/pi";
+import { PiMapPinFill } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT, FONT_INTER, FONT_NUMERAL } from "@/lib/tokens";
 import { mallSnapshotUrl } from "@/lib/mapStaticImage";
 
@@ -227,8 +227,28 @@ export default function DestinationHero({
   return (
     <div style={{ padding: "0 22px 28px" }}>
       {/* Eyebrow — D11: outside the card, above. Italic Cormorant 18 +
-          PiStorefrontBold icon. Padding 0 4px 10px (small horizontal indent
-          for typographic alignment with card; bottom gap to card). */}
+          PiMapPinFill icon. Padding 0 4px 10px (small horizontal indent
+          for typographic alignment with card; bottom gap to card).
+          Session 178 F2 QA dial 3 — 4 changes per David's iPhone QA on
+          Arc 1-4 ship:
+            (1) Icon: PiStorefrontBold → PiMapPinFill (map-marker vocabulary
+                matches the rest of the app's pin glyph usage —
+                MallPickerChip + MallBlock's PinGlyph + /map page pin
+                vernacular all share PiMapPinFill / pin-shape glyphs).
+            (2) Text: "Purchase this item at" → "Visit location to
+                purchase find" (David verbatim; ships as-is per
+                feedback_user_provided_verbatim_values_ship_as_is ✅
+                Promoted).
+            (3) Typography match: fontWeight 600 + lineHeight 1.3
+                retired so this eyebrow matches the
+                "More finds from this booth" carousel header below
+                exactly (Cormorant italic 18 v2.text.secondary, no
+                explicit weight, no explicit lineHeight). David QA:
+                "Match the font size and style of 'Purchase this
+                item...' to 'More from this booth...' text."
+            (4) Companion change in app/find/[id]/page.tsx — booth-icon
+                glyph moves DOWN to the carousel header (the two icons
+                swap positions). */}
       <div
         style={{
           display:     "inline-flex",
@@ -239,13 +259,11 @@ export default function DestinationHero({
           fontFamily:  FONT_CORMORANT,
           fontStyle:   "italic",
           fontSize:    18,
-          fontWeight:  600,
           color:       v2.text.secondary,
-          lineHeight:  1.3,
         }}
       >
-        <PiStorefrontBold size={18} aria-hidden style={{ flexShrink: 0 }} />
-        Purchase this item at
+        <PiMapPinFill size={18} aria-hidden style={{ flexShrink: 0 }} />
+        Visit location to purchase find
       </div>
 
       {/* Card — D13 + D14. v2.surface.card bg, 1px v2.border.light, radius

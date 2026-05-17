@@ -388,10 +388,15 @@ function ShelfSection({
           'more from this booth'"). Session 177 C4 carousel revival
           honors David's explicit ask: "do not include the text on the
           far right that says 'visit booth' as this will be replaced by
-          this [Explore this Booth button under Flag the Find]". Header
-          is left-only: italic Cormorant 18 eyebrow in v2.text.secondary
-          matching the "Purchase this item at" eyebrow voice further up
-          the scroll. */}
+          this [Explore this Booth button under Flag the Find]".
+          Session 178 F2 QA dial 3 — booth-icon glyph added in front of
+          the header text per David's iPhone QA: "Add booth character in
+          front of the 'More from this...'" — the storefront icon swaps
+          positions with the DestinationHero eyebrow's prior icon (map
+          marker moves up to eyebrow; booth icon moves down here).
+          Header text also dialed: "More from this booth…" → "More finds
+          from this booth" per David verbatim. Typography unchanged so
+          this matches the DestinationHero eyebrow above exactly. */}
       <div
         style={{
           paddingLeft: 22,
@@ -401,13 +406,17 @@ function ShelfSection({
       >
         <div
           style={{
+            display:    "inline-flex",
+            alignItems: "center",
+            gap:        6,
             fontFamily: FONT_CORMORANT,
-            fontStyle: "italic",
-            fontSize: 18,
-            color: v2.text.secondary,
+            fontStyle:  "italic",
+            fontSize:   18,
+            color:      v2.text.secondary,
           }}
         >
-          More from this booth…
+          <PiStorefrontBold size={18} aria-hidden style={{ flexShrink: 0 }} />
+          More finds from this booth
         </div>
       </div>
       <div
