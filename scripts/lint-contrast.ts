@@ -49,17 +49,28 @@ import {
   Violation,
 } from "./lint-shared";
 
-// Inline-style: `color: v2.text.muted` or `color: v1.inkMuted`
-// Word-bound suffix prevents `text.mutedAccent` or `inkMutedAlt` false matches.
-const STYLE_REGEX = /\bcolor\s*:\s*v[12]\.(?:text\.muted|inkMuted)\b/g;
+// Inline-style: `color: v2.text.muted` or `color: v1.inkMuted` or `color: v1.inkFaint`
+// Word-bound suffix prevents `text.mutedAccent` etc. false matches.
+// Arc 5.5 (session 174 Shape β follow-on) — added v1.inkFaint detection:
+// session 168 collapsed v1.inkFaint → same hex (#A39686) as v2.text.muted,
+// so it carries the identical readability failure mode but wasn't in the
+// original regex. 17 text-color v1.inkFaint sites surfaced post-extension.
+const STYLE_REGEX = /\bcolor\s*:\s*v[12]\.(?:text\.muted|inkMuted|inkFaint)\b/g;
 
-// TSX prop: `color={v2.text.muted}` or `color={v1.inkMuted}`
-const PROP_REGEX = /\bcolor=\{v[12]\.(?:text\.muted|inkMuted)\}/g;
+// TSX prop: `color={v2.text.muted}` etc.
+const PROP_REGEX = /\bcolor=\{v[12]\.(?:text\.muted|inkMuted|inkFaint)\}/g;
 
-// Icon library JSX prefix detection (Phosphor, Lucide, Material, Ionicons,
-// BoxIcons, FontAwesome, Heroicons, Remix, Tabler — the libraries already
-// imported across this codebase).
+// Icon JSX detection — two patterns:
+//   1. Prefix-name libraries (Phosphor `Pi*`, Material `Md*`, Ionicons `Io*`,
+//      BoxIcons `Bi*`, FontAwesome `Fa*`, Heroicons `Hi*`, Remix `Ri*`,
+//      Tabler `Tb*`) plus the explicit `Lucide*` prefix when consumers use it.
+//   2. Bare-name libraries (Lucide is imported with bare names like Heart,
+//      MapPin, ArrowLeft, etc.) — any PascalCase JSX opener counts as a
+//      potential icon when paired with size≥22 in the same line.
+// Both patterns are guarded by the SIZE_REGEX size threshold; a non-icon
+// component using `size={N}` would only false-allow if N≥22, which is rare.
 const ICON_LIB_REGEX = /<(Pi|Lucide|Md|Io|Bi|Fa|Hi|Ri|Tb)[A-Z]/;
+const BARE_JSX_REGEX = /<[A-Z][a-zA-Z]+\s/;
 
 // size={N} or size={N.M} — decorative icon ≥22px is preserved per audit
 const SIZE_REGEX = /size=\{(\d+(?:\.\d+)?)\}/;
@@ -73,8 +84,11 @@ function isAllowedLine(line: string): boolean {
   // HTML/CSS placeholder context (preserves browser convention)
   if (/\bplaceholder\b/.test(line)) return true;
 
-  // Decorative ≥22px icon (state-conveying icons <22px still flag)
-  if (ICON_LIB_REGEX.test(line)) {
+  // Decorative ≥22px icon (state-conveying icons <22px still flag).
+  // Two-tier detection — prefix-name libraries OR bare PascalCase JSX
+  // (covers Lucide which doesn't ship a `Lucide*` prefix).
+  const hasIconJsx = ICON_LIB_REGEX.test(line) || BARE_JSX_REGEX.test(line);
+  if (hasIconJsx) {
     const sizeMatch = line.match(SIZE_REGEX);
     if (sizeMatch && parseFloat(sizeMatch[1]) >= 22) {
       return true;
