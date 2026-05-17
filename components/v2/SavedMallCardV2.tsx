@@ -82,7 +82,15 @@ export default function SavedMallCardV2({
   return (
     <article
       style={{
-        background: v2.surface.card,
+        // Session 175 Review Board finding (Saved Browse #1) — outer
+        // article bg flipped card → warm so the booth list reads as
+        // "warm container" with the mall section + booth sections still
+        // as card-stock identity layers within. Saved find rows + the
+        // trailing empty row in each booth body share this warm bg so
+        // they recede as "warm casual rows" against the booth body's
+        // card surface. Mall-section card bg now explicit (was inherited
+        // from article's old card bg).
+        background: v2.surface.warm,
         borderRadius: 14,
         border: `1px solid ${v2.border.light}`,
         boxShadow: "0 1px 2px rgba(43,33,26,0.04)",
@@ -90,6 +98,13 @@ export default function SavedMallCardV2({
         overflow: "hidden",
       }}
     >
+      {/* Session 175 — Mall section card-bg wrapper. Encloses the full
+          top portion (mall name + address + DistancePill + Take the Trip
+          + finds-waiting eyebrow) per David's "Full top portion" pick at
+          opener so the mall identity reads as one cohesive card before
+          booth accordions begin. Was: chunks inherited card bg from
+          article; now: outer article is warm + this wrapper holds card. */}
+      <div style={{ background: v2.surface.card }}>
       {/* head-δ — CSS grid: name + DistancePill on row 1; address spans row 2.
           Session 144 iPhone QA: alignItems "center" → "start" so the
           DistancePill anchors to the top of row 1 (= top of head-δ content
@@ -270,6 +285,8 @@ export default function SavedMallCardV2({
           }}
         />
       </div>
+      </div>
+      {/* /Mall-section card-bg wrapper (session 175 Review Board) */}
 
       {/* Accordion sections (children) */}
       {children}

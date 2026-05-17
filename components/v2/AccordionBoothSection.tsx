@@ -142,6 +142,21 @@ export default function AccordionBoothSection({
           style={{ background: v2.surface.card }}
         >
           {children}
+          {/* Session 175 Review Board (Saved Browse #1) — trailing empty
+              row after the last saved find. Warm bg per David's spec
+              ("keep it v2.surface.warm"); ~44px = half SavedFindRow
+              height (David picked "Half-row breathing space" at opener).
+              borderTop hairline matches SavedFindRow's separator pattern
+              so the empty row reads as a "completion row" extending the
+              warm-rows zone below the last entry. */}
+          <div
+            aria-hidden
+            style={{
+              height: 44,
+              background: v2.surface.warm,
+              borderTop: `1px solid ${v2.border.light}`,
+            }}
+          />
         </div>
       )}
     </div>
