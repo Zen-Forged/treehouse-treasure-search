@@ -8,6 +8,22 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.174.2] — 2026-05-17
+
+### Session 174 final close — CLAUDE.md addendum integrating v0.174.1 Round 2 hotfix narrative
+
+Docs-only patch increment per Shape A versioning ("still bump for docs-only sessions so timeline stays continuous"). Integrates the v0.174.1 hotfix arc into the session 174 full block, updates CURRENT ISSUE to point at v0.174.1 production state, refreshes session 175 opener with v0.174.1-aware iPhone QA framing. No runtime code changes.
+
+### Changed
+
+- **CLAUDE.md session 174 full block** — extended with `### Round 2 hotfix — v0.174.1` subsection covering David's Saved Browse #1 finding + 3-file visual hierarchy ship (SavedMallCardV2 article bg flip + mall-section card wrapper, AccordionBoothSection trailing empty row, SavedFindRow card → warm). Worktree-drift-resolution pattern fired 2nd cumulative time post-promotion (session 153 was 1st post-promotion firing).
+- **CURRENT ISSUE** — Last updated date stays 2026-05-17; production reference updated `v0.174.0` → `v0.174.1` with hotfix merge SHA `a40d0b5`; recommended next session unchanged (iPhone QA on v0.174.1 contrast sweep + Saved visual hierarchy paired with launch-gaps strategic session).
+- **Session 175 opener** — pre-filled opener block updated to reference v0.174.1 + 6 contrast-sweep watch-items extended with 3 Saved-visual-hierarchy watch-items from v0.174.1.
+
+[v0.174.2]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.174.2
+
+---
+
 ## [v0.174.1] — 2026-05-17
 
 ### Session 174 hotfix — Round 2 Review Board (Saved Browse #1): visual hierarchy on /flagged

@@ -164,11 +164,32 @@ Per `feedback_kill_bug_class_after_3_patches` ✅ Promoted (3rd attempt — audi
 
 🚧 **[Older carries 161 → 119 unchanged from session 173 close; see prior CLAUDE.md commits or git history.]**
 
+### Round 2 hotfix — v0.174.1 (Saved Browse #1: visual hierarchy on /flagged)
+
+Post-v0.174.0 ship, David's iPhone QA surfaced a Round 2 Review Board finding on Saved Browse: *"change bg of the card container for the booth list to v2.surface.warm. But keep the mall section and booth sections (not the saved finds) the surface card color. Then add an empty row after the last item saved on the list and keep it the v2.surface.warm color."* Shipped as v0.174.1 mid-session hotfix per Shape A versioning patch-increment rule.
+
+Two clarifications resolved at opener per `feedback_user_clarification_restate_interpretation` ✅ Promoted (~23+ cumulative firings) + `feedback_v2_options_before_drafting` ✅ Promoted: mall section scope = "Full top portion" (mall header + DistancePill + Take the Trip + finds-waiting eyebrow) + empty row height = "Half-row breathing space" (~44px). Both David's recommended picks.
+
+Single coupled commit `21d7e66` per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — 3 file changes causally linked:
+- **`components/v2/SavedMallCardV2.tsx`** — outer `<article>` bg `v2.surface.card → v2.surface.warm`; NEW inner card-bg wrapper around full mall-section top portion.
+- **`components/v2/AccordionBoothSection.tsx`** — NEW trailing empty row (44px warm bg + borderTop hairline) at end of expanded body.
+- **`components/v2/SavedFindRow.tsx`** — row bg `v2.surface.card → v2.surface.warm`.
+
+**Worktree-drift discipline fired** — branch had pre-squash session 174 commits stacked atop the new Round 2 commit; resolved via `feedback_worktree_drift_reset_and_cherry_pick` ✅ Promoted-via-memory at session 153 (2nd cumulative firing of resolution sub-pattern post-promotion): reset to `origin/main` post-squash HEAD + cherry-pick Round 2 commit + force-push with lease + new PR. Clean.
+
+Hotfix close: PR [#56](https://github.com/Zen-Forged/treehouse-treasure-search/pull/56) squash-merged at SHA `a40d0b5`; tagged `v0.174.1`. CHANGELOG entry shipped as part of hotfix close (version + CHANGELOG only, no CLAUDE.md update at that time — integrated into this block via v0.174.2 docs-only close).
+
+**Visual hierarchy after Round 2:** outer article (warm container) → mall section card-bg wrapper (card identity at top) → AccordionBoothSection × N (card chrome) → SavedFindRow × N (warm casual rows) → trailing empty row (warm completion space). 3 iPhone QA watch-items per CHANGELOG: save bubble bg fusion risk (SavedFindRow:138 warm-on-warm) / hairline contrast on row-to-row separators / booth-to-booth seam reads naturally.
+
 ### Commits this session
 
-18 runtime commits + 1 close. **Will be tagged `v0.174.0`** on close merge SHA.
+**v0.174.0 main ship:** 18 runtime commits + 1 close.
+Arc 1: `50a670a` `db13e40` `8acbe41` `7307040` · Arc 2: `b013268` `f344e15` `3f3d081` · Arc 3: `e2da42e` `a172746` `bf3b55c` `518a82c` `a752247` · Arc 4: `c31cf84` · Arc 5: `254d0ef` `7e145ac` `2509479` `d9935ac` `892826d` · Close: `5bf2304` → PR #55 squash-merged at `159f8ff7` → tagged `v0.174.0`.
 
-Arc 1: `50a670a` `db13e40` `8acbe41` `7307040` · Arc 2: `b013268` `f344e15` `3f3d081` · Arc 3: `e2da42e` `a172746` `bf3b55c` `518a82c` `a752247` · Arc 4: `c31cf84` · Arc 5: `254d0ef` `7e145ac` `2509479` `d9935ac` `892826d`
+**v0.174.1 hotfix:** 1 runtime commit + 1 close.
+Round 2: `21d7e66` (cherry-picked post worktree-drift reset) · Close: `9c06f36` → PR #56 squash-merged at `a40d0b5` → tagged `v0.174.1`.
+
+**v0.174.2 docs-only final close:** integrates v0.174.1 hotfix narrative into this block; will be tagged at close merge SHA.
 
 ### Net change toward investor narrative
 
@@ -316,9 +337,9 @@ _(Session 151 tombstone rotated off at session 156 close — see git history at 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-05-17 (session 174 close — **Contrast fix-bundle implementation Arcs 1-4 against locked audit (13 commits) + iPhone-QA-driven Shape β system-wide sweep Arc 5 (5 commits) + lint baseline 99 → 0 = 18 runtime commits + 1 close.** Largest contrast pass on record + clearest live demonstration of `feedback_kill_bug_class_after_3_patches` ✅ Promoted at AUDIT-EXECUTION scope. Arcs 1-4 ran the audit's per-site enumeration cleanly against the locked spec; David's iPhone QA finding (`/login` muted text persisting) escalated to Arc 5 system sweep per Shape β cost-shape pick. 36 files swept across ~114 v2.text.muted/v1.inkMuted/v1.inkFaint text-color callsites; baseline drops 99 → 0; contrast bug class structurally closed. Lint script + decay-tracking doc enforce no NEW callsite reintroduces muted-as-prose.)
+> Last updated: 2026-05-17 (session 174 final close — **v0.174.0 main ship (18 runtime commits, Arcs 1-4 audit execution + Arc 5 Shape β system sweep, lint baseline 99 → 0) + v0.174.1 Round 2 hotfix (Saved Browse #1 visual hierarchy on /flagged, 3-file single coupled commit) + v0.174.2 docs-only close (this).** Largest contrast pass on record + clearest live demonstration of `feedback_kill_bug_class_after_3_patches` ✅ Promoted at AUDIT-EXECUTION scope. Arcs 1-4 ran the audit's per-site enumeration cleanly against the locked spec; David's iPhone QA finding (`/login` muted text persisting) escalated to Arc 5 system sweep per Shape β cost-shape pick. Round 2 Saved hotfix post-v0.174.0 ship reworks /flagged visual hierarchy (outer article warm + mall section card wrapper + booth chrome card + saved finds warm + 44px warm trailing empty row). Worktree-drift-resolution discipline fired 2nd cumulative firing post-promotion (session 153 was 1st).)
 
-**Working tree:** clean (after close commit). **Build:** clean across all 47 routes (tsc + npm run build green at every commit boundary). **Beta gate:** unblocked. **Production:** `main` @ TBD (session 174 close merge SHA via PR — TBD on merge) + `v0.174.0` tag. **Net change this session on production:** ~150 LOC net runtime (lint script + baseline doc + 36-file sweep + audit-drift byproducts + comment-rot retire).
+**Working tree:** clean (after v0.174.2 close commit). **Build:** clean across all 47 routes (tsc + npm run build green at every commit boundary). **Beta gate:** unblocked. **Production:** `main` @ `a40d0b5` (v0.174.1 hotfix merge SHA) + tags `v0.174.0` / `v0.174.1` (+ `v0.174.2` once this close lands). **Net change this session on production:** ~190 LOC net runtime (lint script + baseline doc + 36-file sweep + audit-drift byproducts + comment-rot retire + 3-file Saved hotfix).
 
 Roadmap: **18 R-rows total. 13 ✅ Shipped (R1, R3, R4a/b/c, R5a, R7, R10, R11, R12, R16, R17, R18), 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level (contrast fix-bundle is design-system-cleanup not an R-row; affects readability of many already-shipped R-rows). Design system gains 6th lint script + baseline 0 + decay-tracking discipline.
 
@@ -328,11 +349,12 @@ Substrate removed: Nothing structural — sweep is value-replacement not retirem
 
 **Cumulative firings**: smallest→largest ~488+ (18 this session); triage-cost-shape ~35+ (3 this session: REC-3+REC-4 cost-shape at opener + Shape α/β/γ system-sweep escalation); user-clarification-restate-interpretation ~22+ (2 explicit restates); design-record-as-execution-spec ✅ Promoted — **29th cumulative firing** across 29+ different features; kill-bug-class-after-3-patches ✅ Promoted — load-bearing firing at AUDIT-EXECUTION scope (3rd attempt: audit 173 + execution Arcs 1-4 + QA finding → structural fix Shape β + lint); predicate-accumulating-patches-signals-wrong-shape ✅ Promoted — cited in REC-3 lint-vs-JSDoc + cited at Arc 5 escalation rationale; subagent-dispatch-catches-audit-drift ✅ Promoted-via-memory at session 173 — ~10 drift catches at scale (line-numbers + descriptions + audit-missed sites); pre-existing-local-env-failure-at-boundary-gate ✅ Promoted — **8th cumulative firing** (html2canvas-pro `npm install` at Arc 1.1).
 
-### 🚧 Recommended next session — iPhone QA on production v0.174.0 (contrast sweep validation) + `docs/launch-gaps.md` strategic session (session 175 PRIMARY pair)
+### 🚧 Recommended next session — iPhone QA on production v0.174.1 (contrast sweep + Saved visual hierarchy validation) + `docs/launch-gaps.md` strategic session (session 175 PRIMARY pair)
 
-Per session 174 close, session 175 opens fresh from `main` + `v0.174.0` tag with two natural primary moves:
+Per session 174 final close, session 175 opens fresh from `main` + `v0.174.1` tag with two natural primary moves:
 
-**Primary 1 — iPhone QA on production v0.174.0** (~20-30 min). Walk all surfaces with attention to the 6 watch-items per CHANGELOG entry:
+**Primary 1 — iPhone QA on production v0.174.1** (~20-30 min). Walk all surfaces with attention to the 6 contrast-sweep watch-items per v0.174.0 CHANGELOG entry + 3 Saved visual hierarchy watch-items per v0.174.1 CHANGELOG entry:
+**Contrast sweep (v0.174.0):**
 - Muted-prose retirement reads cleanly across login/vendor-request/post-flow/me/saved/find/shelf chrome
 - Decorative `·` bullet separators on PostingAsBlock + VendorsTab — visually darker now, watch for "too prominent / pulling attention"
 - "(optional)" italic suffixes after form labels — watch for prominence shift
@@ -340,7 +362,12 @@ Per session 174 close, session 175 opens fresh from `main` + `v0.174.0` tag with
 - PiCamera opacity:0.75 compound risk on vendor-request:544 — one-line dial if camera placeholder reads ghostly
 - REC-4 italic-serif voice (welcome:167/283 + login:442 + handle:225) — primary tier may read heavy vs secondary; dial-back per-site if needed
 
-Any per-site dial-backs are one-line commits. If walk is clean, contrast bug class structurally closed end-to-end production.
+**Saved visual hierarchy (v0.174.1):**
+- SavedFindRow:138 save bubble bg fusion — `v2.surface.warm` now matches row bg; only 1px border + green leaf distinguishes bubble. One-line dial to `v2.surface.card` if reads "lost in the row."
+- Hairline contrast on row-to-row separators — `v2.border.light` against warm bg (vs prior card); watch for "softer" separator read.
+- Booth-to-booth seam — between two AccordionBoothSections the article's warm bg shows briefly + next section's borderTop hairline; should read as natural section break.
+
+Any per-site dial-backs are one-line commits. If walk is clean, contrast bug class structurally closed end-to-end production + Saved visual hierarchy validated.
 
 **Primary 2 — `docs/launch-gaps.md` strategic session — Shape A gameplan move #2** (~60-90 min). Pre-empted at sessions 172 + 173 + 174. Strategic session per the strategic-vs-tactical split. Consolidates scattered gap state into single living forcing function. Unblocks vendor-value strategic session candidacy at 176+.
 
@@ -378,25 +405,33 @@ David picks order at session-open. Both can ship in same session if iPhone QA is
 
 Full alternatives + operational backlog in [`docs/queued-sessions.md`](docs/queued-sessions.md).
 
-### Session 175 opener (pre-filled — iPhone QA on v0.174.0 + launch-gaps strategic session pair)
+### Session 175 opener (pre-filled — iPhone QA on v0.174.1 + launch-gaps strategic session pair)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Sentry · Vercel · Mapbox GL JS
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md (session 174 full block — Contrast fix-bundle Arcs 1-4 against locked audit + iPhone-QA-driven Shape β system-wide sweep Arc 5 + lint baseline 99 → 0 = 18 runtime commits + 1 close shipped via PR tagged v0.174.0; design system gains 6th lint script + baseline 0 + decay-tracking discipline), CONTEXT.md, AND docs/contrast-lint-baseline.md (NEW living document). Then run the session opening standup from MASTER_PROMPT.md.
+Read CLAUDE.md (session 174 full block — Contrast fix-bundle Arcs 1-4 against locked audit + iPhone-QA-driven Shape β system-wide sweep Arc 5 + lint baseline 99 → 0 = 18 runtime commits + 1 close shipped via PR tagged v0.174.0; PLUS Round 2 Saved Browse visual hierarchy hotfix shipped as v0.174.1 + docs-only final close as v0.174.2), CONTEXT.md, AND docs/contrast-lint-baseline.md (NEW living document). Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Session 174 shipped 18 commits closing the contrast bug class structurally via audit execution Arcs 1-4 + iPhone-QA-escalated Shape β system sweep Arc 5. Lint baseline 99 → 0. Two natural primary moves for session 175 — iPhone QA validation on production + the long-deferred launch-gaps strategic session.
+CURRENT ISSUE: Session 174 shipped 18 commits closing contrast bug class structurally via audit execution Arcs 1-4 + iPhone-QA-escalated Shape β system sweep Arc 5 (lint baseline 99 → 0). Round 2 hotfix v0.174.1 reworked /flagged visual hierarchy (warm container + card mall section + warm casual rows + warm trailing empty row). Two natural primary moves for session 175 — iPhone QA validation on production v0.174.1 + the long-deferred launch-gaps strategic session.
 
 RECOMMENDED PRIMARY WORK FOR SESSION 175 (paired, ~90-120 min total):
 
-  1. iPhone QA on production v0.174.0 (~20-30 min) — Shape β contrast sweep validation. Walk all surfaces with attention to 6 watch-items per CHANGELOG entry:
+  1. iPhone QA on production v0.174.1 (~20-30 min) — Shape β contrast sweep + Saved visual hierarchy validation. Walk all surfaces with attention to:
+
+     CONTRAST SWEEP (v0.174.0) — 6 watch-items per CHANGELOG entry:
      - Muted-prose retirement reads cleanly across login/vendor-request/post-flow/me/saved/find/shelf chrome
      - Decorative `·` bullet separators on PostingAsBlock + VendorsTab — visually darker now, watch for "too prominent"
      - "(optional)" italic suffixes after form labels — watch for prominence shift
      - BoothPage :509 `▾` chevron + Heart icon on shelf NotFound — preserved per audit but darker
      - PiCamera opacity:0.75 compound risk on vendor-request:544 — one-line dial if reads ghostly
      - REC-4 italic-serif voice (welcome:167/283 + login:442 + handle:225) — primary tier may read heavy vs secondary
+
+     SAVED VISUAL HIERARCHY (v0.174.1) — 3 watch-items per CHANGELOG entry:
+     - SavedFindRow:138 save bubble bg fusion — `v2.surface.warm` now matches row bg; only 1px border + green leaf distinguishes bubble. One-line dial to `v2.surface.card` if reads "lost in the row."
+     - Hairline contrast on row-to-row separators — softer read against warm bg vs prior card
+     - Booth-to-booth seam — warm article bg shows briefly between AccordionBoothSections; should read as natural section break
+
      Any per-site dial-backs are one-line commits.
 
   2. docs/launch-gaps.md strategic session — Shape A gameplan move #2 (~60-90 min) — pre-empted at sessions 172 + 173 + 174. Strategic session per the strategic-vs-tactical split. Consolidates scattered gap state into single living forcing function. Unblocks vendor-value strategic session candidacy at 176+.
