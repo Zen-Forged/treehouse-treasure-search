@@ -440,8 +440,8 @@ function SetupContent() {
                     fontSize: 16,
                     color: v2.text.primary,
                     textDecoration: "underline",
-                    textDecorationStyle: "dotted",
-                    textDecorationColor: v2.text.muted,
+                    textDecorationStyle: "solid",
+                    textDecorationColor: v2.border.light,
                     textUnderlineOffset: 4,
                     cursor: "pointer",
                   }}
@@ -456,8 +456,8 @@ function SetupContent() {
                     fontSize: 15,
                     color: v2.text.muted,
                     textDecoration: "underline",
-                    textDecorationStyle: "dotted",
-                    textDecorationColor: v2.text.muted,
+                    textDecorationStyle: "solid",
+                    textDecorationColor: v2.border.light,
                     textUnderlineOffset: 4,
                     cursor: "pointer",
                   }}

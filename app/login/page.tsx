@@ -799,8 +799,8 @@ function LoginInner() {
                       fontSize: 14,
                       color: v2.text.muted,
                       textDecoration: "underline",
-                      textDecorationStyle: "dotted",
-                      textDecorationColor: v2.text.muted,
+                      textDecorationStyle: "solid",
+                      textDecorationColor: v2.border.light,
                       textUnderlineOffset: 3,
                       textAlign: "center",
                       opacity: codeBusy ? 0.5 : 1,
@@ -892,8 +892,8 @@ function LoginInner() {
                       fontSize: 13,
                       color: resendIn > 0 ? v2.text.muted : v2.text.primary,
                       textDecoration: resendIn > 0 ? "none" : "underline",
-                      textDecorationStyle: "dotted",
-                      textDecorationColor: v2.text.muted,
+                      textDecorationStyle: "solid",
+                      textDecorationColor: v2.border.light,
                       textUnderlineOffset: 3,
                     }}
                   >

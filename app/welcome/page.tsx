@@ -208,8 +208,8 @@ function WelcomeInner() {
           <span
             style={{
               textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v2.text.muted,
+              textDecorationStyle: "solid",
+              textDecorationColor: v2.border.light,
               textUnderlineOffset: 3,
             }}
           >
