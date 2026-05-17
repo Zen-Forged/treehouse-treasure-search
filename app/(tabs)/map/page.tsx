@@ -56,6 +56,7 @@ import MapPageBody from "@/components/MapPageBody";
 import MapCarousel from "@/components/MapCarousel";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls } from "@/lib/posts";
+import { track } from "@/lib/clientEvents";
 import { v2 } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
@@ -67,7 +68,7 @@ import type { Mall } from "@/types/treehouse";
 let cachedMalls: Mall[] | null = null;
 
 export default function MapPage() {
-  const [mallId] = useSavedMallId();
+  const [mallId, setMallId] = useSavedMallId();
   const [malls, setMalls] = React.useState<Mall[]>(() => cachedMalls ?? []);
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
   const [resetKey, setResetKey] = React.useState(0);
@@ -125,32 +126,47 @@ export default function MapPage() {
         selectedMallId={mallId}
         peekedMallId={peekedMallId}
         resetKey={resetKey}
-        onPinTap={(id) => {
-          // eslint-disable-next-line no-console
-          console.log("[/map] onPinTap", id);
-          setPeekedMallId(id);
-        }}
-        onMapTap={() => {
-          // eslint-disable-next-line no-console
-          console.log("[/map] onMapTap");
-          setPeekedMallId(null);
-        }}
+        onPinTap={(id) => setPeekedMallId(id)}
+        onMapTap={() => setPeekedMallId(null)}
         onCommit={(id) => {
-          // Arc 1.2 — stub. Arc 3.1 wires scope commit + router.push('/')
-          // per D7 (committing a scope = "let me see what's there" = Explore
-          // feed). Today it just logs.
-          // eslint-disable-next-line no-console
-          console.log("[/map] onCommit (Arc 3.1 wires scope+route)", id);
+          // Arc 1.3 — scope commit lands here; route handoff to /explore
+          // (Home) per D7 lands at Arc 3.1. For Arc 1.3, commit applies
+          // the scope locally so the chip text + carousel + map flyTo
+          // reflect the new scope; user stays on /map. Arc 3.1 will add
+          // router.push('/') after the setMallId call so the commit
+          // routes to Explore as per the design record.
+          //
+          // Analytics mirror TabsChrome's filter_applied event shape with
+          // source: "map_page_pin" to distinguish from drawer-context
+          // map_pin commits (which still fire on Home until Arc 3.2
+          // retires the drawer). Once Arc 3.2 retires the drawer, source
+          // values consolidate around map_page_pin + map_carousel_card +
+          // search_mall_match.
+          setMallId(id);
+          setPeekedMallId(null);
+          const picked = malls.find((m) => m.id === id);
+          track("filter_applied", {
+            filter_type:  "mall",
+            filter_value: picked?.slug ?? id,
+            page:         "/map",
+            source:       "map_page_pin",
+          });
         }}
         onReset={() => {
-          // Arc 1.2 — local-only Reset (peek dismiss + fitBounds re-fire).
-          // Scope clearing lives in useSavedMallId hook setter; Arc 1.3
-          // wires the setter pathway. For Arc 1.2 the Reset visual + the
-          // fitBounds re-fire are validatable in isolation.
-          // eslint-disable-next-line no-console
-          console.log("[/map] onReset");
+          // Reset is the single "back to the default Kentucky view"
+          // affordance per session 165 dial — clears scope + dismisses
+          // peek + bumps resetKey so TreehouseMap's fitBounds effect
+          // re-runs even when scope was already null (mirrors
+          // MallMapDrawer's handleReset semantic from session 161).
+          setMallId(null);
           setPeekedMallId(null);
           setResetKey((n) => n + 1);
+          track("filter_applied", {
+            filter_type:  "mall",
+            filter_value: "all",
+            page:         "/map",
+            source:       "map_page_reset",
+          });
         }}
       />
 
