@@ -202,7 +202,7 @@ export default function AddBoothSheet({
               <div
                 style={{
                   fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 11,
-                  color: v1.inkMuted, lineHeight: 1.4, marginTop: 1,
+                  color: v1.inkMid, lineHeight: 1.4, marginTop: 1,
                 }}
               >
                 Pre-seed for later vendor claim
@@ -219,7 +219,7 @@ export default function AddBoothSheet({
                 cursor: submitting ? "default" : "pointer", flexShrink: 0,
               }}
             >
-              <X size={14} style={{ color: v1.inkMuted }} />
+              <X size={14} style={{ color: v1.inkMid }} />
             </button>
           </div>
 
@@ -238,10 +238,10 @@ export default function AddBoothSheet({
               style={{
                 display: "block",
                 fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 12,
-                color: v1.inkMuted, lineHeight: 1.3, marginBottom: 6,
+                color: v1.inkMid, lineHeight: 1.3, marginBottom: 6,
               }}
             >
-              Hero photo <span style={{ fontStyle: "italic", color: v1.inkFaint, marginLeft: 3 }}>(optional)</span>
+              Hero photo <span style={{ fontStyle: "italic", color: v1.inkMid, marginLeft: 3 }}>(optional)</span>
             </label>
 
             {heroPreview ? (
@@ -291,11 +291,11 @@ export default function AddBoothSheet({
                   gap: 8,
                   cursor: submitting ? "default" : "pointer",
                   fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 13,
-                  color: v1.inkMuted,
+                  color: v1.inkMid,
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <ImageIcon size={14} style={{ color: v1.inkMuted }} />
+                <ImageIcon size={14} style={{ color: v1.inkMid }} />
                 Choose a photo
               </button>
             )}
@@ -361,7 +361,7 @@ export default function AddBoothSheet({
               fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 12,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               background: "transparent",
               border: "none",
               marginTop: 6,

@@ -257,7 +257,7 @@ export default function EditBoothSheet({
               <div
                 style={{
                   fontFamily: FONT_CORMORANT, fontStyle: "italic", fontSize: 11,
-                  color: v2.text.muted, lineHeight: 1.4, marginTop: 1,
+                  color: v2.text.secondary, lineHeight: 1.4, marginTop: 1,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}
               >
@@ -275,7 +275,7 @@ export default function EditBoothSheet({
                 cursor: submitting ? "default" : "pointer", flexShrink: 0,
               }}
             >
-              <X size={14} style={{ color: v2.text.muted }} />
+              <X size={14} style={{ color: v2.text.secondary }} />
             </button>
           </div>
 
@@ -389,7 +389,7 @@ export default function EditBoothSheet({
                       border: `1px solid ${v2.border.light}`,
                       fontFamily: FONT_INTER,
                       fontSize: 13,
-                      color: v2.text.muted,
+                      color: v2.text.secondary,
                       cursor: heroBusy || submitting ? "default" : "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -398,7 +398,7 @@ export default function EditBoothSheet({
                       WebkitTapHighlightColor: "transparent",
                     }}
                   >
-                    <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.text.muted }} />
+                    <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
                     Remove photo
                   </button>
                 )}
@@ -469,7 +469,7 @@ export default function EditBoothSheet({
                   fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 11,
-                  color: v2.text.muted,
+                  color: v2.text.secondary,
                   lineHeight: 1.4,
                   marginTop: 6,
                 }}
@@ -540,7 +540,7 @@ export default function EditBoothSheet({
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 12,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               background: "transparent",
               border: "none",
               marginTop: 6,

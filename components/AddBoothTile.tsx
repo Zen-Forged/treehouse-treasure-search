@@ -40,13 +40,13 @@ export default function AddBoothTile({ onTap }: AddBoothTileProps) {
           gap: 10,
         }}
       >
-        <Plus size={18} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+        <Plus size={18} strokeWidth={1.6} style={{ color: v1.inkMid }} />
         <span
           style={{
             fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 14,
-            color: v1.inkMuted,
+            color: v1.inkMid,
             lineHeight: 1,
           }}
         >

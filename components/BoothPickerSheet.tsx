@@ -142,7 +142,7 @@ export default function BoothPickerSheet({
                   fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 13,
-                  color: v2.text.muted,
+                  color: v2.text.secondary,
                   lineHeight: 1.3,
                   marginBottom: 2,
                 }}
@@ -294,7 +294,7 @@ function BoothRow({
             style={{
               fontFamily: FONT_INTER,
               fontSize: 13,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               lineHeight: 1.4,
               overflow: "hidden",
               textOverflow: "ellipsis",
