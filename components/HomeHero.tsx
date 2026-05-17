@@ -60,8 +60,18 @@ const HERO_HEIGHT_VH = 33;
 // activates pinning hero at top:-SCROLL_BEFORE_STICKY_PX (top of hero
 // offscreen by that amount; bottom of hero at calc(33vh -
 // SCROLL_BEFORE_STICKY_PX) from viewport top). Easily dial-able from
-// David's iPhone QA (~80px = "a bit" per session 176 ask).
-const SCROLL_BEFORE_STICKY_PX = 80;
+// David's iPhone QA.
+//
+// Session 177 dial — 80 → 40 per David's iPhone QA on v0.176.0: "The
+// sticky position of the explore header goes too far and cuts off part
+// of the logo. It should look more like the second image attached with
+// just some padding between the top of the logo and the screen up top."
+// 80px compression pushed the wordmark's leaf glyph flush against the
+// URL bar at compressed state; 40px halves the compression magnitude so
+// ~40px of breathing room above the wordmark remains visible when
+// sticky-pinned. Bounded refinement of session 176 C1 — structural
+// pattern (negative-top sticky) preserved; magnitude tightens.
+const SCROLL_BEFORE_STICKY_PX = 40;
 
 // Session 176 — hero's VISIBLE bottom edge in viewport coordinates when the
 // hero is sticky-pinned (Home, scrollY > SCROLL_BEFORE_STICKY_PX) OR when

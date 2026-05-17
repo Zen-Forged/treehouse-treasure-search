@@ -67,160 +67,136 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 176 (2026-05-17) — Home hero scroll-and-compress dial (negative-top sticky reviving session 164 collapsing-header at smaller magnitude) + Map page extraction R-session design-to-Ready (Frame A bordered window + 20 frozen decisions D1-D20) — 2 runtime commits + 1 close
+## ✅ Session 177 (2026-05-17) — iPhone QA bundle on production v0.176.0: F2 hero compression dial + F4 Explore this Booth button revival + F1 map filter retire + F3 "More from this booth" carousel revival — 4 runtime commits + 1 close
 
-David opened with `/session-open`; standup recommended Round 3 iPhone QA + launch-gaps strategic session pair (carry primary from session 175 close opener). David redirected to two iPhone-QA-driven findings on production v0.175.0 via single message paste with reference screenshot — restated interpretively per `feedback_user_clarification_restate_interpretation` ✅ Promoted (~26+ cumulative firings) before drafting anything.
+David opened with `/session-open`; standup recommended F2 Map page extraction implementation (Arcs 1-5 against session 176's locked design record) as PRIMARY + combined iPhone QA + Mapbox preview-only token pre-work. David redirected with 4 iPhone-QA-driven findings on production v0.176.0 — same shape as session 175's pivot pre-empting recommended primary. Per `feedback_user_clarification_restate_interpretation` ✅ Promoted (~31+ cumulative firings), each finding restated interpretively before drafting; clarifying axes batched via single `AskUserQuestion` per `feedback_v2_options_before_drafting` ✅ Promoted (F1 scope / F2 magnitude / bundle vs F2 sequencing). David picked all 3 Recommended options. 4 commits sequenced smallest→largest per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 (~499+ cumulative firings; 4 firings this session).
 
-### F1 surfaced + restated — Home hero scroll-before-sticky
+### F1 surfaced + restated — /find/[id] map thumbnail too warm
 
-David's verbatim: *"I'd like to allow the hero header image to scroll a bit more before it becomes sticky (see image from the saved page as reference to the position)."* Reference image: Saved-page hero at scrollY=0 at natural top-of-flow position (per session 175 C4 Option α `position: static` Saved branch). Restated: currently on Home hero is `position: sticky; top: 0` — pinned immediately at scrollY=0, never moves. David wants the hero to scroll in flow for SOME pixels FIRST, then snap to sticky once it would scroll past top.
+David's verbatim: *"The overlay on the the map in the /find section is offputting due to the stark contrast i.e. warm hue on the map. We need it to be more muted like the mapbox background is."* Audit-first per `feedback_visibility_tools_first` ✅ Promoted localized the bug class: /find/[id]'s map is a STATIC Mapbox image via `lib/mapStaticImage.ts` using `mapbox/light-v11`, NOT the interactive TreehouseMap with runtime palette overrides. The warm hue was purely the CSS filter `sepia(0.4) saturate(1.1) hue-rotate(-8deg)` shipped at session 171 dial #2 to push the default grey toward v1.basemap.cream warm-cream. Restated: retire the filter so the thumbnail renders in muted Mapbox default. 2 scope interpretations surfaced via `AskUserQuestion`: (a) /find/[id] only (bounded local revision) / (b) global cartographic mute. David picked **(a)** — preserves session 108 cartographic basemap thesis on /map where it's load-bearing.
 
-Three interpretations surfaced via `AskUserQuestion` per `feedback_v2_options_before_drafting` ✅ Promoted (option-surface-before-drafting): Scroll-and-compress (negative-top sticky) / Scroll-away entirely (kill sticky) / Scroll-then-snap-back (jarring). David picked **Scroll-and-compress** — negative-top-offset sticky at smaller magnitude than session 164's collapsing-header.
+### F2 surfaced + restated — Sticky compressed hero cuts logo
 
-### F2 surfaced + restated — Map page extraction
+David's verbatim: *"The sticky position of the explore header goes too far and cuts off part of the logo. It should look more like the second image attached with just some padding between the top of the logo and the screen up top."* Reference image: session 176 C1 ship at compressed state with leaf glyph flush against URL bar. Restated: reduce `SCROLL_BEFORE_STICKY_PX` from 80 → smaller value so compressed hero retains breathing room above the wordmark. 3 magnitude options surfaced via `AskUserQuestion`: 40px / 60px / 20px / preview-iteration. David picked **40px** (Recommended; half of session 176's 80px). Bounded magnitude dial of session 176 C1 — structural pattern (negative-top sticky) preserved; magnitude tightens.
 
-David's verbatim: *"I want to pull the map portion back out from the explore page into it's own page. My goal is to still make it feel like a seamless transition though as much as possible. It needs to have a back button to go back to the explore page. It should not include a search bar. I want it to make better use of the screen and still feel part of the app. I liked the first iteration where it felt a bit contained in a window an not extending the entire screen. We'll need an R session for this."*
+### F3 surfaced + restated — Revive "More from this booth" carousel (no Visit Booth text)
 
-**MAJOR DESIGN REVERSAL** surfaced explicitly per `feedback_surface_locked_design_reversals` ✅ Promoted (~78+ cumulative firings; load-bearing across 8+ sessions). F2 reverses substrate accumulated across 6 prior sessions:
+David's verbatim: *"Need to add back in the more from this booth functionality at the bottom of the /find page. However, do not include the text on the far right that says 'visit booth' as this will be replaced by this [Explore this Booth button under Flag the Find — F4]."* Major reversal of session 170 Arc 4 (commit `dde9696` retired entire <ShelfSection> + 326 LOC + all substrate) per `feedback_surface_locked_design_reversals` ✅ Promoted (~82+ cumulative firings; load-bearing across 9+ sessions). David's "no Visit Booth text" spec aligns automatically with session 169 round 3 prior retirement (commit `03a6c76`) — the revival source state at `dde9696^` already honors it without extra editing.
 
-| Session | Locked decision being reversed/bounded-revised |
-|---|---|
-| 109 | `/map` page deleted entirely → drawer-in-Home only |
-| 155 D-Reversal | Drawer overlays Explore page (Iter 2 chrome-less) |
-| 156 dials | MapControlPill secondary + masthead retire on /map presumed-dead |
-| 158 Arc 3 | MallMapDrawer canonical drawer pattern |
-| 161 refinement | Drawer-specific shelf wrapper + safe-area-aware bottom padding |
-| 166 D3 | MallMapDrawer cemented inside `(tabs)/` chrome (TabsChrome) |
+### F4 surfaced + restated — Explore this Booth button below Flag the Find
 
-David's "needs an R session" framing scoped this as design-pass + multi-arc implementation per the strategic-vs-tactical split.
+David's verbatim: *"Add a button under the 'Flag the Find' button for 'Explore this Booth' (navigate to /shelf)."* Bounded revival of session 170 Arc 3's OTHER CTA-pair half. Session 169 round 2 shipped Explore Booth + Flag the Find as side-by-side 50/50; session 170 Arc 3 retired BOTH on Shape B re-architecture; session 171 C6 bounded-revived Flag the Find under Price as dual affordance with photograph save bubble; session 177 C2 bounded-revives Explore Booth as a STACKED button below Flag the Find (not side-by-side per session 169 — David's verbatim singular noun + vertical stack vocabulary). Reads as parallel-affordance stack to the Flag the Find ↔ photograph save bubble pair above.
 
-### Sequencing — F1 dial first, then F2 R-session
+### Sequencing — bundle this session, F2 Map page next session
 
-Per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted, cost-shape triage surfaced 3 sequencing options via `AskUserQuestion`: F1 first then F2 R-session / F2 R-session only / F1 dial only. David picked **F1 first, then F2 R-session** (Recommended). Both ship in single session; F2 implementation carries to session 177.
+Per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted, sequencing surfaced via `AskUserQuestion`: bundle this session + F2 next / bundle + F2 Arcs 1-2 / bundle + F2 full ship. David picked **bundle this session, F2 next** (Recommended) — keeps each session's scope tight + iPhone QA on bundle ships clean before architectural change. 4 commits sequenced smallest→largest.
 
-### C1 `b102aaa` — F1 Shape A scroll-and-compress dial (single coupled commit)
+### C1 `d91ecda` — F2 SCROLL_BEFORE_STICKY_PX 80 → 40 (smallest dial)
 
-Single coupled commit per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — hero top offset + chip pin position + drawer pin position all track same physical dimension (visible hero bottom).
+Single-file dial in `components/HomeHero.tsx`. Constant value 80 → 40 + expanded comment block on dial lineage (164: 158-191px collapse → 175: 0px no collapse → 176: 80px bounded revival → 177: 40px tightening). `HERO_BOTTOM_EDGE` export inherits via `calc(${HERO_HEIGHT_VH}vh - ${SCROLL_BEFORE_STICKY_PX}px)`; chip + drawer consumers re-anchor without code changes. Compressed pinned hero now shows ~40px breathing room above the wordmark (was: leaf glyph flush against URL bar).
 
-- `components/HomeHero.tsx` — NEW `SCROLL_BEFORE_STICKY_PX = 80` module-scope constant. `position: sticky; top: 0` → `position: sticky; top: -SCROLL_BEFORE_STICKY_PX`. At scrollY=0 hero sits at top:0 (full 33vh visible, chrome bubbles overlay photograph, matches reference image). User scrolls — hero scrolls UP with content for 80px. Past threshold, sticky activates pinning hero with top 80px offscreen. Visible pinned hero = 33vh - 80px (~36% compressed on iPhone SE; wordmark + SearchBar still visible).
-- `components/HomeHero.tsx` — `HERO_BOTTOM_EDGE` export value updates from `${HERO_HEIGHT_VH}vh` to `calc(${HERO_HEIGHT_VH}vh - ${SCROLL_BEFORE_STICKY_PX}px)`. Two consumers (MallPickerChip + MallMapDrawer) inherit compressed bottom edge automatically via existing import — no consumer-side edits needed.
+**Pre-existing local-env miss on parked `ShelfImageShareScreen.tsx`** (html2canvas-pro from session 152 parked code) caught at commit-boundary tsc per `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 — **11th cumulative firing**. `npm install` resolved in 1 round-trip; lockfile updated. Build clean: tsc + `npm run build` green across all 47 routes.
 
-**BOUNDED REVIVAL of session 164 D16-D19 + session 166 dial 10** collapsing-header pattern at smaller magnitude — session 164 collapsed to 158-191px (~58-72% compression on iPhone SE 33vh = 220px); session 176 compresses by 80px (~36% on iPhone SE). The structural pattern (negative-top sticky) returns; the magnitude tightens to "a bit" per David's verbatim ask.
+### C2 `72d3a3b` — F4 Explore this Booth button stacked below Flag the Find
 
-**BOUNDED REVISION of session 175 Option α** — Option α's full-identity-beat thesis stays for scrollY=0 (hero at full 33vh, matching reference image); partial-compression activates only AFTER user scrolls past 80px threshold. Saved branch (`showSearch=false` → position:static) unchanged.
+Single-file edit to `app/find/[id]/page.tsx` (+78/-5 LOC). Outer wrapper restructured from single-button container to flex-column with gap 10 so both buttons share padding 0 22px + marginBottom 22. NEW `<Link href={\`/shelf/${vendorSlug}\`}>` styled as secondary outlined button (cream bg + green text + 1px green outline + PiStorefrontBold 14px + Inter 11px/600/0.12em/uppercase). Label "Explore this Booth" verbatim per `feedback_user_provided_verbatim_values_ship_as_is` ✅ Promoted (David's exact phrasing — not "Explore Booth" as session 169 used). Style mirrors session 169 round 2's original secondary outlined treatment exactly so Flag the Find above stays primary engagement CTA per lattice canonical `project_layered_engagement_share_hierarchy` ✅ Promoted.
 
-Pre-existing local-env miss on parked `ShelfImageShareScreen.tsx` (html2canvas-pro from session 152 parked code) caught at commit-boundary tsc per `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 — **10th cumulative firing**. `npm install` resolved in 1 round-trip. Lockfile updated.
+**PiStorefrontBold import REVIVED** — was retired session 170 Arc 3 alongside the original Explore Booth + inline cartographic eyebrow consumers; eyebrow stays owned by `<DestinationHero>`, but the CTA returns. Import-revival comment preserves revival rationale for greppability per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted (inverse-firing — when "dead" was retirement, "revive" needs comment provenance).
 
-Build clean: tsc + `npm run build` green across all 47 routes. Pushed to origin (`b102aaa`) for Vercel preview.
+### C3 `d437c35` — F1 retire CSS warmth filter on /find/[id] map thumbnail
 
-### F2 design-pass execution — audit-first → V1 → frame pick → fill-refinement → design record
+Single-file edit to `components/DestinationHero.tsx` (+30/-11 LOC). CSS `filter: sepia(0.4) saturate(1.1) hue-rotate(-8deg)` removed entirely from the static map `<img>`. Placeholder bg dialed `v2.surface.warm` → `#F2EFEA` neutral cream-grey for visual consistency with the now-muted image. Bounded reversal scope: ONLY this /find/[id] thumbnail surface; /map page's interactive TreehouseMap keeps the warm-cream cartographic palette via session 156's `resolveCssVar`-fixed `setPaintProperty` overrides (map IS the primary identity surface there — brand vocabulary load-bearing). Here on /find/[id] it was decorative — thumbnail is a tap-target for /map navigation, not a primary identity beat.
 
-Per `feedback_visibility_tools_first` ✅ Promoted + `feedback_reference_first_when_concept_unclear` ✅ Promoted-via-memory (**7th cumulative firing** across sessions 99/102/111/115/117/131/176):
+### C4 `7c76217` — F3 "More from this booth" carousel revival (largest, +415/-42 LOC)
 
-**Audit-first** — dispatched Explore-agent inventory of session 155-166 map substrate (10 file reads + git-history recovery of pre-155 `/map` page from commit `3bbcbfb0d^` for the "contained window" reference David pointed at). Substrate report: 866-LOC TreehouseMap + 312-LOC MallMapDrawer + 297-LOC MapCarousel + 439-LOC PinCallout + 5 hooks + cartographic palette + peek-state pattern. Pre-155 contained-window reference recovered + included in design record.
+Audit-first git-history recovery via `git show dde9696^:app/find/[id]/page.tsx` extracted the exact pre-retirement source state — mirror-image revival preserves all prior decisions including session 169 round 3's earlier retirement of the "Visit Booth" right-slot text (commit `03a6c76`). **NEW Tech Rule candidate pattern**: parent-of-retirement-commit recovery (`git show <sha>^:path`) as canonical "revive the structural pattern that was retired at <sha>" workflow — sub-pattern of `feedback_visibility_tools_first` ✅ Promoted extended from "search before action" to "git as source-of-truth for retired substrate."
 
-**Pre-V1 prose scoping (Q1-Q4 single AskUserQuestion)** locked 4 structural decisions before drafting V1:
-- **D1** MallStrip tap on Home routes to `/map` (strip becomes canonical entry; drawer-toggle handler retires)
-- **D2** MallStrip mirrors at top of `/map` page (consistency with Home; same chip primitive)
-- **D3** MapCarousel as canonical bottom shelf on `/map` (sessions 158+161 substrate carries)
-- **D4** Framer-motion slide-up transition on `/map` enter (mimics current drawer enter feel — "seamless")
+Revival surface:
+- **Imports**: useCallback (React) / getVendorPosts (lib/posts) / writeFindContext + getVendorPostsCache + setVendorPostsCache + FindRef (lib/findContext) / HomeFeedTile (components/v2/HomeFeedTile)
+- **Module-scope helper**: `findStripScrollKey` (per-find horizontal scroll-restore key)
+- **Function**: 326-LOC `<ShelfSection>` component (cache-hit useLayoutEffect + async-fetch fallback + scroll-restore + per-tile tap handoff via writeFindContext + height-locking 56px metadata blocks)
+- **Page state**: setShelfHasItems + shelfReady useState
+- **Effects**: Phase C QA fix #3 setShelfReady reset on [id] change (synchronous via setShelfReady(false) inside existing useEffect) + scroll-restore shelfReady gate in useLayoutEffect + shelfReady in deps array
+- **Callback**: handleShelfReady useCallback (readiness-signal bridge between carousel fetch resolution + parent scroll-restore)
+- **Mount site**: `<ShelfSection>` OUTSIDE swipe-nav motion.div per pre-retirement geometry so framer-motion's pointer listeners don't intercept horizontal pans inside the carousel
+- **Header chrome**: LEFT-ONLY shape per David's "no Visit Booth text" spec — italic Cormorant 18 "More from this booth…" in v2.text.secondary
 
-**V1 mockup** at `docs/mockups/map-page-extraction-v1.html` spans the one remaining structural axis (containment geometry) across 3 frames per `feedback_mockup_options_span_structural_axes` ✅ Promoted:
-- **Frame A** — Bordered window literal revival (1px border + 14px radius + 14px page padding). Pre-155 pattern. Strongest "this is a window" treatment; smallest map area.
-- **Frame B** — Soft-padded breathing room (12px margins + 16px radius + subtle shadow, no hard border). Middle ground.
-- **Frame C** — Full-bleed (map edge-to-edge; masthead + strip overlay with cream gradient fade; carousel floats above nav). Largest map area; closest to "drawer expansion" feel.
+All revival markers preserved with explicit "REVIVED at session 177 C4" provenance comments for greppability — symmetric to retirement comments at session 170 Arc 4 commit body.
 
-7-axis trade-off matrix at the bottom captures the "better use of screen" (pulls toward C) vs "contained in a window not extending entire screen" (pulls toward A) tension explicitly.
+### Vercel queue operational gap surfaced + handled
 
-**David picked Frame A** — bordered window literal revival. "Better use of screen" payoff comes from dedicated-page surface (vs. drawer-overlay) not edge-to-edge map.
+Mid-session David flagged Vercel queue not moving — worktree push landed behind 2 deployments from session 176 close (close docs commit `8d2319e` INITIALIZING + PR squash-merge `3bc537d` QUEUED). Vercel coalesced my 4-commit push into single deployment for HEAD (C4) which was QUEUED. MCP doesn't expose a cancel/delete deployment tool — workaround: dashboard URL handoff + identify safe-to-cancel deployments by commit message inspection. David picked "cancel 2 ahead so yours runs first." **NEW Tech Rule candidate pattern**: "Vercel queue cancellation requires dashboard (MCP gap) — provide team-specific deployments URL + identify which deployments are non-load-bearing by commit message inspection." Both cancelled deployments were duplicative of work already on main; cancellation doesn't undo anything in the repo.
 
-**Post-V1 fill-refinement (Q5-Q7 single AskUserQuestion)** — V2 mockup SKIPPED per `feedback_v2_options_before_drafting` ✅ Promoted (axes prose-resolvable; mockup would burn time):
-- **D6** MallStrip tap while ON `/map` opens `<MallSheet>` (bottom sheet, pre-155 revival). MallSheet currently dormant in repo (456 LOC); revives without code change.
-- **D7** PinCallout "Explore" CTA on `/map` commits scope + routes back to `/explore`. Map page is "pick where to shop" utility — commit means "let me see what's there."
-- **D8** Saved tab keeps no `/map` entry. MallStrip stays Home-only (no reversal of session 175 Option α). Cleanest mental model: map lives in Explore flow.
+### Memory firings cumulative through session 177
 
-**Remaining trivial axes deferred to iPhone QA dial at Arc 5** per `feedback_user_provided_verbatim_values_ship_as_is` — MapControlPill placement, transition motion specifics, MallStrip chip caret. Ship reasonable defaults; calibrate via QA.
-
-### C2 `c064baa` — F2 design record + V1 mockup (single coupled commit per Design Agent rule)
-
-Single coupled commit per Design Agent rule + `feedback_commit_design_records_in_same_session` ✅ Promoted — design record + V1 mockup ship together. Net +980 LOC across 2 new files:
-
-- `docs/map-page-extraction-design.md` — **20 frozen decisions D1-D20** + 6 cross-session reversals surfaced with table + substrate inventory (what carries / what re-purposes / what retires / what revives from dormant) + component contracts (3 new: `app/(tabs)/map/page.tsx` + `components/MapPageBody.tsx` + `components/MapPageTransition.tsx`; 4 modified: MallPickerChip + MallSheet + TabsChrome + (tabs)/layout + MastheadBackButton; 2 retired: MallMapDrawer + useMapDrawer context) + 8 Tier B explicit headroom items + 7-row risk register + 4-arc implementation sequencing.
-- `docs/mockups/map-page-extraction-v1.html` — V1 mockup with 3 frames + 7-axis trade-off matrix.
-
-**Implementation arcs sequenced smallest→largest** per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 (~495+ cumulative firings; 2 firings this session):
-- **Arc 1** (3 commits) — MapPageBody primitive in isolation + smoke route + scope state wiring
-- **Arc 2** (2 commits) — MallSheet revival + wire scope-picker on /map
-- **Arc 3** (2 coupled commits) — Wire Home entry (MallPickerChip onTap → router.push) + retire drawer substrate (MallMapDrawer + useMapDrawer + dead-code byproducts per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted)
-- **Arc 4** (1 commit) — Framer-motion slide-up transition wrapper
-- **Arc 5** — Production iPhone QA + dial-backs
-
-**Estimated total: ~8 commits across Arcs 1-4. Single-session ship plausible at ~90 min in session 177+ against the locked record.**
-
-Pushed to origin (`c064baa`) for Vercel preview.
-
-### Memory firings cumulative through session 176
-
-- `feedback_user_clarification_restate_interpretation` ✅ Promoted — ~26+ cumulative firings (F1 restate + F2 restate + Q1-Q7 each restated + cost-shape sequence pick)
-- `feedback_surface_locked_design_reversals` ✅ Promoted — ~78+ cumulative firings; load-bearing across 8+ sessions. C1 bounded-revises session 175 Option α; C2 surfaces 6 cross-session reversals (sessions 109+155+156+158+161+166) in design-record table.
-- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 133 — 2 firings this session (F1/F2 sequencing + F1 shape pick)
-- `feedback_v2_options_before_drafting` ✅ Promoted — 3 firings this session (F1 behavior options + Q1-Q4 single AskUserQuestion + Q5-Q7 single AskUserQuestion + V2 mockup SKIPPED explicitly)
-- `feedback_mockup_options_span_structural_axes` ✅ Promoted — V1 mockup's 3 frames span genuinely-different containment chrome treatments, not style variants
-- `feedback_reference_first_when_concept_unclear` ✅ Promoted-via-memory — **7th cumulative firing** across sessions 99/102/111/115/117/131/176. Audit-first via Explore agent + pre-155 reference recovered from git.
-- `feedback_visibility_tools_first` ✅ Promoted — Explore-agent dispatch + git-history recovery of pre-155 /map page + consumer-grep before drafting code
-- `feedback_pre_mockup_prose_model_first` ✅ Promoted — F1 + F2 prose models surfaced before mockup; F1 shipped as direct dial; F2 went to V1 mockup because containment-geometry is a visual axis
-- `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 — **10th cumulative firing** (html2canvas-pro `npm install` at C1 commit boundary)
-- `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — 2 firings (C1 hero+chip+drawer geometry coupled; C2 design record + V1 mockup coupled per Design Agent rule)
-- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — 2 firings (C1 → C2 sequenced; ~495+ cumulative)
-- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — captured in C2 design record for Arc 3.2 (MallMapDrawer + useMapDrawer + drawer-toggle handlers retire as scope-adjacent byproducts)
-- `feedback_commit_design_records_in_same_session` Design Agent rule — C2 ships record + mockup together
-- `feedback_user_provided_verbatim_values_ship_as_is` ✅ Promoted — trivial axes (MapControlPill placement, motion specifics) deferred to iPhone QA dial vs over-specifying in design record
-- `feedback_treehouse_no_coauthored_footer` honored on both runtime commits + this close
+- `feedback_user_clarification_restate_interpretation` ✅ Promoted — **~31+ cumulative firings** (5 firings this session: F1 + F2 + F3 + F4 each restated + 3-question AskUserQuestion batch)
+- `feedback_v2_options_before_drafting` ✅ Promoted — 1 firing (single batched 3-question AskUserQuestion for F1 scope + F2 magnitude + sequencing)
+- `feedback_surface_locked_design_reversals` ✅ Promoted — **~82+ cumulative firings; load-bearing across 9+ sessions**. 4 firings this session: F1 bounded reversal of session 171 dial #2 / F2 bounded magnitude dial of session 176 C1 / F3 bounded reversal of session 170 Arc 4 (carousel retirement) / F4 bounded revival of session 170 Arc 3 OTHER CTA half (with session 171 C6 already restoring Flag the Find half)
+- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 133 — 1 firing (bundle vs F2 sequencing)
+- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — **~499+ cumulative firings** (4 firings this session: F2 dial smallest → F4 button → F1 filter retire → F3 carousel revival largest)
+- `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 — **11th cumulative firing** (html2canvas-pro `npm install` at C1 commit boundary)
+- `feedback_visibility_tools_first` ✅ Promoted — multiple firings (audit-first read of HomeHero.tsx + TreehouseMap.tsx + DestinationHero.tsx + git-history recovery of session 170 Arc 4 retirement commit `dde9696` + parent-state recovery via `git show dde9696^:path`)
+- `feedback_user_provided_verbatim_values_ship_as_is` ✅ Promoted — F4 label "Explore this Booth" verbatim (not "Explore Booth")
+- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — inverse-firing on C2 + C4 (revival comments at import sites mirror retirement comments at session 170 commits for greppability)
+- `feedback_treehouse_no_coauthored_footer` honored on all 4 runtime commits + this close
 - `feedback_session_close_auto_merges_pr` honored on this close
 
 ### NEW Tech Rule candidate patterns surfaced (single firings each, all promote on 2nd firing per `feedback_tech_rule_promotion_destination` ✅ Promoted)
 
-1. **"Bounded revision vs full reversal"** — when revising a locked design decision, distinguish "REVERSES" (decision X-then-not-X across full surface) from "BOUNDED-REVISES" (decision X applies at sub-condition; not-X applies at other sub-condition). Session 176 C1 bounded-revises session 175 Option α — full-identity-beat thesis stays for scrollY=0, compression activates only after scroll-past-threshold. Different memory rule than surface-locked-reversals because the prior decision still holds within its bounded scope. Sub-pattern of `feedback_surface_locked_design_reversals` extended to "scope-bounded reversal taxonomy."
-2. **"Bounded revival of retired structural pattern at smaller magnitude"** — when a prior session retired a structural pattern (negative-top sticky collapsing-header session 164→175), revival at smaller magnitude (80px vs 158-191px) is NOT a full reversal of the retirement — it's a bounded revival within new product constraints. Surface explicitly in commit body with magnitude comparison. Sub-pattern of surface-locked-design-reversals.
-3. **"R-session naming convention as design-pass scope signal"** — David's "needs an R session" framing upfront scopes the work as "design-pass + multi-arc implementation, not a quick fix." Treat as explicit signal that cost-shape triage should be design-pass cost shapes (V1 mockup + frozen decisions), not implementation cost shapes. Captures the strategic-vs-tactical split discipline that's been compounding.
-4. **"Audit-first agent dispatch surfaces git-recoverable substrate"** — when designing a substrate revival ("revive the pre-N pattern"), dispatch Explore agent with explicit instruction to recover deleted files via `git log --all --diff-filter=D` + `git show <sha>:<path>`. The recovered file becomes the reference scan input. Generalizes to any "what did we have before retirement" question. Sub-pattern of visibility-tools-first.
+1. **"Bounded magnitude dial vs full reversal"** — F2's 80 → 40 reads as magnitude tightening within the same structural pattern (negative-top sticky compression), NOT a reversal of session 176 C1. Sub-pattern of `feedback_within_session_design_record_reversal` ✅ Promoted extended to "magnitude tightening of just-shipped value at next iPhone QA cycle" — different memory rule than full reversal because the structural decision still holds.
+2. **"Parent-of-retirement-commit recovery for substrate revival"** — `git show <retirement-sha>^:path` extracts the exact pre-retirement source state for mirror-image revival. Preserves all prior decisions automatically (F3's "no Visit Booth text" spec aligned with session 169 round 3 prior retirement at `03a6c76` without extra editing because the revival source at `dde9696^` already honored it). Sub-pattern of `feedback_visibility_tools_first` extended from "search before action" to "git as source-of-truth for retired substrate."
+3. **"Vercel queue cancellation requires dashboard (MCP gap)"** — when worktree push lands behind queued deployments, identify safe-to-cancel deployments by commit message inspection (squash-merge duplicates already-merged work; docs-only commits don't gate runtime preview). Provide team-specific dashboard URL for cancellation since Vercel MCP doesn't expose cancel/delete tool.
+4. **"Inverse `feedback_dead_code_cleanup_as_byproduct` for revival comments"** — when reviving substrate retired in a prior session with explicit retirement comments, add symmetric "REVIVED at session N" provenance comments at the revival sites. Preserves greppability + retirement-revival roundtrip audit trail. First fired session 152 (Share My Shelf parked-not-deleted) at retirement layer; session 177 C2+C4 fires it at revival layer.
+5. **"Carousel revival preserves prior-session retirement-within-retirement"** — when reviving substrate that itself contained prior retirements, the revival source state (parent of retirement commit) automatically honors those prior decisions. F3's "no Visit Booth text" spec maps to session 169 round 3 retirement BEFORE session 170 Arc 4's carousel retirement; reviving from `dde9696^` mirror-image automatically respects the prior retirement without extra editing. Sub-pattern of pattern #2 above.
 
 ### Roadmap delta
 
-**18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level (C1 is visual refinement on already-shipped R-row; C2 is design-to-Ready for an architectural change that will land Arc 1+2+3+4 in session 177+). Session 164 D16-D19 collapsing-header pattern + session 175 Option α full-identity-beat thesis now coexist as bounded-scope variants (scrollY=0 = full 33vh; scrollY > 80 = compressed sticky).
+**18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level — 4 commits are visual/structural refinement on already-shipped R-rows; no new R-row movement. Session 170 Arc 3 + Arc 4 retirements both bounded-revived this session (F3 carousel + F4 Explore Booth button); session 171 dial #2 bounded-reversed (F1 filter retire); session 176 C1 bounded-dialed (F2 magnitude tightening). All 4 reversals preserved the structural decisions while scoping the bounded refinement explicitly in commit bodies.
 
-**Substrate added:** `SCROLL_BEFORE_STICKY_PX = 80` constant + `calc()`-based `HERO_BOTTOM_EDGE` export (replaces literal-vh form; consumers inherit compression automatically) · `docs/map-page-extraction-design.md` 20-decision design record · `docs/mockups/map-page-extraction-v1.html` V1 mockup.
+**Substrate added:** `<ShelfSection>` 326-LOC component revived in /find/[id]/page.tsx with all dependencies (useCallback / getVendorPosts / writeFindContext / getVendorPostsCache / setVendorPostsCache / FindRef / HomeFeedTile / findStripScrollKey + setShelfHasItems / shelfReady state + handleShelfReady useCallback + scroll-restore shelfReady gate) · `<Link href="/shelf/${vendorSlug}">` "Explore this Booth" secondary CTA in /find/[id]/page.tsx · flex-column wrapper for stacked Flag the Find + Explore this Booth pair · PiStorefrontBold import revival.
 
-**Substrate locked for retirement at session 177+ Arc 3.2:** `MallMapDrawer` wrapper · `useMapDrawer` context · drawer-specific framer-motion · body-scroll-lock effect · drawer-toggle handler paths in TabsChrome + MallPickerChip. ~600 LOC retirement estimated when Arc 3 ships.
+**Substrate removed:** CSS `filter: sepia(0.4) saturate(1.1) hue-rotate(-8deg)` on /find/[id] static map thumbnail (session 171 dial #2 retired).
 
-**Substrate locked for revival at session 177+ Arc 2:** `MallSheet.tsx` (456 LOC, dormant since session 158).
-
-**Net runtime change C1:** +18 / -8 LOC in HomeHero.tsx + package-lock.json update.
-**Net runtime change C2:** +980 LOC across 2 new docs files (mockup + design record). Zero runtime code shipped.
+**Net runtime change:**
+- C1 (F2): +12 / -5 LOC in HomeHero.tsx + package-lock.json refresh
+- C2 (F4): +78 / -5 LOC in app/find/[id]/page.tsx
+- C3 (F1): +30 / -11 LOC in components/DestinationHero.tsx
+- C4 (F3): +415 / -42 LOC in app/find/[id]/page.tsx
+- **Total: +535 / -63 LOC across 3 source files + 1 lockfile update**
 
 Build clean at every commit boundary; tsc + `npm run build` clean covering all 47 routes.
 
-### Carries opening into session 177
+### Carries opening into session 178
 
-🚧 **NEW (176→177): F2 Map page extraction implementation (Arcs 1-5)** — pure execution pass against the 20-decision design record locked at C2. Estimated ~8 commits across Arcs 1-4 + iPhone QA + dial-backs in Arc 5. Single-session ship plausible at ~90 min. Per `feedback_design_record_as_execution_spec` ✅ Promoted (28th cumulative firing setup; 29th if Arc 1 ships clean against record) this is the load-bearing test that the design pass closed all decision axes. PRIMARY recommendation for session 177.
+🚧 **NEW (177→178): iPhone QA walk on production v0.177.0 bundle** — F1 muted map thumbnail + F2 40px compression magnitude + F3 carousel end-to-end (cache-hit fast path + scroll-restore shelfReady gate + per-tile tap swipe-context handoff) + F4 Explore this Booth button (stacked-pair visual hierarchy + cream-on-cream readability + tap routing). Any dial-backs ship as one-line commits.
 
-🚧 **NEW (176→177): Combined iPhone QA walk on production v0.176.0** — (a) C1 scroll-and-compress dial: verify 80px threshold + compressed pinned hero geometry on iPhone SE / 14 Pro Max; (b) C4+C5 carries from session 175 SUPERSEDED by C1 behavior change (Round 3 walks the new state instead); (c) 9 remaining unwalked v0.174 watch-items per CHANGELOG entries. Combinable into single ~30 min batched walk. Any dial-backs on C1 ship as one-line commits.
+🚧 **CARRY (176→178): F2 Map page extraction implementation (Arcs 1-5)** — pure execution pass against the 20-decision design record locked at session 176 C2. Estimated ~8 commits across Arcs 1-4 + iPhone QA + dial-backs in Arc 5. Single-session ship plausible at ~90 min. Per `feedback_design_record_as_execution_spec` ✅ Promoted (28th cumulative firing setup; 29th if Arc 1 ships clean against record). PRIMARY recommendation for session 178 (was 177, deferred this session per QA pivot).
 
-🚧 **NEW (176→177): 4 NEW Tech Rule candidate patterns from session 176** — bounded revision vs full reversal / bounded revival of retired structural pattern at smaller magnitude / R-session naming convention as design-pass scope signal / audit-first agent dispatch surfaces git-recoverable substrate.
+🚧 **CARRY (156→178): Mapbox preview-only token setup** — **23-session carry now** (156→177). `/map` page in session 178 will silently fail on Vercel preview without it. ~15 min HITL. **Worth closing BEFORE session 178 F2 Arc 4 ship** so /map can be preview-QA'd cleanly.
 
-🚧 **CARRY (172→177): `docs/launch-gaps.md` strategic session — Shape A gameplan move #2** — pre-empted at sessions 172 + 173 + 174 + 175 + 176 (**5 sessions deep now**).
+🚧 **NEW (177→178): 5 NEW Tech Rule candidate patterns from session 177** — bounded magnitude dial vs full reversal / parent-of-retirement-commit recovery for substrate revival / Vercel queue cancellation requires dashboard (MCP gap) / inverse-dead-code-cleanup-as-byproduct for revival comments / carousel revival preserves prior-session retirement-within-retirement. All single firings; promote on 2nd firing per `feedback_tech_rule_promotion_destination` ✅ Promoted.
 
-🚧 **CARRY (156→177): Mapbox preview-only token setup** — **22-session carry now** (156→176). `/map` page in session 177 will silently fail on Vercel preview without it. ~15 min HITL. **Worth closing BEFORE session 177 F2 implementation lands** so the new /map page can be preview-QA'd cleanly.
+🚧 **CARRY (176→178): 4 NEW Tech Rule candidate patterns from session 176** — bounded revision vs full reversal / bounded revival of retired structural pattern at smaller magnitude / R-session naming convention as design-pass scope signal / audit-first agent dispatch surfaces git-recoverable substrate.
 
-🚧 **[Older carries 174 → 119 unchanged from session 175 close; see prior CLAUDE.md commits or git history.]**
+🚧 **CARRY (172→178): `docs/launch-gaps.md` strategic session — Shape A gameplan move #2** — pre-empted at sessions 172 + 173 + 174 + 175 + 176 + 177 (**6 sessions deep now**). Strategic session per the strategic-vs-tactical split. ~60-90 min. Unblocks vendor-value strategic session candidacy at 179+.
+
+🚧 **CARRY (175→178): 5 NEW Tech Rule candidate patterns from session 175** — audit-bounded enumeration extends from SITES to DIMENSIONS / hero collapsing-header reversal via showSearch-driven sticky-vs-static branching / renamed export when semantic meaning changes / iPhone QA round N reveals classic memory-file-covered bug / QA finding triggers within-session design-reversal cost-shape triage via AskUserQuestion.
+
+🚧 **CARRY (174→178): 5 NEW Tech Rule candidate patterns from session 174** + **CARRY (173→178): 1 NEW Tech Rule candidate** + **CARRY (172→178): 2 NEW Tech Rule candidates** + **CARRY (171→178): 7 NEW Tech Rule candidates** + **CARRY (170→178): 5 NEW Tech Rule candidates** + 7 Tier B items + **CARRY (169→178): 5 NEW** + **CARRY (168→178): inline-hex consumer sweep** + 5 NEW Tech Rule candidates + **CARRY (167→178): Chrome-unification revival path** + 4 NEW + **[Older carries 161 → 119 unchanged from prior closes; see git history.]**
 
 ### Commits this session
 
-2 runtime commits + 1 close. C1: `b102aaa` · C2: `c064baa` · Close: [this commit] → tagged `v0.176.0`.
+4 runtime commits + 1 close. C1 F2: `d91ecda` · C2 F4: `72d3a3b` · C3 F1: `d437c35` · C4 F3: `7c76217` · Close: [this commit] → tagged `v0.177.0`.
 
 ### Net change toward investor narrative
 
-Textbook compounding-discipline session at scale — 2 well-shaped runtime commits across two distinct work types (1 surgical dial + 1 R-session design pass) ship clean in single session because the operating-system rules compose: cost-shape triage at META level (F1 vs F2 sequencing) + cost-shape triage at sub-level (F1 Shape A/B/C) + audit-first via Explore agent (substrate inventory + git-history recovery) + reference-first scan (pre-155 contained-window reference) + V1 mockup spanning structural axes (containment geometry) + V2 options surfaced before drafting (skipped per axis-nature judgment) + 20 frozen decisions + 8 Tier B headroom + 7-row risk register + 4-arc implementation sequencing + smallest→largest commit hygiene + surface-locked-design-reversals (6 reversals in C2 design-record table + bounded-revision taxonomy for C1) + single-coupled-commit (C1 hero+chip+drawer + C2 record+mockup) + pre-existing-local-env-failure resolved at boundary gate (10th cumulative firing). The **R-session shape itself** is a meaningful operational data point — David's "needs an R session" framing scoped the work upfront as design-pass + multi-arc implementation, which means the operating-system rules pre-selected the right workflow (V1 mockup + frozen decisions + Arc sequencing) instead of attempting a quick implementation patch. The R-session shape from sessions 117 + 121 + 131 + 138-148 + 162-163 + 170 + 176 is now a 7-firing-deep canonical pattern. Each disciplined design-pass session stacks onto a project posture where re-scoping events become rare, design records become true execution specs, and the codebase becomes measurably easier to evolve safely as project age increases — exactly the right shape for an early-stage product approaching beta. Session 177 will test the 29th cumulative firing of `feedback_design_record_as_execution_spec` ✅ Promoted when Arc 1 ships against the locked record.
+Textbook compounding-discipline session — 4 well-shaped runtime commits across 4 distinct iPhone-QA-driven findings ship clean in single ~75-minute session because the operating-system rules compose at scale: cost-shape triage (3-question batched AskUserQuestion) + smallest→largest sequencing + audit-first via git-history recovery (parent-of-retirement-commit pattern for F3 carousel revival) + verbatim copy ship + surface-locked-design-reversals taxonomy (bounded magnitude dial vs full reversal distinction sharpening) + dead-code-cleanup-as-byproduct (revival-comment provenance symmetric to retirement-comment provenance) + pre-existing-local-env-failure resolved at boundary gate (11th cumulative firing). The **carousel revival via `git show <retirement-sha>^:path`** is itself a discipline data point — the operating system now reads "revive substrate X" as a 1-command extraction rather than a manual re-author cycle, AND the revival automatically respects prior retirements layered within the retired substrate (F3's "no Visit Booth text" honored without explicit re-editing because session 169 round 3 had already retired it before session 170 Arc 4's wholesale carousel retirement). Each disciplined iPhone-QA-driven bundle session stacks onto a project posture where bounded refinement at scale becomes the default mode + structural decisions become measurably easier to evolve safely as project age increases. Session 178 will be the deferred F2 Map page extraction implementation (8 commits / ~90 min single-session ship plausible against locked record) — the 29th cumulative firing test of `feedback_design_record_as_execution_spec` ✅ Promoted. If Arc 1 ships clean against the locked record without re-scoping, the discipline crosses from "28-firings-deep validated repeatable" into "load-bearing operating mode for any future architectural change."
+
+## ✅ Session 176 (2026-05-17) — Home hero scroll-and-compress dial (negative-top sticky reviving session 164 collapsing-header at smaller magnitude) + Map page extraction R-session design-to-Ready (Frame A bordered window + 20 frozen decisions D1-D20) — 2 runtime commits + 1 close (rotated to mini-block session 177 close)
+
+> Full block rotated out at session 177 close. Net: **2 runtime commits + 1 close. Tagged `v0.176.0`** (PR [#59](https://github.com/Zen-Forged/treehouse-treasure-search/pull/59), merge SHA `3bc537d`). David opened with `/session-open`; standup recommended Round 3 iPhone QA + launch-gaps strategic session pair. David redirected to 2 iPhone-QA findings on production v0.175.0: (F1) Home hero should scroll a bit before becoming sticky; (F2) Pull MallMapDrawer back out of Explore into its own `/map` page with "contained window" feel + David's explicit "needs an R session." C1 `b102aaa` F1 Shape A scroll-and-compress dial — `position: sticky; top: -SCROLL_BEFORE_STICKY_PX (= 80px)` replaces Option α's `top: 0`. Bounded revival of session 164 D16-D19 collapsing-header pattern at smaller magnitude (~36% vs 58-72%) + bounded revision of session 175 Option α (full-identity-beat thesis stays for scrollY=0; compression activates after threshold). `HERO_BOTTOM_EDGE` export updates from `${HERO_HEIGHT_VH}vh` to `calc(${HERO_HEIGHT_VH}vh - ${SCROLL_BEFORE_STICKY_PX}px)` so chip + drawer geometry inherit compressed bottom edge automatically. C2 `c064baa` F2 Map page extraction R-session design-to-Ready — audit-first via Explore agent (10 file reads + git-history recovery of pre-155 /map page from commit `3bbcbfb0d^`) + pre-V1 prose Q1-Q4 + V1 mockup spanning 3 containment-geometry frames (A bordered window literal revival / B soft-padded breathing room / C full-bleed) + David picked Frame A + post-V1 fill-refinement Q5-Q7 with V2 SKIPPED per axis-nature judgment + 20 frozen decisions D1-D20 + 6 cross-session reversals surfaced in design-record table (sessions 109+155+156+158+161+166+175) + 8 Tier B headroom + 7-row risk register + 4-arc implementation sequencing. 10th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted (html2canvas-pro `npm install` at C1). 4 NEW Tech Rule candidates surfaced (bounded revision vs full reversal / bounded revival of retired structural pattern at smaller magnitude / R-session naming as design-pass scope signal / audit-first agent dispatch surfaces git-recoverable substrate).
+
+_(Session 176 detailed beat narrative removed at session 177 close — see git history at commit `3bc537d` for the full beat-by-beat narrative including all F1+F2 beats + 20 frozen decisions + 6 cross-session reversals + design-record-as-execution-spec setup for session 177+ F2 implementation.)_
 
 ## ✅ Session 175 (2026-05-17) — iPhone QA dial bundle on production v0.174.1: /login sub-text + EditBoothSheet typography + iOS keyboard + Home/Saved hero behavior reversal (session 164 D16-D19) + mall chip flicker fix — 5 runtime commits + 1 close (rotated to mini-block session 176 close)
 
@@ -520,86 +496,90 @@ _(Session 151 tombstone rotated off at session 156 close — see git history at 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-05-17 (session 176 close — **v0.176.0 ship: 2 runtime commits + 1 close. C1 F1 Shape A scroll-and-compress dial on Home hero (negative-top sticky at -80px; bounded revival of session 164 collapsing-header at smaller magnitude; bounded revision of session 175 Option α) + C2 F2 Map page extraction R-session design-to-Ready (Frame A bordered window literal revival + V1 mockup + 20 frozen decisions D1-D20 + 6 cross-session reversals surfaced + substrate inventory + 8 Tier B headroom items + 7-row risk register + 4-arc implementation sequencing).** F2 reverses session 109's `/map`-page deletion + session 155's drawer-overlay reshape. 7th cumulative firing of `feedback_reference_first_when_concept_unclear` ✅ Promoted. 10th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at C1 commit boundary.
+> Last updated: 2026-05-17 (session 177 close — **v0.177.0 ship: 4 runtime commits + 1 close. C1 F2 hero compression dial (`SCROLL_BEFORE_STICKY_PX` 80→40; bounded magnitude tightening of session 176 C1) + C2 F4 "Explore this Booth" button stacked below Flag the Find (bounded revival of session 170 Arc 3 OTHER CTA half via session 169 secondary outlined style) + C3 F1 retire CSS warmth filter on /find/[id] map thumbnail (bounded reversal of session 171 dial #2; scope: /find/[id] only) + C4 F3 revive "More from this booth" carousel without Visit Booth text (bounded reversal of session 170 Arc 4 + 326 LOC revival via `git show dde9696^:path` parent-of-retirement-commit recovery).** 4 cross-session reversals all bounded-scope; structural decisions preserved; refinements explicitly scoped in commit bodies. **11th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate`** ✅ Promoted at C1 commit boundary (html2canvas-pro npm install).
 
-**Working tree:** clean (after session 176 close commit). **Build:** clean across all 47 routes (tsc + npm run build green at every commit boundary). **Beta gate:** unblocked. **Production:** `main` @ [merge SHA TBD post-close] + tags `v0.174.0` / `v0.174.1` / `v0.174.2` / `v0.175.0` (+ `v0.176.0` once this close lands). **Net change this session on production:** +18 / -8 LOC in HomeHero.tsx + package-lock.json update (C1) + +980 LOC across 2 new docs files (C2 design record + V1 mockup).
+**Working tree:** clean (after session 177 close commit). **Build:** clean across all 47 routes (tsc + npm run build green at every commit boundary). **Beta gate:** unblocked. **Production:** `main` @ [merge SHA TBD post-close] + tags `v0.174.0` / `v0.174.1` / `v0.174.2` / `v0.175.0` / `v0.176.0` (+ `v0.177.0` once this close lands). **Net change this session on production:** +535 / -63 LOC across 3 source files + package-lock.json refresh.
 
-Roadmap: **18 R-rows total. 13 ✅ Shipped (R1, R3, R4a/b/c, R5a, R7, R10, R11, R12, R16, R17, R18), 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level (5 commits are visual/structural refinement on already-shipped R-rows; no new R-row movement). Session 164 D16-D19 sticky-collapsing-header behavior REVERSED via Option α — Home + Saved hero substrate now matches new model.
+Roadmap: **18 R-rows total. 13 ✅ Shipped (R1, R3, R4a/b/c, R5a, R7, R10, R11, R12, R16, R17, R18), 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level — 4 commits are visual/structural refinement on already-shipped R-rows. Session 170 Arc 3 + Arc 4 retirements both bounded-revived (F4 + F3); session 171 dial #2 bounded-reversed (F1); session 176 C1 bounded-dialed (F2). All 4 reversals preserved the structural decisions while scoping the bounded refinement explicitly in commit bodies.
 
-**Substrate added this session:** `HERO_BOTTOM_EDGE` export from HomeHero (replaces `STICKY_THIN_HEIGHT` — semantic-meaning-change rename) · `cachedMallId` + `cachedMalls` module-scope caches (sync warm-nav hydration primitive for chip mountpoint) · iOS keyboard `scrollIntoView` pattern at EditBoothSheet booth name input (300ms `setTimeout` delay clears keyboard slide-up + sheet entry transition) · Cormorant italic helper-voice consistency at 14px across `/login` + EditBoothSheet helper text.
+**Substrate added this session:** `<ShelfSection>` 326-LOC component revived in `app/find/[id]/page.tsx` with all dependencies (useCallback / getVendorPosts / writeFindContext / getVendorPostsCache / setVendorPostsCache / FindRef / HomeFeedTile / findStripScrollKey + setShelfHasItems / shelfReady state + handleShelfReady useCallback + scroll-restore shelfReady gate) · `<Link href={\`/shelf/${vendorSlug}\`}>` "Explore this Booth" secondary CTA in `/find/[id]` · flex-column wrapper for stacked Flag the Find + Explore this Booth pair · PiStorefrontBold import revival.
 
-**Substrate removed:** `HERO_STRIP_HEIGHT_HOME` + `HERO_STRIP_HEIGHT_SAVED` + `stickyThinHeight` ternary in HomeHero · session-166-dial-3 drawer-open auto-scroll effect (~30 lines) in TabsChrome · `STICKY_THIN_HEIGHT` export (renamed) · calc-based negative-offset sticky positioning. `--th-safe-area-inset-top` CSS var kept as substrate despite zero current consumers.
+**Substrate removed:** CSS `filter: sepia(0.4) saturate(1.1) hue-rotate(-8deg)` on /find/[id] static map thumbnail (session 171 dial #2 retired).
 
-**Cumulative firings**: smallest→largest ~495+ (2 this session); triage-cost-shape ~37+ (2 this session: F1/F2 sequencing + F1 Shape A/B/C); user-clarification-restate-interpretation ~26+ (multiple: F1 + F2 restates + Q1-Q7 each restated); surface-locked-design-reversals ~78+ (C1 bounded-revises Option α + C2 surfaces 6 cross-session reversals); reference-first-when-concept-unclear ✅ Promoted — **7th cumulative firing** across sessions 99/102/111/115/117/131/176; v2-options-before-drafting ✅ Promoted — 3 firings (F1 behavior options + Q1-Q4 batch + Q5-Q7 batch); mockup-options-span-structural-axes ✅ Promoted (V1 3 frames span containment axis); single-coupled-commit-when-must-move-together ✅ Promoted — 2 firings (C1 hero+chip+drawer + C2 design record + V1 mockup); pre-existing-local-env-failure-at-boundary-gate ✅ Promoted — **10th cumulative firing** (html2canvas-pro `npm install` at C1).
+**Cumulative firings**: smallest→largest **~499+** (4 this session); surface-locked-design-reversals **~82+** (4 this session — F1+F2+F3+F4 all bounded reversals); user-clarification-restate-interpretation **~31+** (5 this session — each finding restated + 3-question AskUserQuestion batch); v2-options-before-drafting ✅ Promoted — 1 firing (single batched 3-question AskUserQuestion); triage-cost-shape ✅ Promoted-via-memory — 1 firing (bundle vs F2 sequencing); pre-existing-local-env-failure-at-boundary-gate ✅ Promoted — **11th cumulative firing**; visibility-tools-first ✅ Promoted (audit-first reads + git-history recovery via `git show <retirement-sha>^:path` — NEW Tech Rule candidate pattern); dead-code-cleanup-as-byproduct ✅ Promoted (inverse-firing — revival comments at import sites mirror retirement comments for greppability).
 
-### 🚧 Recommended next session — F2 Map page extraction implementation Arcs 1-5 + combined iPhone QA on production v0.176.0 (session 177 PRIMARY)
+### 🚧 Recommended next session — F2 Map page extraction implementation Arcs 1-5 + Mapbox preview-only token + production iPhone QA on v0.177.0 (session 178 PRIMARY)
 
-Per session 176 close, session 177 opens fresh from `main` + `v0.176.0` tag. Three natural moves; David picks order at session-open:
+Per session 177 close, session 178 opens fresh from `main` + `v0.177.0` tag. Three natural moves; David picks order at session-open:
 
-**Primary 1 — F2 Map page extraction implementation Arcs 1-5** (~90 min single-session ship plausible). Pure execution pass against the 20-decision design record locked at C2 (`docs/map-page-extraction-design.md`). Estimated ~8 commits sequenced smallest→largest:
+**Primary 1 — F2 Map page extraction implementation Arcs 1-5** (~90 min single-session ship plausible). Pure execution pass against the 20-decision design record locked at session 176 C2 (`docs/map-page-extraction-design.md`). Carried from session 177 (deferred this session per QA pivot). Estimated ~8 commits sequenced smallest→largest:
 - **Arc 1** (3 commits) — MapPageBody primitive in isolation + `/map-page-test` smoke route per `feedback_testbed_first_for_ai_unknowns` ✅ Promoted + scope state wiring (stubbed handlers)
 - **Arc 2** (2 commits) — MallSheet revival from dormant (456 LOC since session 158) + wire scope-picker on /map tap-strip
 - **Arc 3** (2 coupled commits) — Wire Home entry (MallPickerChip onTap → `router.push('/map')`) + retire drawer substrate (MallMapDrawer + useMapDrawer + drawer-toggle handlers + dead-code byproducts per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted; ~600 LOC retirement)
 - **Arc 4** (1 commit) — Framer-motion slide-up transition wrapper for `/map` enter+exit
 - **Arc 5** — Production iPhone QA + dial-backs (MapControlPill placement + transition motion specifics)
 
-This is the load-bearing test of **29th cumulative firing of `feedback_design_record_as_execution_spec`** ✅ Promoted — if Arc 1 ships clean against the locked record without re-scoping, the discipline crosses from "28-firings-deep validated" into "load-bearing operating mode for any future architectural change."
+This is the load-bearing test of **29th cumulative firing of `feedback_design_record_as_execution_spec`** ✅ Promoted — if Arc 1 ships clean against the locked record without re-scoping, the discipline crosses from "28-firings-deep validated repeatable" into "load-bearing operating mode for any future architectural change."
 
-**Primary 2 — Combined iPhone QA walk on production v0.176.0** (~30 min). Validates:
-- **C1 scroll-and-compress dial** — 80px threshold reads as "a bit" (not too aggressive / not too subtle); chip + drawer geometry inherits compressed `HERO_BOTTOM_EDGE` cleanly; dial `SCROLL_BEFORE_STICKY_PX` if QA flags
-- **Round 3 from session 175 superseded** — C1 behavior change overrides Option α; Round 3 walks the new state instead
-- **9 remaining v0.174 watch-items unwalked** per CHANGELOG (muted retirement + decorative bullets + italic suffixes + Saved 3 visual hierarchy items)
+**PRE-WORK (~15 min HITL): Mapbox preview-only token setup** — close **23-session carry** (156→177). `/map` page in session 178 will silently fail on Vercel preview without it. Worth closing BEFORE F2 Arc 4 ship so /map can be preview-QA'd cleanly. Create separate preview-only Mapbox token (no URL restrictions); set as `NEXT_PUBLIC_MAPBOX_TOKEN` for Preview environment in Vercel; production token unchanged.
 
-Combinable with earlier production walks owed (v0.171.0 + v0.170.0 + v0.169.0) into single ~60 min batched walk. Dial-backs ship as one-line commits.
+**Primary 2 — iPhone QA walk on production v0.177.0** (~30 min). Validates session 177 bundle:
+- **F1 muted map thumbnail** — verify default light-v11 grey reads cohesively with surrounding warm-cream cardstock (no jarring contrast); placeholder bg #F2EFEA harmonizes with both states.
+- **F2 40px compression magnitude** — verify ~40px breathing room above wordmark when sticky-pinned. Dial up to 50 or down to 30 if QA flags.
+- **F3 carousel revival end-to-end** — cache-hit fast path on back-nav; scroll-restore shelfReady gate on peer-nav into different find; per-tile tap preserves swipe-context (tap booth sibling → swipe back to original find works).
+- **F4 Explore this Booth button** — cream-on-cream readability against /find/[id] page bg; tap routes to correct `/shelf/[vendorSlug]`; stacked-pair visual hierarchy (Flag the Find = primary; Explore this Booth = secondary).
+
+Combinable with carry items from prior sessions (v0.176.0 + v0.174 watch-items + earlier production walks owed for v0.171.0 + v0.170.0 + v0.169.0) into single ~60 min batched walk. Dial-backs ship as one-line commits.
 
 **Alternatives ranked by leverage:**
-- **Mapbox preview-only token setup** — **22-session carry now** (156→176); ~15 min HITL. **Worth closing BEFORE session 177 F2 implementation lands** so the new /map page can be preview-QA'd cleanly. Without it, `/map` Mapbox tiles silently fail on Vercel preview deployments.
-- **`docs/launch-gaps.md` strategic session — Shape A gameplan move #2** (~60-90 min). Pre-empted at sessions 172 + 173 + 174 + 175 + 176 (**5 sessions deep now**). Strategic session per the strategic-vs-tactical split. Unblocks vendor-value strategic session candidacy at 178+.
-- **First vendor-value strategic session at 178+** — per `project_vendor_value_first_prioritization` ✅ Promoted ordering: Share My Shelf revival → vendor profile enrichment → Stripe → analytics + KPIs → vendor onboarding affordances. Requires launch-gaps doc as input.
+- **Mapbox preview-only token setup ALONE** — **23-session carry now** (156→177); ~15 min HITL. Could happen at start of session 178 as 5-min warm-up before F2.
+- **`docs/launch-gaps.md` strategic session — Shape A gameplan move #2** (~60-90 min). Pre-empted at sessions 172 + 173 + 174 + 175 + 176 + 177 (**6 sessions deep now**). Strategic session per the strategic-vs-tactical split. Unblocks vendor-value strategic session candidacy at 179+.
+- **First vendor-value strategic session at 179+** — per `project_vendor_value_first_prioritization` ✅ Promoted ordering: Share My Shelf revival → vendor profile enrichment → Stripe → analytics + KPIs → vendor onboarding affordances. Requires launch-gaps doc as input.
 - **Inline-hex consumer sweep (Shape B foundation colors)** — carry from session 168; ~37 inline consumers.
 
 ### 🚧 Operational follow-ups carrying
 
-- 🚧 **NEW (176→177): F2 Map page extraction implementation (Arcs 1-5)** — pure execution pass against the 20-decision design record locked at C2. ~8 commits across Arcs 1-4 + iPhone QA in Arc 5. Single-session ship plausible at ~90 min. PRIMARY recommendation for session 177. **MUST close Mapbox preview-only token carry BEFORE Arc 4 ship** so /map can be preview-QA'd.
-- 🚧 **NEW (176→177): Combined iPhone QA walk on production v0.176.0** — C1 scroll-and-compress dial validation + 9 remaining v0.174 watch-items + earlier production walks owed (v0.171.0 + v0.170.0 + v0.169.0). Combinable into single ~60 min batched walk.
-- 🚧 **NEW (176→177): 4 NEW Tech Rule candidate patterns from session 176** — bounded revision vs full reversal / bounded revival of retired structural pattern at smaller magnitude / R-session naming convention as design-pass scope signal / audit-first agent dispatch surfaces git-recoverable substrate. All single firings; promote on 2nd firing per `feedback_tech_rule_promotion_destination` ✅ Promoted.
-- 🚧 **CARRY (175→177): 5 NEW Tech Rule candidate patterns from session 175** — audit-bounded enumeration extends from SITES to DIMENSIONS / hero collapsing-header reversal via showSearch-driven sticky-vs-static branching / renamed export when semantic meaning changes / iPhone QA round N reveals classic memory-file-covered bug / QA finding triggers within-session design-reversal cost-shape triage via AskUserQuestion.
-- 🚧 **CARRY (172→177): `docs/launch-gaps.md` strategic session — Shape A gameplan move #2** — pre-empted at sessions 172 + 173 + 174 + 175 + 176 (**5 sessions deep**). Strategic session per the strategic-vs-tactical split. ~60-90 min. Unblocks vendor-value strategic session candidacy at 178+.
-- 🚧 **NEW (177+): First vendor-value strategic session** — using design-reviewer agent + launch-gaps doc as input. Candidate ordering per `project_vendor_value_first_prioritization`: Share My Shelf revival → vendor profile enrichment → Stripe → analytics + KPIs → vendor onboarding affordances.
-- 🚧 **CARRY (174→177): 5 NEW Tech Rule candidate patterns from session 174** — aligned-whitespace sed tolerance / bare-PascalCase JSX lint detection / audit drift quantification / lint baseline doc as living document / audit-bounded enumeration as patch shape vs system sweep as structural fix.
-- 🚧 **CARRY (173→177): 1 NEW Tech Rule candidate from session 173** — "Session N+1 validates real subagent dispatch via `subagent_type`" — promotes on 2nd firing.
-- 🚧 **CARRY (172→177): 2 NEW Tech Rule candidate patterns from session 172** — subagent ship pattern + advisory-bounds-honesty-signal patterns.
-- 🚧 **CARRY (171→177): 7 NEW Tech Rule candidate patterns from session 171** — brand-asset-swap-with-optimize-on-ship (3rd firing strongest near-term promotion candidate).
-- 🚧 **CARRY (170→177): 5 NEW Tech Rule candidate patterns from session 170** + **7 Tier B headroom items from `docs/find-destination-hero-design.md`**.
-- 🚧 **CARRY (169→177): 5 NEW Tech Rule candidate patterns from session 169**.
-- 🚧 **CARRY (168→177): Inline-hex consumer sweep (Shape B foundation colors)** — ~37 inline hex/rgba consumers + **5 NEW Tech Rule candidate patterns from session 168**.
-- 🚧 **CARRY (167→177): Chrome-unification revival path** — `archive/chrome-unification-v1` on origin has 6 commits ready + **4 NEW Tech Rule candidate patterns from session 167**.
-- 🚧 **CARRY (156→177): Mapbox preview-only token setup** — **22-session carry now** (156→176). `/map` page in session 177 will silently fail on Vercel preview without it. ~15 min HITL. **Worth closing BEFORE session 177 F2 Arc 4 ship** so /map can be preview-QA'd cleanly.
-- 🚧 **[Older carries 161 → 119 unchanged from session 175 close; see prior CLAUDE.md commits or git history.]**
+- 🚧 **NEW (177→178): iPhone QA walk on production v0.177.0 bundle** — F1 muted map thumbnail + F2 40px compression magnitude + F3 carousel end-to-end + F4 Explore this Booth button. Combinable with prior production walks owed (v0.176.0 + v0.174 watch-items + v0.171/170/169).
+- 🚧 **CARRY (176→178): F2 Map page extraction implementation (Arcs 1-5)** — pure execution pass against the 20-decision design record locked at session 176 C2. ~8 commits / ~90 min single-session ship plausible. PRIMARY recommendation for session 178. **MUST close Mapbox preview-only token carry BEFORE Arc 4 ship** so /map can be preview-QA'd.
+- 🚧 **CARRY (156→178): Mapbox preview-only token setup** — **23-session carry now** (156→177). `/map` page in session 178 will silently fail on Vercel preview without it. ~15 min HITL. **Worth closing BEFORE session 178 F2 Arc 4 ship**.
+- 🚧 **NEW (177→178): 5 NEW Tech Rule candidate patterns from session 177** — bounded magnitude dial vs full reversal / parent-of-retirement-commit recovery for substrate revival / Vercel queue cancellation requires dashboard (MCP gap) / inverse-dead-code-cleanup-as-byproduct for revival comments / carousel revival preserves prior-session retirement-within-retirement. All single firings; promote on 2nd firing per `feedback_tech_rule_promotion_destination` ✅ Promoted.
+- 🚧 **CARRY (176→178): 4 NEW Tech Rule candidate patterns from session 176** — bounded revision vs full reversal / bounded revival of retired structural pattern at smaller magnitude / R-session naming convention as design-pass scope signal / audit-first agent dispatch surfaces git-recoverable substrate.
+- 🚧 **CARRY (172→178): `docs/launch-gaps.md` strategic session — Shape A gameplan move #2** — pre-empted at sessions 172 + 173 + 174 + 175 + 176 + 177 (**6 sessions deep**). Strategic session per the strategic-vs-tactical split. ~60-90 min. Unblocks vendor-value strategic session candidacy at 179+.
+- 🚧 **NEW (179+): First vendor-value strategic session** — using design-reviewer agent + launch-gaps doc as input. Candidate ordering per `project_vendor_value_first_prioritization`: Share My Shelf revival → vendor profile enrichment → Stripe → analytics + KPIs → vendor onboarding affordances.
+- 🚧 **CARRY (175→178): 5 NEW Tech Rule candidate patterns from session 175** — audit-bounded enumeration extends from SITES to DIMENSIONS / hero collapsing-header reversal via showSearch-driven sticky-vs-static branching / renamed export when semantic meaning changes / iPhone QA round N reveals classic memory-file-covered bug / QA finding triggers within-session design-reversal cost-shape triage via AskUserQuestion.
+- 🚧 **CARRY (174→178): 5 NEW Tech Rule candidate patterns from session 174** — aligned-whitespace sed tolerance / bare-PascalCase JSX lint detection / audit drift quantification / lint baseline doc as living document / audit-bounded enumeration as patch shape vs system sweep as structural fix.
+- 🚧 **CARRY (173→178): 1 NEW Tech Rule candidate from session 173** — "Session N+1 validates real subagent dispatch via `subagent_type`" — promotes on 2nd firing.
+- 🚧 **CARRY (172→178): 2 NEW Tech Rule candidate patterns from session 172** — subagent ship pattern + advisory-bounds-honesty-signal patterns.
+- 🚧 **CARRY (171→178): 7 NEW Tech Rule candidate patterns from session 171** — brand-asset-swap-with-optimize-on-ship (3rd firing strongest near-term promotion candidate).
+- 🚧 **CARRY (170→178): 5 NEW Tech Rule candidate patterns from session 170** + **7 Tier B headroom items from `docs/find-destination-hero-design.md`**.
+- 🚧 **CARRY (169→178): 5 NEW Tech Rule candidate patterns from session 169**.
+- 🚧 **CARRY (168→178): Inline-hex consumer sweep (Shape B foundation colors)** — ~37 inline hex/rgba consumers + **5 NEW Tech Rule candidate patterns from session 168**.
+- 🚧 **CARRY (167→178): Chrome-unification revival path** — `archive/chrome-unification-v1` on origin has 6 commits ready + **4 NEW Tech Rule candidate patterns from session 167**.
+- 🚧 **[Older carries 161 → 119 unchanged from session 176 close; see prior CLAUDE.md commits or git history.]**
 
 ### Alternative next moves (top 5)
 
-1. **F2 Map page extraction implementation Arcs 1-5 + combined iPhone QA on v0.176.0** — paired primary recommendation for session 177. F2 implementation = ~8 commits / ~90 min against locked design record; iPhone QA = ~30 min batched walk. ~120 min combined. **Should close Mapbox preview-only token carry before Arc 4 ship.**
-2. **Mapbox preview-only token setup ALONE** — 22-session carry (156→176); ~15 min HITL. **Worth doing first before session 177 F2 Arc 4** so /map can be preview-QA'd cleanly. Could happen at start of session 177 as 5-min warm-up.
-3. **`docs/launch-gaps.md` strategic session alone** — pre-empted 5 sessions deep (172→176). ~60-90 min. Unblocks vendor-value strategic session candidacy at 178+.
-4. **First vendor-value strategic session at 178+** (requires launch-gaps doc as input first) — Share My Shelf revival highest near-term leverage per `project_vendor_value_first_prioritization`.
-5. **Combined iPhone QA walk alone** — production v0.176.0 C1 validation + 9 v0.174 watch-items + earlier production walks (v0.171/170/169) owed. ~60 min batched.
+1. **F2 Map page extraction implementation Arcs 1-5 + Mapbox preview token + iPhone QA on v0.177.0** — paired primary recommendation for session 178. F2 = ~8 commits / ~90 min against locked design record; pre-work = 15 min HITL; QA = ~30 min batched walk. ~135 min combined.
+2. **Mapbox preview-only token setup ALONE** — 23-session carry (156→177); ~15 min HITL. Worth doing first as 5-min warm-up before session 178 F2 Arc 4.
+3. **`docs/launch-gaps.md` strategic session alone** — pre-empted 6 sessions deep (172→177). ~60-90 min. Unblocks vendor-value strategic session candidacy at 179+.
+4. **First vendor-value strategic session at 179+** (requires launch-gaps doc as input first) — Share My Shelf revival highest near-term leverage per `project_vendor_value_first_prioritization`.
+5. **iPhone QA walk alone on v0.177.0 bundle** — F1+F2+F3+F4 validation + earlier production walks owed. ~60 min batched.
 
 Full alternatives + operational backlog in [`docs/queued-sessions.md`](docs/queued-sessions.md).
 
-### Session 177 opener (pre-filled — F2 implementation + Mapbox token + iPhone QA)
+### Session 178 opener (pre-filled — F2 implementation + Mapbox token + iPhone QA on v0.177.0)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Sentry · Vercel · Mapbox GL JS
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md (session 176 full block — Home hero scroll-and-compress dial + Map page extraction R-session design-to-Ready = 2 runtime commits + 1 close shipped via PR tagged v0.176.0) + docs/map-page-extraction-design.md (20 frozen decisions D1-D20 + 4-arc implementation sequencing). Then run the session opening standup from MASTER_PROMPT.md.
+Read CLAUDE.md (session 177 full block — iPhone QA bundle on v0.176.0: F1 map filter retire + F2 hero compression dial + F3 carousel revival + F4 Explore this Booth button = 4 runtime commits + 1 close shipped via PR tagged v0.177.0) + docs/map-page-extraction-design.md (20 frozen decisions D1-D20 + 4-arc implementation sequencing — locked at session 176 C2). Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Session 176 shipped F1 scroll-and-compress dial on Home hero + F2 Map page extraction design-to-Ready. F2 implementation pending Arc 1+2+3+4 in session 177+ (~8 commits, ~90 min single-session ship plausible against locked record). Per `feedback_design_record_as_execution_spec` ✅ Promoted, this is the 29th cumulative firing setup — if Arc 1 ships clean without re-scoping, the discipline crosses from "validated repeatable" into "load-bearing operating mode for any future architectural change."
+CURRENT ISSUE: Session 177 shipped 4-commit iPhone QA bundle on production v0.176.0; session 178 carries F2 Map page extraction implementation (deferred from 177 per QA pivot). F2 implementation pending Arc 1+2+3+4 (~8 commits, ~90 min single-session ship plausible against locked record). Per `feedback_design_record_as_execution_spec` ✅ Promoted, this is the 29th cumulative firing setup — if Arc 1 ships clean without re-scoping, the discipline crosses from "validated repeatable" into "load-bearing operating mode for any future architectural change."
 
-RECOMMENDED PRIMARY WORK FOR SESSION 177 (sequenced, ~120 min total):
+RECOMMENDED PRIMARY WORK FOR SESSION 178 (sequenced, ~135 min total):
 
-  0. PRE-WORK (~15 min HITL): Mapbox preview-only token setup — close 22-session carry (156→176). Without it, the new /map page at Arc 4 will silently fail on Vercel preview, blocking the canonical preview-QA loop. ~15 min: create separate preview-only Mapbox token (no URL restrictions); set as NEXT_PUBLIC_MAPBOX_TOKEN for Preview environment in Vercel; production token unchanged.
+  0. PRE-WORK (~15 min HITL): Mapbox preview-only token setup — close 23-session carry (156→177). Without it, the new /map page at Arc 4 will silently fail on Vercel preview, blocking the canonical preview-QA loop. ~15 min: create separate preview-only Mapbox token (no URL restrictions); set as NEXT_PUBLIC_MAPBOX_TOKEN for Preview environment in Vercel; production token unchanged.
 
   1. F2 Implementation Arcs 1-4 (~90 min, ~8 commits sequenced smallest→largest):
      - Arc 1 (3 commits): MapPageBody primitive in isolation + /map-page-test smoke route + scope state wiring
@@ -607,20 +587,19 @@ RECOMMENDED PRIMARY WORK FOR SESSION 177 (sequenced, ~120 min total):
      - Arc 3 (2 coupled commits): Wire Home entry (MallPickerChip onTap → router.push('/map')) + retire drawer substrate (MallMapDrawer + useMapDrawer + dead-code byproducts; ~600 LOC retirement)
      - Arc 4 (1 commit): Framer-motion slide-up transition wrapper
 
-  2. Arc 5 — Combined iPhone QA walk on production (~30 min):
+  2. Arc 5 — Combined iPhone QA walk on production v0.177.0 + new v0.178.0 (~30 min):
      - F2 /map page validation: bordered window + MallStrip mirror + carousel shelf + slide-up transition + MallSheet picker + PinCallout commit routing to /explore
-     - C1 scroll-and-compress dial validation (verify 80px reads as "a bit"; dial SCROLL_BEFORE_STICKY_PX if QA flags)
-     - 9 remaining v0.174 watch-items (combinable into same walk)
-     - Earlier production walks owed (v0.171.0 + v0.170.0 + v0.169.0)
+     - v0.177.0 bundle validation: F1 muted map / F2 40px compression / F3 carousel end-to-end / F4 Explore this Booth button
+     - Earlier production walks owed (v0.174 watch-items + v0.171/170/169)
 
 DAVID PICKS ORDER AT SESSION-OPEN. If F2 Arc 1-4 ships clean against design record, full implementation + QA in single session is plausible.
 
 NON-RECOMMENDED ALTERNATIVES if you want to redirect:
-  - docs/launch-gaps.md strategic session alone (5 sessions deep; ~60-90 min)
-  - First vendor-value strategic session at 178+ (requires launch-gaps doc as input first)
+  - docs/launch-gaps.md strategic session alone (6 sessions deep; ~60-90 min)
+  - First vendor-value strategic session at 179+ (requires launch-gaps doc as input first)
   - Inline-hex consumer sweep (Shape B foundation colors, carry from session 168; ~37 inline consumers)
 
-CARRY-FORWARDS: 4 NEW Tech Rule candidates from session 176 (bounded revision vs full reversal / bounded revival of retired structural pattern at smaller magnitude / R-session naming convention as design-pass scope signal / audit-first agent dispatch surfaces git-recoverable substrate). 5 NEW from session 175 + 5 from session 174 + 1 from session 173 + 2 from session 172 + 7 from session 171 + carries through session 156.
+CARRY-FORWARDS: 5 NEW Tech Rule candidates from session 177 (bounded magnitude dial vs full reversal / parent-of-retirement-commit recovery / Vercel queue cancellation requires dashboard / inverse-dead-code-cleanup-as-byproduct for revival comments / carousel revival preserves prior-session retirement-within-retirement). 4 NEW from session 176 + 5 from session 175 + 5 from session 174 + 1 from session 173 + 2 from session 172 + 7 from session 171 + carries through session 156.
 
 SCHEDULED AGENT: trig_017455nMVrTTZb6PxYnYcYZY fires Thu May 21 9:00 AM EDT — checks if VendorCTACard still unused → opens cleanup PR if so.
 ```
