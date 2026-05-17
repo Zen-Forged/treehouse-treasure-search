@@ -54,6 +54,7 @@ import MastheadBackButton from "@/components/MastheadBackButton";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MallPickerChip from "@/components/MallPickerChip";
 import MapPageBody from "@/components/MapPageBody";
+import MapPageTransition from "@/components/MapPageTransition";
 import MapCarousel from "@/components/MapCarousel";
 import MallSheet from "@/components/MallSheet";
 import { useSavedMallId } from "@/lib/useSavedMallId";
@@ -130,61 +131,60 @@ export default function MapPage() {
         }}
       />
 
-      <MapPageBody
-        malls={malls}
-        selectedMallId={mallId}
-        peekedMallId={peekedMallId}
-        resetKey={resetKey}
-        onPinTap={(id) => setPeekedMallId(id)}
-        onMapTap={() => setPeekedMallId(null)}
-        onCommit={(id) => {
-          // Arc 3.1 — D7: PinCallout "Explore" CTA on /map commits scope
-          // + routes back to / (Explore feed). The map page is "pick
-          // where to shop" utility — committing a scope means "let me
-          // see what's there" = Explore feed with the new scope active.
-          //
-          // useSavedMallId's cross-instance event broadcast (session 110
-          // fix to session 109 shared-layout drift) ensures the chip on
-          // Home hydrates to the new mall name synchronously on next
-          // nav — no flash through the all-Kentucky chip state on
-          // return.
-          //
-          // peekedMallId clear runs but is purely cosmetic at this point
-          // since /map is about to unmount on router.push('/').
-          //
-          // Analytics fire as filter_applied with source: "map_page_pin"
-          // to distinguish from drawer-context map_pin commits (which
-          // still fire on Home until Arc 3.2 retires the drawer). Once
-          // Arc 3.2 retires the drawer, source values consolidate around
-          // map_page_pin + map_carousel_card + search_mall_match.
-          setMallId(id);
-          setPeekedMallId(null);
-          const picked = malls.find((m) => m.id === id);
-          track("filter_applied", {
-            filter_type:  "mall",
-            filter_value: picked?.slug ?? id,
-            page:         "/map",
-            source:       "map_page_pin",
-          });
-          router.push("/");
-        }}
-        onReset={() => {
-          // Reset is the single "back to the default Kentucky view"
-          // affordance per session 165 dial — clears scope + dismisses
-          // peek + bumps resetKey so TreehouseMap's fitBounds effect
-          // re-runs even when scope was already null (mirrors
-          // MallMapDrawer's handleReset semantic from session 161).
-          setMallId(null);
-          setPeekedMallId(null);
-          setResetKey((n) => n + 1);
-          track("filter_applied", {
-            filter_type:  "mall",
-            filter_value: "all",
-            page:         "/map",
-            source:       "map_page_reset",
-          });
-        }}
-      />
+      <MapPageTransition>
+        <MapPageBody
+          malls={malls}
+          selectedMallId={mallId}
+          peekedMallId={peekedMallId}
+          resetKey={resetKey}
+          onPinTap={(id) => setPeekedMallId(id)}
+          onMapTap={() => setPeekedMallId(null)}
+          onCommit={(id) => {
+            // Arc 3.1 — D7: PinCallout "Explore" CTA on /map commits scope
+            // + routes back to / (Explore feed). The map page is "pick
+            // where to shop" utility — committing a scope means "let me
+            // see what's there" = Explore feed with the new scope active.
+            //
+            // useSavedMallId's cross-instance event broadcast (session 110
+            // fix to session 109 shared-layout drift) ensures the chip on
+            // Home hydrates to the new mall name synchronously on next
+            // nav — no flash through the all-Kentucky chip state on
+            // return.
+            //
+            // peekedMallId clear runs but is purely cosmetic at this point
+            // since /map is about to unmount on router.push('/').
+            //
+            // Analytics fire as filter_applied with source: "map_page_pin"
+            // to distinguish from map_page_sheet (D6 picker) + map_page_reset.
+            setMallId(id);
+            setPeekedMallId(null);
+            const picked = malls.find((m) => m.id === id);
+            track("filter_applied", {
+              filter_type:  "mall",
+              filter_value: picked?.slug ?? id,
+              page:         "/map",
+              source:       "map_page_pin",
+            });
+            router.push("/");
+          }}
+          onReset={() => {
+            // Reset is the single "back to the default Kentucky view"
+            // affordance per session 165 dial — clears scope + dismisses
+            // peek + bumps resetKey so TreehouseMap's fitBounds effect
+            // re-runs even when scope was already null (mirrors
+            // MallMapDrawer's handleReset semantic from session 161).
+            setMallId(null);
+            setPeekedMallId(null);
+            setResetKey((n) => n + 1);
+            track("filter_applied", {
+              filter_type:  "mall",
+              filter_value: "all",
+              page:         "/map",
+              source:       "map_page_reset",
+            });
+          }}
+        />
+      </MapPageTransition>
 
       <MapCarousel
         // /map has no drawer to gate on — carousel is always visible per
