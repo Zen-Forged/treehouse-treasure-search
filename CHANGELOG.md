@@ -8,6 +8,56 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.174.0] — 2026-05-17
+
+### Session 174 — Contrast fix-bundle implementation (Arcs 1-4 against locked audit) + iPhone-QA-driven Shape β system-wide sweep (Arc 5) + lint baseline 99 → 0
+
+18 runtime commits + 1 close. Largest single-session contrast pass on record + the cleanest live demonstration of `feedback_kill_bug_class_after_3_patches` ✅ Promoted firing at audit-execution scope. David opened with `/session-open`; standup recommended fix-bundle implementation against the now-fresh `docs/contrast-audit.md` per session 173 close opener. David: *"yes."* Per `feedback_v2_options_before_drafting` ✅ Promoted + `feedback_triage_cost_shape_before_design_pass` ✅ Promoted, surfaced REC-3 (lint script vs token split) + REC-4 (italic-serif brand voice scope) as cost-shape triage at opener to batch brand/arch context-switch vs mid-session. David picked **REC-3 Lint script** (smallest blast radius, namespace stable, tooling investment as structural backstop) + **REC-4 audit recommendation** (all 4 Cormorant italic Tier 1 sites promote to `v2.text.primary`).
+
+Arcs 1-4 shipped 13 commits sequenced smallest→largest with build clean at every commit boundary, vendor-flow first per REC-5 + `project_vendor_value_first_prioritization` ✅ Promoted. **29th cumulative firing of `feedback_design_record_as_execution_spec` ✅ Promoted** validated across 29+ different features — audit ran as execution spec; zero design calls + 2 brand/arch picks resolved at opener as cost-shape triage; multiple audit-description + line-number drifts caught + handled via grep-localization per `feedback_subagent_dispatch_catches_audit_drift` ✅ Promoted (BoothPage:596→:644, :688→:736, shelf:210→:243, find/[id]:1125 description drift, find/[id]/edit:601→:602, audit-missed :234 + :882 + ShareSheet's audit-paired icon all surfaced + handled via `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted byproduct cleanup pattern).
+
+David's iPhone QA on Vercel preview surfaced THE bug-class moment: **"I am still seeing areas where it's difficult to read"** with a Review Board finding on `/login` "muted font color still appearing `color: var(--th-v2-text-muted)`". Diagnosed gap — the audit's per-site enumeration was scope-bounded to ≤14px text + 15-16px italic; the systemic recommendation #1 said "retire `v2.text.muted` as a TEXT color entirely" but the execution only swept enumerated sites. **75% miss rate on `/login` alone** (audit enumerated 1 of 8 in-scope muted sites; the other 7 were "≥15px non-italic muted assumed legible" — David's QA invalidated the audit's assumption: muted is #A39686 on #E6DECF = **2.16:1 which fails WCAG AA at any size, italic or not**).
+
+Per `feedback_kill_bug_class_after_3_patches` ✅ Promoted (3rd attempt — audit enumeration + execution + QA — escalates to structural fix) + `feedback_predicate_accumulating_patches_signals_wrong_shape` ✅ Promoted (per-site enumeration was the patch shape; system sweep + lint enforcement is the structural-fix shape), cost-shape triage surfaced 3 shapes Shape α (user-facing only, defer admin) vs Shape β (system-wide all 99 baseline) vs Shape γ (per-site triage). David picked **Shape β — System-wide sweep, all 99 baseline**. Arc 5 shipped 5 commits + lint extension + baseline doc update: 36 files swept across vendor-flow (Arc 5.1, 8 files) + auth/shopper (Arc 5.2, 7 files) + shared chrome (Arc 5.3, 12 files) + admin/Review Board (Arc 5.4, 9 files) + lint extension catching v1.inkFaint + Lucide bare-JSX icons (Arc 5.5) + baseline doc updated with decay-tracking table. **Baseline dropped 99 → 0.** Contrast bug class structurally closed.
+
+Tooling additions: `scripts/lint-contrast.ts` modeled after session-162 `lint-shared.ts` pattern (detection: `color: v[12].(text.muted|inkMuted|inkFaint)` inline + TSX prop; allowlist: comments + placeholder context + decorative ≥22px icons via library-prefix OR bare-PascalCase JSX heuristic + size threshold). `npm run lint:contrast` registered as 6th lint script alongside spacing/colors/fonts/shadows/radius. Warn-not-fail per session 143 lock — calibration debt baseline, regression detection on new callsites. `docs/contrast-lint-baseline.md` ships as living document with decay tracking (Arc 4 init: 99 → Arc 5 close: 0).
+
+### Added
+
+- **`scripts/lint-contrast.ts`** (NEW, 134 LOC) — contrast token-compliance lint per REC-3 architectural pick. Detects `v2.text.muted` / `v1.inkMuted` / `v1.inkFaint` used as prose color; allowlists per-line based on comment / placeholder / ≥22px decorative icon (two-tier: prefix-name libraries + bare-PascalCase JSX for Lucide). Warn-not-fail.
+- **`docs/contrast-lint-baseline.md`** (NEW) — living document tracking baseline decay session-over-session. Initial entries: Arc 4 init (99) + Arc 5 close (0; Δ −99).
+- **`npm run lint:contrast`** — 6th lint script registered in `package.json` alongside spacing/colors/fonts/shadows/radius.
+
+### Changed
+
+- **System-wide v2.text.muted retirement as prose color** (Arc 5 Shape β) across **36 files / ~114 sites** (vendor-flow first per REC-5):
+  - Vendor-flow (Arc 5.1, 8 files): `vendor-request` + `post/tag` + `setup` + `AddBoothSheet` + `AddBoothInline` + `EditBoothSheet` + `AddBoothTile` + `BoothPickerSheet`
+  - Auth + shopper (Arc 5.2, 7 files): `login` + `welcome` + `admin/login` + `find/[id]` + `(tabs)/page` + `my-shelf` + `contact`
+  - Shared chrome (Arc 5.3, 12 files): `MallScopeHeader` + `MallSheet` + `BoothPage` + `BoothLockupCard` + `SearchBar` + `EmptyState` + `FeaturedBanner` + `PhotographPreview` + `PostingAsBlock` + `TreehouseMap` + `VendorCTACard` + `BoothFormFields`
+  - Admin + Review Board (Arc 5.4, 9 files): `admin/RelinkSheet` + `admin/VendorsTab` + `admin/ForceDeleteConfirm` + `admin/InviteVendorSheet` + 5 `review-board/*` files
+  - Targets: `v2.text.muted → v2.text.secondary` + `v1.inkMuted → v1.inkMid` + `v1.inkFaint → v1.inkMid` (all #5C5246, passes WCAG AA 5.71-7.45:1 on all 4 in-scope backgrounds; preserves v1 namespace on v1-layer files)
+  - Preserved per audit recommendation #1: border consumers + conditional ternary branches + placeholder template-literal at `SearchBar:181` (`${v2.text.muted}` syntax bypassed bare `color:` pattern naturally)
+- **Arc 1 — Decoration retire (17 sites, 4 commits):** `textDecorationStyle: "dotted" → "solid"` + `textDecorationColor: v2.text.muted | v1.inkFaint → v2.border.light` across vendor-flow (BoothPage:648 + find/[id]/edit:514) + chrome primitives (MallScopeHeader + DestinationHero + BoothLockupCard) + auth/onboarding (login + setup + welcome + vendor-request × 3) + v1-layer shopper (find/[id] × 3 + shelf/[slug]:261). Decoration retire ships FIRST per REC-2 + `feedback_kill_bug_class_after_3_patches` so Arc 2 replace_all is structurally safe.
+- **Arc 2 — Tier 2 sweep + REC-6 state-conveying icons (24 sites, 3 commits):** post/preview + me + ShareSheet (Arc 2.1, +ShareSheet:1162 PiLeafBold per REC-6) + find/[id]/edit (Arc 2.2, +audit-missed :234 drift) + shopper-flow REC-6 icon pairs (Arc 2.3, PinCallout:184 MapPin + login:732+733 + vendor-request:822+823 PiEnvelopeSimple+text per REC-6 "icon + text it prefixes are same scope unit").
+- **Arc 3 — Tier 1 ship + REC-4 italic-serif (16 sites, 5 commits):** BoothPage (Arc 3.1, 4 sites incl audit-missed :882 byproduct) + find/[id]/edit (Arc 3.2, 3 sites with audit description drift surfaced) + auth/onboarding REC-4 picks (Arc 3.3, 4 italic-serif → primary per David's pick + handle:282 helper → secondary) + v1-layer shopper (Arc 3.4, 3 sites with audit description drift surfaced) + Saved chrome (Arc 3.5, SavedMallCardV2:168).
+
+### Fixed
+
+- David's iPhone QA finding (`/login` muted font color persisting in computed styles) — closed structurally via Shape β system sweep. All 8 in-scope `/login` muted sites now retired to `v2.text.secondary` (passing WCAG AA 5.71-7.45:1 on all backgrounds).
+
+### iPhone QA watch-items
+
+- **Decorative `·` bullet separators** (PostingAsBlock + VendorsTab) — visually darken slightly from muted → mid (same family, just less ghostly); acceptable variation OR one-line dial-back per site if reads "too prominent / pulling attention."
+- **"(optional)" italic suffixes** after form labels — darken to mid; potentially reads more prominent than intended (subordinated label decoration); dial back if needed.
+- **Dotted-decoration source colors** at find/[id]/edit:506 + other italic-serif Tier 1 sites swept to primary per REC-4 — voice trade-off acknowledged (loses some soft editorial-register voice); dial back specific sites to secondary if italic stroke loss + primary tier reads heavy.
+- **BoothPage :509 chevron `▾`** (Cormorant 20px decorative, sweep visually darkens) — defer classification; iPhone QA dial if reads heavy.
+- **`/shelf/[slug]:227` Heart icon** (size 32 decorative on NotFound) — was preserved per audit ≥22px exclusion + post-Arc-5 lint allowlist; should still read muted but darker on cream bg.
+- **`/vendor-request:544` PiCamera 28px + opacity:0.75 compound risk** — single-line dial (drop opacity to 1.0 OR promote color tier) if camera placeholder reads ghostly on real device.
+
+[v0.174.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.174.0
+
+---
+
 ## [v0.173.0] — 2026-05-17
 
 ### Session 173 — Design-reviewer subagent registration validated via real dispatch + 4 audit-doc RECs applied to `docs/contrast-audit.md`
