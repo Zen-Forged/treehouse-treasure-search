@@ -8,6 +8,30 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.174.1] — 2026-05-17
+
+### Session 174 hotfix — Round 2 Review Board (Saved Browse #1): visual hierarchy on /flagged
+
+Mid-session hotfix on top of v0.174.0 per Shape A versioning (patch increment). David's Round 2 iPhone QA finding post-v0.174.0 ship: *"change bg of the card container for the booth list to v2.surface.warm. But keep the mall section and booth sections (not the saved finds) the surface card color. Then add an empty row after the last item saved on the list and keep it the v2.surface.warm color."* Single coupled commit per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — 3 file changes causally linked for visual hierarchy to read coherently.
+
+Two clarifications resolved at opener per `feedback_user_clarification_restate_interpretation` ✅ Promoted (~23+ cumulative firings) + `feedback_v2_options_before_drafting` ✅ Promoted: mall section scope = "Full top portion" (mall header + DistancePill + Take the Trip + finds-waiting eyebrow) + empty row height = "Half-row breathing space" (~44px). Both recommended picks.
+
+### Changed
+
+- **`components/v2/SavedMallCardV2.tsx`** — outer `<article>` bg: `v2.surface.card → v2.surface.warm`. NEW inner `<div bg: v2.surface.card>` wrapper around full mall-section top portion (head-δ + Take the Trip + finds-waiting eyebrow). Reads as "warm container with card identity at top."
+- **`components/v2/AccordionBoothSection.tsx`** — NEW trailing empty row at end of expanded body (aria-hidden, height 44px, `bg: v2.surface.warm`, borderTop 1px `v2.border.light`). Matches SavedFindRow separator pattern; reads as "completion row" extending warm-rows zone below last entry.
+- **`components/v2/SavedFindRow.tsx`** — row bg: `v2.surface.card → v2.surface.warm`. Find rows recede as "warm casual rows" against booth body's card surface.
+
+### iPhone QA watch-items
+
+- **`SavedFindRow:138` save bubble bg** is `v2.surface.warm` — now matches row bg; only 1px border + green leaf icon distinguishes bubble. May visually disappear; one-line dial to `v2.surface.card` if reads "lost in the row" on real device.
+- **Hairline contrast** — `SavedFindRow` borderTop 1px `v2.border.light` against warm bg (vs previous card bg); watch for softer separator read.
+- **Booth-to-booth seam** — between two `AccordionBoothSection`s the article's warm bg shows briefly + the next section's borderTop hairline; should read as natural section break.
+
+[v0.174.1]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.174.1
+
+---
+
 ## [v0.174.0] — 2026-05-17
 
 ### Session 174 — Contrast fix-bundle implementation (Arcs 1-4 against locked audit) + iPhone-QA-driven Shape β system-wide sweep (Arc 5) + lint baseline 99 → 0

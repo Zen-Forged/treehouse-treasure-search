@@ -72,7 +72,14 @@ export default function SavedFindRow({
         gap: 12,
         alignItems: "center",
         borderTop: `1px solid ${v2.border.light}`,
-        background: v2.surface.card,
+        // Session 175 Review Board (Saved Browse #1) — find rows flip
+        // card → warm so they recede as "warm casual rows" against the
+        // booth body's card surface. Paired with SavedMallCardV2 outer
+        // article bg flip + AccordionBoothSection trailing empty row
+        // (same warm bg) for cohesive visual hierarchy: mall section
+        // = card identity, booth header + body = card chrome, find
+        // rows + trailing empty row = warm content.
+        background: v2.surface.warm,
         cursor: "pointer",
         opacity: dim ? 0.55 : 1,
       }}
