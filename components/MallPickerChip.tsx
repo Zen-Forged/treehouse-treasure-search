@@ -30,7 +30,7 @@
 import * as React from "react";
 import { PiMapPinFill, PiCaretDown } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT } from "@/lib/tokens";
-import { STICKY_THIN_HEIGHT } from "@/components/HomeHero";
+import { HERO_BOTTOM_EDGE } from "@/components/HomeHero";
 
 interface MallPickerChipProps {
   mallName: string;
@@ -54,9 +54,10 @@ const CHEVRON_LEFT_GAP  = 10;
 const PIN_NAME_GAP      = 8;
 
 // Session 166 dial 2 — chip becomes position:sticky so it stays visible
-// below hero's sticky-collapsed strip during scroll AND during drawer-open
-// state (paired with TabsChrome's auto-scroll on drawer-open).
-// MallMapDrawer imports this constant for its top:calc geometry.
+// below hero strip during scroll. Session 175 Option α update: hero
+// no longer collapses (stays full 33vh sticky at top:0 on Home), so chip
+// pins at HERO_BOTTOM_EDGE (33vh) — the hero's bottom edge in viewport
+// space. MallMapDrawer imports this constant for its top:calc geometry.
 //
 // Height = TOP_PADDING + max(PIN_SIZE, NAME_FONT_SIZE * 1.3, CHEVRON_SIZE)
 //        + BOTTOM_PADDING = 12 + 29 + 6 = 47px. Rounded to 48 for safe
@@ -68,15 +69,17 @@ export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps)
     <div
       style={{
         padding:    `${TOP_PADDING}px ${HORIZ_PADDING}px ${BOTTOM_PADDING}px`,
-        // Sticky-pinned below hero strip. As page scrolls past hero, chip
-        // detaches from flow and pins at top:STICKY_THIN_HEIGHT_PX (90px).
-        // bg matches v2.bg.main so feed content doesn't bleed through
-        // when chip is pinned over scrolling feed. zIndex 11 sits above
-        // hero (z:10) so chip is never covered by hero strip overlap;
-        // drawer's top:calc accounts for chip height so they don't
-        // overlap when drawer is open.
+        // Sticky-pinned at HERO_BOTTOM_EDGE (33vh) so it sits flush
+        // against hero's bottom edge throughout scroll. Session 175
+        // Option α — hero no longer collapses, so chip's pin point is
+        // the hero's natural bottom edge, not a collapsed thin-strip
+        // value. bg matches v2.bg.tabs so feed content doesn't bleed
+        // through when chip is pinned over scrolling feed. zIndex 11
+        // sits above hero (z:10) so chip is never covered by hero on
+        // any device's viewport boundary; drawer's top:calc accounts
+        // for chip height so they don't overlap when drawer is open.
         position:   "sticky",
-        top:        STICKY_THIN_HEIGHT,
+        top:        HERO_BOTTOM_EDGE,
         zIndex:     11,
         // Session 166 dial 8 — chip sticky bg follows (tabs)/-surfaces
         // tier so seam between feed-scrolling-under-chip and the chip

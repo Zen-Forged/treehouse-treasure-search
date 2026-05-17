@@ -73,10 +73,12 @@ import {
 } from "@/lib/tokens";
 // Session 166 Arc 3.1.3 — drawer top realigns from the retired
 // MASTHEAD/SEARCH_BAR_WRAP/STRIP chrome stack (sessions 154-157) to the
-// new HomeHero sticky-collapsed strip + MallPickerChip sticky-pinned
-// chip strip. Drawer top = hero strip height + chip strip height so
-// chip stays visible above drawer as dismiss affordance.
-import { STICKY_THIN_HEIGHT } from "./HomeHero";
+// new HomeHero sticky strip + MallPickerChip sticky-pinned chip strip.
+// Drawer top = hero bottom edge + chip strip height so chip stays
+// visible above drawer as dismiss affordance. Session 175 Option α —
+// hero no longer collapses, so HERO_BOTTOM_EDGE (33vh) replaces the
+// former STICKY_THIN_HEIGHT collapsed-strip value.
+import { HERO_BOTTOM_EDGE } from "./HomeHero";
 import { CHIP_VISIBLE_HEIGHT_PX } from "./MallPickerChip";
 import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
@@ -219,12 +221,12 @@ export default function MallMapDrawer({
             }}
             style={{
               position:      "fixed",
-              // Session 166 dial 2 (post-Arc-3.1.3 iPhone QA) — drawer top
-              // realigns from "below hero strip" (90px) to "below hero strip
-              // + chip strip" (152px) so MallPickerChip stays visible as a
-              // dismiss affordance during drawer-open state. Resolves
-              // David's "currently trapped without a refresh" finding.
-              top:           `calc(${STICKY_THIN_HEIGHT} + ${CHIP_VISIBLE_HEIGHT_PX}px)`,
+              // Drawer top sits below hero (33vh) + chip strip (48px) so
+              // MallPickerChip stays visible as a dismiss affordance during
+              // drawer-open state. Session 175 Option α — anchor changes
+              // from collapsed STICKY_THIN_HEIGHT (90px) to HERO_BOTTOM_EDGE
+              // (33vh ≈ 270px on iPhone SE) since hero no longer collapses.
+              top:           `calc(${HERO_BOTTOM_EDGE} + ${CHIP_VISIBLE_HEIGHT_PX}px)`,
               // Mobile-column containment — mirrors StickyMasthead +
               // BottomNav fixed-chrome pattern. Without this,
               // the drawer (and its full-bleed Mapbox canvas) extends to
