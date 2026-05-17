@@ -4,7 +4,11 @@ import { Cormorant_Garamond, Dancing_Script, Inter, Lora } from "next/font/googl
 import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
-import { MapDrawerProvider } from "@/lib/useMapDrawer";
+// Session 178 F2 Arc 3.2 — MapDrawerProvider retired alongside MallMapDrawer.
+// The (tabs)/ scope-picker moved to dedicated /map route at Arc 1; cross-
+// component drawer-open state no longer needed since /map is a route, not
+// an overlay. Provider removal closes the entire shared-state primitive
+// per feedback_dead_code_cleanup_as_byproduct ✅ Promoted.
 
 // DevAuthPanel is dev-only — never rendered in production
 const DevAuthPanel = process.env.NODE_ENV === "development"
@@ -125,10 +129,8 @@ export default function RootLayout({
           canonical hex post-collapse. */}
       <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#E6DECF" }}>
         <FindSessionProvider>
-          <MapDrawerProvider>
-            {children}
-            <DevAuthPanel />
-          </MapDrawerProvider>
+          {children}
+          <DevAuthPanel />
         </FindSessionProvider>
       </body>
     </html>

@@ -73,12 +73,15 @@ const PIN_NAME_GAP      = 8;
 // below hero strip during scroll. Session 175 Option α update: hero
 // no longer collapses (stays full 33vh sticky at top:0 on Home), so chip
 // pins at HERO_BOTTOM_EDGE (33vh) — the hero's bottom edge in viewport
-// space. MallMapDrawer imports this constant for its top:calc geometry.
+// space.
 //
-// Height = TOP_PADDING + max(PIN_SIZE, NAME_FONT_SIZE * 1.3, CHEVRON_SIZE)
-//        + BOTTOM_PADDING = 12 + 29 + 6 = 47px. Rounded to 48 for safe
-// integer arithmetic in downstream consumers.
-export const CHIP_VISIBLE_HEIGHT_PX = 48;
+// Session 178 F2 Arc 3.2 — CHIP_VISIBLE_HEIGHT_PX export retired
+// alongside MallMapDrawer per feedback_dead_code_cleanup_as_byproduct
+// ✅ Promoted. The constant existed only for MallMapDrawer's top:calc
+// geometry (`top: calc(HERO_BOTTOM_EDGE + CHIP_VISIBLE_HEIGHT_PX)px`);
+// with the drawer retired (Arc 3 — pulled out to dedicated /map route),
+// no remaining consumer needs it. The chip's height is internal to this
+// primitive now.
 
 export default function MallPickerChip({
   mallName,
