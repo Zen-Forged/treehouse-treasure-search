@@ -36,7 +36,7 @@ Resolved from `:root` CSS variables in `lib/tokens.ts`:
 | **Tier 1** | 16 | Small italic (13–16px) on secondary/muted | Critical — fix this beta |
 | **Tier 2** | 18 | Small upright (10–14px) on muted | High — fix this beta |
 | **Tier 3** | 9 | 15–16px italic on secondary | Borderline — italic stroke loss; fix recommended |
-| **Bonus** | 4 | Dotted underline + faint decoration color | System-wide pattern fix |
+| **Bonus** | 17 | Dotted underline + faint decoration color | System-wide pattern fix (session 173 REC-2 re-enumeration; was 4) |
 
 ---
 
@@ -113,14 +113,38 @@ Italic stroke loss at small sizes — same root cause as Tier 1 but slightly lar
 
 ## Bonus pattern — Dotted underline + faint decoration color
 
-Reads as "broken underline" rather than "informational dotted" per session 46 precedent. Lower priority than text-color fixes but systemic.
+Reads as "broken underline" rather than "informational dotted" per session 46 precedent. **CRITICAL:** session 173 grep re-enumeration found **17 in-scope sites — 13 omitted from the original audit** (76% miss rate). Mixed-consumer collision risk: many files use `v2.text.muted` both as `color:` (prose text — should retire to `v2.text.secondary` per systemic recommendation #1) AND as `textDecorationColor:` (decoration — should retire dotted per this recommendation). Naive `replace_all v2.text.muted → v2.text.secondary` corrupts decoration semantics (darkens dotted 3.5×, perceptually doubles decoration weight, reads as solid underline distractor). **The structural fix per `feedback_kill_bug_class_after_3_patches` ✅ Promoted: sequence decoration retire FIRST (this section) so ARC-2 replace_all becomes safe by removing decoration consumers from the token entirely.**
+
+### `v2.text.muted` decoration sites (9 in-scope; post-flow exclusion applies to preview/tag-only callsites)
 
 | File:line | Element | Current | Suggested |
 |---|---|---|---|
-| [`components/BoothPage.tsx:600`](../components/BoothPage.tsx) | MallBlock address dotted underline | `textDecorationColor: v2.text.muted` | Retire dotted; use solid `v2.border.light` |
+| [`components/BoothPage.tsx:648`](../components/BoothPage.tsx) | MallBlock address dotted underline (audit cited :600 — line drifted to :648 post-session-171) | `textDecorationColor: v2.text.muted` | Retire dotted; use solid `v2.border.light` |
 | [`app/login/page.tsx:803`](../app/login/page.tsx) | Link dotted underline | `textDecorationColor: v2.text.muted` | Solid `v2.border.light` |
 | [`app/login/page.tsx:896`](../app/login/page.tsx) | "Resend" link dotted | `textDecorationColor: v2.text.muted` | Solid `v2.border.light` |
-| [`app/find/[id]/edit/page.tsx:514`](../app/find/[id]/edit/page.tsx) | Decorative dotted stroke | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+| [`app/setup/page.tsx:444`](../app/setup/page.tsx) | Form helper dotted decoration | `textDecorationColor: v2.text.muted` | Solid `v2.border.light` |
+| [`app/setup/page.tsx:460`](../app/setup/page.tsx) | Form helper dotted decoration | `textDecorationColor: v2.text.muted` | Solid `v2.border.light` |
+| [`app/welcome/page.tsx:212`](../app/welcome/page.tsx) | WelcomeRow inline link dotted | `textDecorationColor: v2.text.muted` | Solid `v2.border.light` |
+| [`app/vendor-request/page.tsx:864`](../app/vendor-request/page.tsx) | Form helper dotted decoration | `textDecorationColor: v2.text.muted` | Solid `v2.border.light` |
+| [`app/vendor-request/page.tsx:880`](../app/vendor-request/page.tsx) | Form helper dotted decoration | `textDecorationColor: v2.text.muted` | Solid `v2.border.light` |
+| [`app/vendor-request/page.tsx:898`](../app/vendor-request/page.tsx) | Form helper dotted decoration | `textDecorationColor: v2.text.muted` | Solid `v2.border.light` |
+
+### `v1.inkFaint` decoration sites (8 in-scope on v1-layer + shared chrome primitives)
+
+| File:line | Element | Current | Suggested |
+|---|---|---|---|
+| [`app/find/[id]/edit/page.tsx:514`](../app/find/[id]/edit/page.tsx) | Decorative dotted stroke (Tier 3 entry also lists this) | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+| [`app/shelf/[slug]/page.tsx:261`](../app/shelf/[slug]/page.tsx) | Address dotted underline (paired with Tier 1 entry :210) | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+| [`app/find/[id]/page.tsx:346`](../app/find/[id]/page.tsx) | Decorative dotted stroke | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+| [`app/find/[id]/page.tsx:363`](../app/find/[id]/page.tsx) | Decorative dotted stroke | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+| [`app/find/[id]/page.tsx:1158`](../app/find/[id]/page.tsx) | Address dotted underline (paired with Tier 1 entry :1152) | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+| [`components/MallScopeHeader.tsx:147`](../components/MallScopeHeader.tsx) | Shared chrome dotted decoration | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+| [`components/DestinationHero.tsx:125`](../components/DestinationHero.tsx) | Destination hero dotted decoration (session 170 primitive) | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+| [`components/BoothLockupCard.tsx:168`](../components/BoothLockupCard.tsx) | Shared booth lockup dotted decoration | `textDecorationColor: v1.inkFaint` | Solid `v2.border.light` |
+
+### Excluded per Post-flow v1 cleanup boundary (audit out-of-scope per "Mapping pinned; full Arc 10 cleanup deferred")
+
+`app/post/preview/page.tsx:755` + `app/post/preview/page.tsx:809` + `app/post/tag/page.tsx:462` + `app/post/tag/page.tsx:602` — these 4 sites carry into Arc 10 cleanup, not this fix-bundle.
 
 ---
 
@@ -143,8 +167,9 @@ Reads as "broken underline" rather than "informational dotted" per session 46 pr
 
 ### 3. Dotted decoration pattern
 
-- **4 confirmed instances** where `textDecorationColor: v2.text.muted` reads as "broken" rather than "dotted info"
-- **Recommendation:** Retire dotted-underline pattern system-wide for body text. Replace with solid `v2.border.light` hairlines OR drop decoration entirely.
+- **17 confirmed in-scope instances** (4 originally enumerated + 13 surfaced via session 173 grep audit per REC-2) where `textDecorationColor: v2.text.muted` OR `textDecorationColor: v1.inkFaint` reads as "broken" rather than "dotted info"
+- **Mixed-consumer collision risk:** same files use `v2.text.muted` as `color:` (prose) AND `textDecorationColor:` (decoration) — naive replace_all corrupts decoration semantics
+- **Recommendation:** Retire dotted-underline pattern system-wide for body text. Replace with solid `v2.border.light` hairlines OR drop decoration entirely. **Sequence FIRST in fix-bundle** so ARC-2 replace_all becomes safe (no decoration consumers remain on the token).
 
 ---
 
@@ -216,15 +241,28 @@ Per [`memory/project_vendor_value_first_prioritization.md`](../memory/project_ve
 
 ---
 
-## Recommended fix-bundle sequencing
+## Recommended fix-bundle sequencing (session 173 — REC-2 RE-SEQUENCED)
 
-A clean follow-on session shape (~60-90 min single session):
+A clean follow-on session shape (~75-105 min single session, was ~60-90 min before REC-2's Arc 1 expansion from 4 → 17 sites):
 
-1. **Arc 1 — Tier 1 ship** (~30 min): 15 remaining Tier 1 edits (BoothPage.tsx:417 already shipped). 5-7 commits sequenced smallest→largest by file.
-2. **Arc 2 — Tier 2 sweep** (~30 min): `replace_all v2.text.muted → v2.text.secondary` per file for the 18 Tier 2 consumers, OR per-line edit if the file has both prose + non-prose consumers of the token. ~5 file commits.
-3. **Arc 3 — Bonus pattern retire** (~15 min): 4 dotted-underline decoration retirements. 1 commit.
-4. **Arc 4 — Token enforcement (optional)** (~15 min): Add an inline comment to `lib/tokens.ts` at `v2.text.muted` warning "do not use for prose text ≤14px; use v2.text.secondary." Lint script (`npm run lint:contrast`) optional — see Audit C in session 171 close opener if David wants ongoing enforcement.
-5. **iPhone QA pass** on real device against fix bundle → ship session close.
+**Per REC-2 + `feedback_kill_bug_class_after_3_patches` ✅ Promoted: decoration retire FIRST so ARC-2 replace_all becomes structurally safe by removing decoration consumers from `v2.text.muted` + `v1.inkFaint` entirely.** Per REC-5 + `project_vendor_value_first_prioritization.md` ✅ Promoted: within each arc, vendor-flow files sequence first.
+
+1. **Arc 1 — Decoration retire (was Arc 3; PROMOTED to first per REC-2)** (~25 min): All 17 in-scope `textDecorationColor` sites retire to solid `v2.border.light` or drop decoration entirely. 3-4 commits sequenced by file with vendor-flow first per REC-5:
+   - Commit 1.1: vendor-flow surfaces (`/find/[id]/edit:514` + `components/BoothPage.tsx:648` + `components/ShareSheet` if any)
+   - Commit 1.2: shared chrome primitives (`components/MallScopeHeader:147` + `components/DestinationHero:125` + `components/BoothLockupCard:168`)
+   - Commit 1.3: auth/onboarding (`login:803` + `login:896` + `welcome:212` + `setup:444 + 460` + `vendor-request:864 + 880 + 898`)
+   - Commit 1.4: v1-layer shopper (`shelf/[slug]:261` + `find/[id]:346 + 363 + 1158`)
+
+2. **Arc 2 — Tier 2 replace_all sweep (REC-2 re-sequence makes this safe)** (~30 min): With no decoration consumers remaining on `v2.text.muted`, `replace_all v2.text.muted → v2.text.secondary` per file safely covers all 18 Tier 2 consumers without mixed-consumer corruption. ~5 file commits sequenced vendor-flow first per REC-5:
+   - Commit 2.1: vendor-flow files (`/post/preview` flagged lines + `/me` + `ShareSheet`)
+   - Commit 2.2: vendor-edit file (`/find/[id]/edit` Tier 2 entries)
+   - Commit 2.3: shopper-flow (Saved + helper labels)
+
+3. **Arc 3 — Tier 1 ship (was Arc 1; demoted to third per REC-2)** (~30 min): 15 remaining Tier 1 explicit edits (BoothPage.tsx:417 already shipped). 5-7 commits sequenced smallest→largest by file, vendor-flow files first per REC-5.
+
+4. **Arc 4 — Token enforcement (REC-3 architectural pick required before this arc commits)** (~15-30 min): Either lint script (`npm run lint:contrast` modeled after the 5 lint scripts shipped at session 162) OR token split (`v2.text.muted` retired entirely; new tokens `v2.ink.placeholder` + `v2.ink.divider` + `v2.ink.icon` with explicit semantic names). **Brand/arch call deferred to session 174 implementation opener — see REC-3 outside-advisory-bounds note. JSDoc-only enforcement is NOT structurally sufficient per `feedback_predicate_accumulating_patches_signals_wrong_shape` ✅ Promoted (the bug class returns when next callsite slips in).**
+
+5. **iPhone QA pass** on real device against fix bundle → ship session close. Watch-items per REC-6 icon spot-audit: PiCamera opacity-0.75 compound risk on `/vendor-request:544`; state-conveying icon contrast on ShareSheet:1162 + PinCallout:184 + login/vendor-request envelope glyphs.
 
 ---
 
