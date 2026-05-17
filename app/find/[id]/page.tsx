@@ -1122,7 +1122,7 @@ export default function FindDetailPage() {
             justifyContent: "center",
           }}
         >
-          <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", color: v1.inkMuted, fontSize: 15 }}>
+          <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", color: v1.inkPrimary, fontSize: 15 }}>
             Loading…
           </div>
         </div>
@@ -1149,7 +1149,7 @@ export default function FindDetailPage() {
               fontFamily: FONT_SYS,
               fontWeight: 500,
               fontSize: 15,
-              color: v1.inkMuted,
+              color: v1.inkPrimary,
               background: "none",
               border: "none",
               cursor: "pointer",

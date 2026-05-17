@@ -240,7 +240,7 @@ function NotFound() {
           fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 14,
-          color: v1.inkMuted,
+          color: v1.inkPrimary,
           textAlign: "center",
           lineHeight: 1.65,
           margin: 0,
