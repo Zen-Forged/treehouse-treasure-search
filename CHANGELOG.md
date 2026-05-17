@@ -8,6 +8,58 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.175.0] — 2026-05-17
+
+### Session 175 — iPhone QA dial bundle on production v0.174.1: /login sub-text + EditBoothSheet typography + iOS keyboard + Home/Saved hero behavior reversal (session 164 D16-D19) + mall chip flicker fix
+
+5 runtime commits + 1 close. David walked production v0.174.1 on iPhone PWA + surfaced findings across 3 rounds compressed into single session. Round 1 shipped surgical 3-fix bundle (C1 /login sub-text bumps + C3 EditBoothSheet iOS keyboard `scrollIntoView` + C2 EditBoothSheet typography size bumps). Round 2 shipped Option α major design reversal — Home hero stops collapsing entirely + Saved gets static in-flow hero (4-file coupled commit reversing session 164 D16-D19 sticky-collapsing-header). Round 3 shipped mall chip flicker fix (5th cumulative firing of `feedback_module_scope_cache_for_warm_nav_hydration` ✅ Promoted at session 168). David ran `/session-close` before completing Round 3 walk continuation on C4+C5 → carries to session 176 as primary validation gate.
+
+First cross-axis firing of `feedback_audit_bounded_enumeration_is_patch_shape` ✅ Promoted at session 174 close — pattern generalizes from un-enumerated SITES (color audit's per-site enumeration) to un-enumerated DIMENSIONS (color vs size as separate audit axes). EditBoothSheet's colors passed WCAG 4.5:1; what failed is absolute SIZE legibility at iPhone arm-length (16/11/11 px), an un-enumerated dimension. David's "Why wasn't this caught?" surfaced this honest scope-bound answer explicitly.
+
+### Added
+
+- **`HERO_BOTTOM_EDGE` export** in `components/HomeHero.tsx` — `${HERO_HEIGHT_VH}vh` constant representing the hero's natural bottom edge in viewport coordinates. Consumers (`MallPickerChip`, `MallMapDrawer`) pin themselves at or below this edge.
+- **`cachedMallId` module-scope cache** in `lib/useSavedMallId.ts` — sync warm-nav hydration primitive. `useState` initializer reads cache → hydrates synchronously on warm-nav re-mount. Setter writes cache alongside localStorage + custom-event broadcast. Storage event (cross-tab) also updates cache.
+- **`cachedMalls` module-scope cache** in `components/TabsChrome.tsx` — sync warm-nav hydration for `getActiveMalls()` async fetch. Paired with `cachedMallId` for full sync-hydration of `selectedMall` computation on warm-nav.
+- **iOS keyboard `scrollIntoView` pattern** at EditBoothSheet booth name input (vendor mode) — `onFocus` handler with `setTimeout(300)` + `scrollIntoView({ block: "center", behavior: "smooth" })`. 300ms delay clears iOS keyboard slide-up animation (~250ms) + sheet entry transition (340ms). Captured `target` const avoids stale ref.
+
+### Changed
+
+- **`/login` top sub-text** ("Enter your email to continue on Treehouse Finds.") — 18 → 20px Cormorant italic + weight 400 → 500. Third bump on this string (14→16 session 153, 16→18 session 169, 18→20 here).
+- **`/login` bottom sub-text** ("We'll email you a sign-in link — no password needed.") — 14 → 16px Cormorant italic + weight 400 → 500. Paired with top sub-text bump.
+- **EditBoothSheet title** ("Edit booth name") — 16 → 20px Cormorant.
+- **EditBoothSheet eyebrow** ("Kentucky Treehouse · America's Antique Mall") — 11 → 13px italic Cormorant.
+- **EditBoothSheet helper** ("Booth number and location are managed by Treehouse Finds...") — 11 → 14px italic Cormorant (matches /login bottom sub-text for cross-surface Cormorant italic helper-voice consistency).
+- **Home hero behavior** — `position: sticky; top: calc(STICKY_THIN_HEIGHT - 33vh)` collapsing-header → `position: sticky; top: 0; height: 33vh` (stays at full 33vh pinned to viewport top throughout scroll). Page content scrolls under the full hero + chip. NO COLLAPSE.
+- **Saved hero behavior** — sticky-collapsing → `position: static` (renders in document flow at top of page; scrolls away with content). Identity beat that scrolls with content, not sticky chrome.
+- **`MallPickerChip` sticky top** — pins at `HERO_BOTTOM_EDGE` (33vh) so it sits flush against hero's bottom edge throughout scroll.
+- **`MallMapDrawer` top calc** — `calc(HERO_BOTTOM_EDGE + 48px)` ≈ 318px on iPhone SE; MallPickerChip stays visible above drawer as dismiss affordance.
+
+### Removed
+
+- **Session-166-dial-3 drawer-open auto-scroll effect** (~30 lines) in `components/TabsChrome.tsx`. Retired as scope-adjacent dead-code byproduct of Option α per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted. The auto-scroll forced scrollY to ~190px on drawer-open at scrollY=0 so hero would collapse out of drawer's render area. With Option α the hero stays full 33vh sticky at top:0 throughout scroll — drawer pins regardless of scrollY, no "drawer behind hero" race to resolve.
+- **`HERO_STRIP_HEIGHT_HOME`** (`"calc(max(14px, env(safe-area-inset-top, 14px)) + 144px)"`) + **`HERO_STRIP_HEIGHT_SAVED`** (`"90px"`) + **`stickyThinHeight` ternary** + **calc-based negative-offset sticky positioning** in `HomeHero.tsx`. All dead code post-Option α.
+- **`STICKY_THIN_HEIGHT` export** — renamed to `HERO_BOTTOM_EDGE` (semantic-meaning change; the export now represents the hero's natural bottom edge, not a collapsed thin-strip value). Sub-pattern of `feedback_dead_code_cleanup_as_byproduct` extended from code deletion to identifier semantics.
+
+### Fixed
+
+- **EditBoothSheet booth name input** keyboard covers most of sheet on iOS Safari (David's verbatim: "when edit is selected the keyboard covers most of it. This shouldn't happen.") — fixed via `onFocus` handler + `scrollIntoView({ block: "center" })` with 300ms delay clearing keyboard slide-up + sheet entry transition.
+- **Mall chip flicker on Saved → Explore warm-nav** (David's verbatim: "The mall chip flickers when navigating from Saved to Explore (takes a split second to load)") — module-scope caches for `malls` + `mallId` enable sync hydration on warm-nav re-mount of TabsChrome; chip mounts with correct mall name immediately, eliminating "All Kentucky locations" → mall-name text flip.
+
+### iPhone QA watch-items
+
+1. **C4 Option α Home hero behavior** — verify hero stays full 33vh sticky during scroll (no collapse); page content scrolls under hero + chip. ~33vh hero + 48px chip = ~318px fixed chrome on Home during scroll (~40% iPhone SE viewport). Trade accepted at Option α pick: identity presence + simplicity over feed real estate.
+2. **C4 Option α Saved static-in-flow** — verify hero renders inline at top + scrolls away with content (no sticky behavior on Saved).
+3. **C4 MallMapDrawer drawer-open at scrollY=0** — opens cleanly below hero + chip without auto-scroll jank (auto-scroll effect retired).
+4. **C5 chip warm-nav sync** — chip mounts with correct mall name on Saved → Explore nav (no "All Kentucky locations" flash). First cold mount may still show brief unhydrated state — acceptable since warm-nav was the surfacing path.
+5. **C3 iOS keyboard scroll behavior** — booth name input scrolls into center of visible viewport after keyboard slides up (~300ms delay).
+6. **C2 EditBoothSheet typography** — 20/13/14 px sizes read comfortably at iPhone arm-length without feeling oversized.
+7. **C1 /login sub-text prominence** — 20px italic 500 + 16px italic 500 read prominent without feeling heavy.
+
+[v0.175.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.175.0
+
+---
+
 ## [v0.174.2] — 2026-05-17
 
 ### Session 174 final close — CLAUDE.md addendum integrating v0.174.1 Round 2 hotfix narrative
