@@ -449,6 +449,17 @@ export default function EditBoothSheet({
                 placeholder="e.g. ZenForged Finds"
                 disabled={submitting}
                 autoFocus
+                onFocus={(e) => {
+                  // Session 175 iPhone QA — iOS Safari keyboard covers the
+                  // booth name input when it gets focus inside this bottom
+                  // sheet. 300ms delay clears keyboard slide-up animation
+                  // (~250ms) + the sheet's entry transition (340ms at L227);
+                  // scrollIntoView lands the input in the visible viewport
+                  // above the keyboard. Captured `target` avoids stale ref
+                  // if the input unmounts during the delay.
+                  const target = e.currentTarget;
+                  setTimeout(() => target.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+                }}
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
