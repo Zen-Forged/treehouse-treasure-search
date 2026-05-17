@@ -62,7 +62,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useLayoutEffect, useState, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil } from "lucide-react";
@@ -75,7 +75,7 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import { PiStorefrontBold } from "react-icons/pi";
 import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
-import { getPost } from "@/lib/posts";
+import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { useShopperSaves } from "@/lib/useShopperSaves";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
@@ -95,10 +95,13 @@ import { mapsUrl, boothNumeralSize } from "@/lib/utils";
 // this page no longer constructs the URL directly.
 import { track } from "@/lib/clientEvents";
 // writeFindContext + getVendorPostsCache + setVendorPostsCache + FindRef
-// imports retired in session 170 Arc 4 — all 4 were consumed only by
-// the <ShelfSection> "More from this booth" carousel which retired
-// per Shape B re-architecture (Frame C).
-import { readFindContext, getPostCache, setPostCache } from "@/lib/findContext";
+// REVIVED at session 177 C4 — all 4 consumers return with the carousel
+// revival (David's iPhone QA on v0.176.0: "Need to add back in the
+// more from this booth functionality at the bottom of the /find
+// page"). Session 170 Arc 4 retired the imports alongside the
+// <ShelfSection> retirement; session 177 C4 bounded-revives carousel
+// + dependencies per feedback_surface_locked_design_reversals.
+import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendorPostsCache, setVendorPostsCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
@@ -110,8 +113,10 @@ import DestinationHero from "@/components/DestinationHero";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import ShareBubble from "@/components/ShareBubble";
 import ShareSheet from "@/components/ShareSheet";
-// HomeFeedTile import retired in session 170 Arc 4 — only consumer
-// was the <ShelfSection> carousel which retired per Shape B Frame C.
+// HomeFeedTile REVIVED at session 177 C4 — carousel revives + only
+// consumer is back. Session 170 Arc 4 retired the import alongside
+// the <ShelfSection> retirement.
+import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import type { Post } from "@/types/treehouse";
 
 // v1.1 tokens imported from lib/tokens.ts (canonical since session 19A). v1 palette +
@@ -148,8 +153,10 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
 // doesn't cross-contaminate scroll state. Pattern lifted from /flagged
 // (canonical clean Phase 3 shape) + session-86 refuse-to-write-0 primitive.
 const findScrollKey = (postId: string) => `treehouse_find_scroll_y:${postId}`;
-// findStripScrollKey retired in session 170 Arc 4 — was the carousel's
-// horizontal scroll-restore key; only consumer was <ShelfSection>.
+// findStripScrollKey REVIVED at session 177 C4 — carousel revives + its
+// horizontal scroll-restore needs the per-find key back. Session 170
+// Arc 4 retired alongside <ShelfSection>.
+const findStripScrollKey = (postId: string) => `treehouse_find_strip_scroll_x:${postId}`;
 
 // Phase B QA fix #2 (session 100) — post cache moved to lib/findContext.ts
 // so source surfaces (Home loadFeed; eventually /flagged + /shelf/[slug])
@@ -207,14 +214,336 @@ function wasRecentPopstate(maxAgeMs = 800): boolean {
   } catch { return false; }
 }
 
-// <ShelfSection> "More from this booth" carousel retired in session 170
-// Arc 4 per Shape B Frame C re-architecture. Booth navigation now
-// covered by <DestinationHero>'s tappable vendor/booth strip
-// (routes to /shelf/[vendorSlug]). David's session-170 Q2 pick:
-// "Retire entirely". The carousel-isolated state (allItems, ready,
-// stripRef, stripPendingX, stripRestored, swipe-context handoff via
-// writeFindContext) all retired together as scope-adjacent dead code
-// byproducts per feedback_dead_code_cleanup_as_byproduct.
+// <ShelfSection> "More from this booth" carousel REVIVED at session 177
+// C4 — David's iPhone QA on v0.176.0: "Need to add back in the more
+// from this booth functionality at the bottom of the /find page.
+// However, do not include the text on the far right that says 'visit
+// booth' as this will be replaced by this [Explore this Booth button
+// under Flag the Find]". Bounded surface-locked design reversal of
+// session 170 Arc 4 per feedback_surface_locked_design_reversals ✅
+// Promoted. The Visit-Booth right-slot header text DOES NOT come back
+// (session 169 round 3 commit 03a6c76 retired it before the carousel
+// retired in session 170 Arc 4; F4 Explore this Booth button under
+// Flag the Find carries that intent now). All other carousel
+// infrastructure (allItems state, ready state, stripRef, stripPendingX,
+// stripRestored, vendor-posts cache, swipe-context handoff via
+// writeFindContext) revives unchanged from pre-retirement source
+// (git show dde9696^:app/find/[id]/page.tsx).
+function ShelfSection({
+  vendorId,
+  vendorSlug,
+  currentPostId,
+  onReady,
+}: {
+  vendorId: string;
+  // Phase C — vendor slug threaded through so the carousel can write a
+  // booth-scoped swipe context (`/shelf/${slug}`) on tap. Tapping a card
+  // is the user re-scoping their swipe-nav from feed/saved to "this
+  // booth's catalog." Null when the vendor lacks a slug.
+  vendorSlug: string | null;
+  currentPostId: string;
+  onReady: (hasItems: boolean) => void;
+}) {
+  // Phase C — store ALL booth posts (unfiltered). Carousel display is
+  // filtered to exclude currentPostId; the swipe-nav findRefs uses the
+  // full list so swiping from a "More from this booth" landing can reach
+  // back to the previously-viewed find.
+  const [allItems, setAllItems] = useState<Post[]>([]);
+  const [ready, setReady] = useState(false);
+
+  // v2 Arc 3.4 — saves wiring for per-tile leaf bubble. Hook is the single
+  // source of truth across instances (R1 Arc 4); FindDetailPage already
+  // calls it for the masthead heart. Cross-instance custom-event broadcast
+  // keeps both reads in sync without coordination.
+  const saves = useShopperSaves();
+
+  // Session 88 — horizontal scroll-restore on the carousel. Refs survive
+  // re-renders; state would force unnecessary re-paints. Same shape as the
+  // page-level vertical scroll-restore in FindDetailPage below, just on
+  // scrollLeft instead of scrollY and on the inner overflow-x container
+  // instead of window.
+  const stripRef = useRef<HTMLDivElement>(null);
+  const stripPendingX = useRef<number | null>(null);
+  const stripRestored = useRef(false);
+
+  // Read saved horizontal scroll position before items load so it's ready
+  // to restore the moment the strip renders. Only restore on browser
+  // back/forward (popstate fired); forward Link-tap opens the find as a
+  // new page with the strip at scroll-left 0.
+  useEffect(() => {
+    stripRestored.current = false;
+    stripPendingX.current = null;
+    if (!wasRecentPopstate()) return;
+    try {
+      const saved = sessionStorage.getItem(findStripScrollKey(currentPostId));
+      if (saved) {
+        const x = parseInt(saved, 10);
+        if (!isNaN(x) && x > 0) stripPendingX.current = x;
+      }
+    } catch {}
+  }, [currentPostId]);
+
+  // Session 101 — check vendorPostsCache synchronously via useLayoutEffect
+  // before paint. Cache hit on back-nav: populate items + signal ready in
+  // the same render cycle so parent's shelfReady gate opens before paint,
+  // letting the scroll-restore staircase fire pre-paint and kill the
+  // scrollY=0 flash. Cache miss: fall through to async fetch.
+  useLayoutEffect(() => {
+    const cached = getVendorPostsCache(vendorId);
+    if (!cached) return;
+    setAllItems(cached);
+    setReady(true);
+    onReady(cached.filter((p) => p.id !== currentPostId).length > 0);
+  }, [vendorId, currentPostId, onReady]);
+
+  useEffect(() => {
+    if (getVendorPostsCache(vendorId)) return; // useLayoutEffect handled it
+    getVendorPosts(vendorId, 12).then((posts) => {
+      setVendorPostsCache(vendorId, posts);
+      setAllItems(posts);
+      setReady(true);
+      // Phase C — populate the shared post cache so a tap into any
+      // booth post paints metadata synchronously. Same pattern as
+      // Home loadFeed and /flagged loadPosts.
+      for (const p of posts) setPostCache(p);
+      // Display filter excludes the currently-viewed post (carousel
+      // shows OTHER finds in the booth). onReady reflects the visible
+      // item count, not the full booth size.
+      onReady(posts.filter((p) => p.id !== currentPostId).length > 0);
+    });
+  }, [vendorId, currentPostId, onReady]);
+
+  // Save scrollLeft on every horizontal scroll. Refuse-to-write-0: empty
+  // storage already restores to 0, so 0 is a meaningless write target.
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    function onScroll() {
+      if (!stripRef.current) return;
+      const x = Math.round(stripRef.current.scrollLeft);
+      if (x <= 0) return;
+      try { sessionStorage.setItem(findStripScrollKey(currentPostId), String(x)); } catch {}
+    }
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [currentPostId, ready]);
+
+  // Restore scrollLeft once items are ready and the overflow container has
+  // its full content width. Single RAF — DOM is committed by then.
+  useEffect(() => {
+    if (!ready) return;
+    if (stripRestored.current) return;
+    if (stripPendingX.current === null) return;
+    if (!stripRef.current) return;
+    stripRestored.current = true;
+    const x = stripPendingX.current;
+    requestAnimationFrame(() => {
+      if (stripRef.current) stripRef.current.scrollLeft = x;
+    });
+  }, [ready]);
+
+  // Display list — booth posts excluding the one currently being viewed.
+  const items = allItems.filter((p) => p.id !== currentPostId);
+  // Swipe-nav findRefs — full booth list including current. Tapping a
+  // card switches the swipe context to this booth so the user can move
+  // through booth siblings (and back to the current find via swipe).
+  const findRefs: FindRef[] = vendorSlug
+    ? allItems.map((p) => ({
+        id:        p.id,
+        image_url: p.image_url ?? null,
+        title:     p.title ?? null,
+      }))
+    : [];
+  const swipeOriginPath = vendorSlug ? `/shelf/${vendorSlug}` : undefined;
+
+  if (!ready || items.length === 0) return null;
+
+  // Per-tile tap handler — preserves the session-100 preview-cache write +
+  // session-100 Phase C swipe-context handoff that ShelfCard owned before
+  // v2 Arc 3.4 retired it. The page-level scroll snapshot stays on the
+  // wrapper div's onClickCapture below (capture phase fires first).
+  function handleCarouselTap(item: Post) {
+    if (item.image_url) {
+      try {
+        sessionStorage.setItem(
+          `treehouse_find_preview:${item.id}`,
+          JSON.stringify({ image_url: item.image_url, title: item.title }),
+        );
+      } catch {}
+    }
+    if (vendorSlug && swipeOriginPath) {
+      const cursor = findRefs.findIndex((r) => r.id === item.id);
+      writeFindContext({
+        originPath:  swipeOriginPath,
+        findRefs,
+        cursorIndex: cursor >= 0 ? cursor : 0,
+      });
+    }
+  }
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      {/* Session 169 round 3 — "Visit Booth" right-slot text retired
+          (David: "Remove the 'visit booth' text and link above the
+          'more from this booth'"). Session 177 C4 carousel revival
+          honors David's explicit ask: "do not include the text on the
+          far right that says 'visit booth' as this will be replaced by
+          this [Explore this Booth button under Flag the Find]". Header
+          is left-only: italic Cormorant 18 eyebrow in v2.text.secondary
+          matching the "Purchase this item at" eyebrow voice further up
+          the scroll. */}
+      <div
+        style={{
+          paddingLeft: 22,
+          paddingRight: 22,
+          marginBottom: 14,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: FONT_CORMORANT,
+            fontStyle: "italic",
+            fontSize: 18,
+            color: v2.text.secondary,
+          }}
+        >
+          More from this booth…
+        </div>
+      </div>
+      <div
+        ref={stripRef}
+        className="hide-scrollbar"
+        style={{
+          display: "flex",
+          gap: 12,
+          overflowX: "auto",
+          overflowY: "hidden",
+          // Session 89 (iPhone QA #7) — paddingLeft 0 → 22 so the strip's
+          // first card aligns with the section header above it (which uses
+          // paddingLeft: 22). Per-item marginLeft compensation on idx===0
+          // dropped since the container padding now owns the leading inset.
+          paddingLeft: 22,
+          paddingRight: 22,
+          paddingTop: 6,
+          paddingBottom: 18,
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+          // Session 100 (Phase B) — claim X-axis pans natively so the
+          // page-level swipe-between-finds drag (touch-action: pan-y on
+          // the motion.div parent) doesn't capture them. pan-y also
+          // permits vertical scroll to pass through to the page within
+          // carousel bounds.
+          touchAction: "pan-x pan-y",
+        }}
+      >
+        {items.map((item) => {
+          const isSold = item.status === "sold";
+          return (
+            <div
+              key={item.id}
+              // Session 88 — capture-phase click snapshot. Fires before the
+              // child Link's bubble-phase click handler, so we record the
+              // user's true scroll position synchronously before any
+              // route-transition events (scroll-to-top, document auto-clamp)
+              // can clobber the listener's saved value. Pairs with
+              // findScrollWriteBlocked (module scope) which the page-level
+              // listener checks before writing.
+              onClickCapture={() => {
+                try {
+                  const y = Math.round(window.scrollY);
+                  if (y > 0) {
+                    sessionStorage.setItem(findScrollKey(currentPostId), String(y));
+                  }
+                } catch {}
+                findScrollWriteBlocked = true;
+              }}
+              style={{
+                scrollSnapAlign: "start",
+                flexShrink: 0,
+                width: "42vw",
+                maxWidth: 170,
+              }}
+            >
+              <Link
+                href={`/find/${item.id}`}
+                onClick={() => handleCarouselTap(item)}
+                style={{ display: "block", textDecoration: "none" }}
+              >
+                <HomeFeedTile
+                  src={item.image_url ?? ""}
+                  alt={item.title}
+                  loading="lazy"
+                  tap
+                  dim={isSold}
+                  isFollowed={saves.isSaved(item.id)}
+                  onToggleFollow={() => {
+                    const next = !saves.isSaved(item.id);
+                    saves.toggle(item.id, next);
+                    track(next ? "post_saved" : "post_unsaved", { post_id: item.id });
+                  }}
+                  fallback={
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        padding: "12px 10px",
+                        display: "flex",
+                        alignItems: "flex-end",
+                        fontFamily: FONT_CORMORANT,
+                        fontStyle: "italic",
+                        fontSize: 13,
+                        color: v2.text.muted,
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                  }
+                  below={
+                    // Session-83 height-locking pattern: outer fixed-height
+                    // flex container vertically centers the inner clamped
+                    // title. 2-line worst case fits exactly (Cormorant 14
+                    // × 1.4 lineHeight × 2 = 39.2 + 8 vertical padding +
+                    // breathing room = 56). 1-line titles render centered
+                    // between photo bottom and card bottom — uniform tile
+                    // height across the carousel regardless of title length.
+                    <div
+                      style={{
+                        height: 56,
+                        padding: "0 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: FONT_CORMORANT,
+                          fontSize: 14,
+                          color: v2.text.primary,
+                          lineHeight: 1.4,
+                          textAlign: "center",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical" as const,
+                        }}
+                      >
+                        {item.title}
+                      </div>
+                    </div>
+                  }
+                />
+              </Link>
+            </div>
+          );
+        })}
+        <div style={{ flexShrink: 0, width: 10 }} />
+      </div>
+    </div>
+  );
+}
 
 // Icon bubble — v1.1e size bumped 34 → 38 for on-image parity.
 // `variant="frosted"` renders the overlay treatment used on the photograph (save + share).
@@ -391,12 +720,18 @@ export default function FindDetailPage() {
   // feedback; no per-page color-tint state needed anymore.
   const [shareOpen,     setShareOpen]     = useState(false);
   const [isMyPost,      setIsMyPost]      = useState(false);
-  // setShelfHasItems + shelfReady state retired in session 170 Arc 4 —
-  // the "More from this booth" carousel that needed scroll-restore
-  // readiness signalling retired per Shape B Frame C. Document height
-  // now stabilizes after setLoading(false) without async-fetch growth,
-  // so the scroll-restore useLayoutEffect below no longer needs the
-  // shelfReady gate.
+  // setShelfHasItems + shelfReady state REVIVED at session 177 C4
+  // alongside the carousel. The "More from this booth" carousel
+  // fetches its own data after the parent post fetch resolves, so
+  // the document grows TALLER after setLoading(false). If scroll-
+  // restore fires before the carousel's ready signal, scrollTo gets
+  // clamped to the (too-short) document height and lands above the
+  // user's saved Y. shelfReady = true once the carousel's fetch has
+  // resolved (regardless of result count). Phase C QA fix #2 (session
+  // 100) primitive — retired session 170 Arc 4 along with carousel,
+  // revives here unchanged.
+  const [, setShelfHasItems]              = useState(false);
+  const [shelfReady,    setShelfReady]    = useState(false);
   // R1 Arc 4 — single source of truth for save state across guest +
   // authed paths. Hook owns the localStorage/DB branching internally.
   const saves = useShopperSaves();
@@ -485,10 +820,15 @@ export default function FindDetailPage() {
       );
     }
 
-    // Phase C QA fix #3 (setShelfReady reset) retired in session 170
-    // Arc 4 — the shelfReady gate it served lives no longer; the
-    // <ShelfSection> carousel that introduced async-document-grow
-    // retired per Shape B Frame C.
+    // Phase C QA fix #3 — reset shelfReady SYNCHRONOUSLY before paint so
+    // the scroll-restore useEffect (which runs after paint) sees the
+    // fresh false value via its closure. Previously this lived in a
+    // sibling useEffect and the reset was scheduled after the scroll-
+    // restore effect had already read the stale true value, fired
+    // scrollTo too early, and clamped against the document height
+    // captured before the carousel re-rendered with the new currentPostId.
+    // REVIVED at session 177 C4 alongside the carousel.
+    setShelfReady(false);
   }, [id]);
 
   // Drag-end commit. Threshold: 80px offset OR 500px/s velocity. Above →
@@ -643,6 +983,8 @@ export default function FindDetailPage() {
   // document grows after first paint (lazy images, etc.).
   useLayoutEffect(() => {
     if (loading) return;
+    const hasVendor = !!post?.vendor;
+    if (hasVendor && !shelfReady) return;
     if (scrollRestored.current) return;
     if (pendingScrollY.current === null) return;
     scrollRestored.current = true;
@@ -673,7 +1015,7 @@ export default function FindDetailPage() {
       timeouts.forEach((t) => clearTimeout(t));
       findScrollWriteBlocked = false;
     };
-  }, [id, loading, post]);
+  }, [id, loading, shelfReady, post]);
 
   useEffect(() => {
     if (!id) return;
@@ -741,10 +1083,17 @@ export default function FindDetailPage() {
     setShareOpen(true);
   }
 
-  // handleShelfReady callback retired in session 170 Arc 4 along with
-  // <ShelfSection>. Was the readiness-signal bridge between carousel
-  // fetch resolution and the parent's scroll-restore gate (Phase C QA
-  // fix #2). Both retired together; useCallback import retires too.
+  // handleShelfReady callback REVIVED at session 177 C4 alongside the
+  // carousel. Readiness-signal bridge between carousel fetch resolution
+  // and the parent's scroll-restore gate (Phase C QA fix #2). useCallback
+  // import also revives.
+  const handleShelfReady = useCallback((hasItems: boolean) => {
+    setShelfHasItems(hasItems);
+    // Phase C QA fix #2 — flip the readiness flag so the scroll-restore
+    // effect can proceed knowing the carousel has rendered (or returned
+    // empty) and the document height is final.
+    setShelfReady(true);
+  }, []);
 
   const mapLink = post?.mall?.address
     ? mapsUrl(post.mall.address)
@@ -1467,15 +1816,39 @@ export default function FindDetailPage() {
 
       </motion.div>
 
-      {/* <ShelfSection> "More from this booth" carousel retired in
-          session 170 Arc 4 per Shape B Frame C re-architecture. David's
-          session-170 Q2 pick: "Retire entirely". Booth navigation
-          covered by <DestinationHero>'s tappable vendor/booth strip
-          (routes to /shelf/[vendorSlug]) — semantically the same
-          intent (browse-other-finds-at-this-booth → land on /shelf
-          which shows all booth finds), 1 extra tap, acceptable
-          trade-off for the cohesion gain of collapsing the page from
-          7 stacked sections to 3 anchors. */}
+      {/* "More from this booth" carousel REVIVED at session 177 C4 —
+          David's iPhone QA on v0.176.0: "Need to add back in the more
+          from this booth functionality at the bottom of the /find
+          page. However, do not include the text on the far right that
+          says 'visit booth' as this will be replaced by this [Explore
+          this Booth button under Flag the Find]."
+
+          Mounted OUTSIDE the swipe-nav <motion.div> (closes above at
+          line ~1810) so framer-motion's pointer listeners don't
+          intercept horizontal pans inside the carousel — moving the
+          carousel out of its DOM subtree restores the carousel's own
+          gesture surface. Pre-retirement mount-site geometry preserved
+          verbatim.
+
+          Bounded surface-locked design reversal of session 170 Arc 4
+          retirement per feedback_surface_locked_design_reversals ✅
+          Promoted (~78+ cumulative firings). Session 169 round 3 had
+          already retired the "Visit Booth" right-slot text from the
+          carousel header (commit 03a6c76); David's session-177 ask
+          honors that prior retirement explicitly (F4 Explore this
+          Booth button under Flag the Find now carries that booth-nav
+          affordance, as does DestinationHero's tappable vendor strip).
+
+          Gating preserved: showNormalBody && post && hasVendor (no
+          carousel for sold-as-shopper / no-vendor finds). */}
+      {showNormalBody && post && hasVendor && (
+        <ShelfSection
+          vendorId={post.vendor!.id}
+          vendorSlug={post.vendor?.slug ?? null}
+          currentPostId={post.id}
+          onReady={handleShelfReady}
+        />
+      )}
 
       {/* Stable footer chrome — rendered in every state so back-nav from
           /shelf/[slug] never remounts the BottomNav (mirrors masthead pattern). */}
