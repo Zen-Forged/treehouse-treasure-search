@@ -8,6 +8,38 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.176.0] — 2026-05-17
+
+### Session 176 — Home hero scroll-and-compress dial + Map page extraction R-session design-to-Ready (Frame A bordered window + 20 frozen decisions)
+
+2 runtime commits + 1 close. David opened with `/session-open`; standup recommended Round 3 iPhone QA + launch-gaps strategic session pair. David redirected to two iPhone-QA-driven findings on production v0.175.0: (F1) Home hero should scroll a bit before becoming sticky (reference image: Saved page hero at natural top-of-flow position); (F2) Pull MallMapDrawer back out of Explore into its own dedicated `/map` page with back button + no search bar + "contained window" feel + "seamless transition" + David's explicit "needs an R session." Per `feedback_user_clarification_restate_interpretation` ✅ Promoted, both findings restated interpretively before drafting; F2 surfaced as MAJOR design reversal of session 109's /map-page deletion + session 155's drawer-overlay reshape per `feedback_surface_locked_design_reversals` ✅ Promoted (~78+ cumulative firings).
+
+C1 `b102aaa` — F1 Shape A scroll-and-compress dial. `position: sticky; top: -SCROLL_BEFORE_STICKY_PX (= 80px)` replaces Option α's `top: 0`. At scrollY=0 hero sits at top:0 (full 33vh visible, chrome bubbles overlay photograph, matches reference image). User scrolls — hero scrolls UP with content for 80px. Past threshold, sticky activates pinning hero with top 80px offscreen. Visible pinned hero = 33vh - 80px (~36% compressed on iPhone SE; wordmark + SearchBar still visible). BOUNDED REVIVAL of session 164 D16-D19 + session 166 dial 10 collapsing-header pattern at smaller magnitude (session 164: 158-191px collapse = 58-72% on iPhone SE; session 176: 80px collapse = 36%). BOUNDED REVISION of session 175 Option α — full-identity-beat thesis stays for scrollY=0; partial-compression activates AFTER user scrolls past 80px threshold. Single coupled commit per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — `HERO_BOTTOM_EDGE` export updates from `${HERO_HEIGHT_VH}vh` to `calc(${HERO_HEIGHT_VH}vh - ${SCROLL_BEFORE_STICKY_PX}px)` so chip + drawer geometry inherit compressed bottom edge automatically. Pre-existing local-env miss on parked `ShelfImageShareScreen.tsx` (html2canvas-pro) resolved via `npm install` at commit boundary — **10th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate`** ✅ Promoted at session 161.
+
+C2 `c064baa` — F2 Map page extraction R-session design-to-Ready. Audit-first per `feedback_visibility_tools_first` ✅ Promoted dispatched Explore-agent inventory of session 155-166 map substrate (10 file reads + git-history recovery of pre-155 /map page from commit `3bbcbfb0d^` for the "contained window" reference David pointed at). Pre-V1 prose scoping (Q1-Q4 single AskUserQuestion) locked 4 structural decisions before drafting V1 mockup: D1 strip-routes-to-/map; D2 strip-mirrors-on-/map; D3 carousel-canonical-bottom-shelf; D4 framer-motion-slide-up. V1 mockup at `docs/mockups/map-page-extraction-v1.html` spans containment geometry across 3 frames (A bordered window literal revival / B soft-padded breathing room / C full-bleed) per `feedback_mockup_options_span_structural_axes` ✅ Promoted with 7-axis trade-off matrix. **David picked Frame A** — bordered window literal revival (1px border + 14px radius + 14px page padding). Post-V1 prose fill-refinement (Q5-Q7) — V2 mockup SKIPPED per `feedback_v2_options_before_drafting` ✅ Promoted (axes prose-resolvable); 3 fill axes locked: D6 MallSheet revival on /map strip tap; D7 PinCallout commit routes to /explore; D8 Saved keeps no /map entry. 20 frozen decisions D1-D20 + 8 Tier B explicit headroom items + 7-row risk register + 4-arc implementation sequencing (~8 commits, single-session ship plausible at ~90 min in session 177+). 6 cross-session reversals surfaced explicitly + acknowledged across sessions 109 + 155 + 156 + 158 + 161 + 166 + 175. Substrate inventory: 866-LOC TreehouseMap + 297-LOC MapCarousel + 439-LOC PinCallout + 5 hooks + cartographic palette + peek-state pattern all carry verbatim; MallMapDrawer wrapper + useMapDrawer context + drawer-specific framer-motion all retire; MallSheet (456 LOC dormant since session 158) revives for D6. Design record + V1 mockup committed together as single coupled commit per Design Agent rule + `feedback_commit_design_records_in_same_session` ✅ Promoted.
+
+### Added
+
+- **`SCROLL_BEFORE_STICKY_PX` constant** in `components/HomeHero.tsx` (= 80) — scroll distance allowed before negative-top sticky activates on Home. Easily dial-able via iPhone QA; module-scope constant propagates through chip + drawer geometry via single `HERO_BOTTOM_EDGE` export.
+- **`docs/map-page-extraction-design.md`** — 20-decision design record for /map page extraction R-session (Frame A bordered window, 4-arc implementation sequencing, 8 Tier B headroom items, 7-row risk register). 🟢 Ready for implementation in session 177+.
+- **`docs/mockups/map-page-extraction-v1.html`** — V1 mockup with 3 frames spanning containment geometry axis + 7-axis trade-off matrix. Frame A locked.
+
+### Changed
+
+- **Home hero sticky behavior** — `position: sticky; top: 0` → `position: sticky; top: -80px`. At scrollY=0 hero shows full 33vh; user scrolls 80px before pinning; pinned hero shows 33vh - 80px (~36% compressed on iPhone SE). Bounded revival of session 164 collapsing-header pattern at smaller magnitude. Bounded revision of session 175 Option α (scrollY=0 thesis preserved; pinned-state thesis revised).
+- **`HERO_BOTTOM_EDGE` export** — value updates from `${HERO_HEIGHT_VH}vh` to `calc(${HERO_HEIGHT_VH}vh - ${SCROLL_BEFORE_STICKY_PX}px)`. Consumers (`MallPickerChip`, `MallMapDrawer`) inherit compressed bottom edge automatically via existing import; single coupled commit because hero offset + chip pin + drawer pin all track same physical dimension.
+
+### iPhone QA watch-items
+
+- **C1 scroll-and-compress dial** — verify 80px threshold reads as "a bit" not too aggressive or too subtle. Hero pinned compressed state should still show wordmark + SearchBar clearly. Dial `SCROLL_BEFORE_STICKY_PX` if QA flags.
+- **Chip + drawer geometry under compression** — chip + drawer should pin flush against compressed hero bottom edge without gap or overlap on iPhone SE / 14 Pro Max. `HERO_BOTTOM_EDGE` calc inherits automatically; verify visually.
+- **Combined walk owed**: C1 verification + Round 3 carries from session 175 (Option α + chip flicker now superseded by C1 behavior change; Round 3 walks the new state) + 9 unwalked v0.174 watch-items (combinable into single ~30 min walk).
+- **F2 design pass**: implementation pending Arc 1+2+3+4 in session 177+ (~8 commits, ~90 min single-session ship plausible against locked record). Production iPhone QA at Arc 5.
+
+[v0.176.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.176.0
+
+---
+
 ## [v0.175.0] — 2026-05-17
 
 ### Session 175 — iPhone QA dial bundle on production v0.174.1: /login sub-text + EditBoothSheet typography + iOS keyboard + Home/Saved hero behavior reversal (session 164 D16-D19) + mall chip flicker fix
