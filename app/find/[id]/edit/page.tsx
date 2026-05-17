@@ -382,7 +382,7 @@ export default function EditFindPage() {
               style={{
                 fontFamily: FONT_CORMORANT,
                 fontSize: 15,
-                color: v2.text.secondary,
+                color: v2.text.primary,
                 lineHeight: 1.25,
               }}
             >
@@ -589,7 +589,7 @@ function FieldGroup({
         style={{
           fontFamily: FONT_CORMORANT,
           fontSize: 15,
-          color: v2.text.secondary,
+          color: v2.text.primary,
           lineHeight: 1.25,
         }}
       >
@@ -599,7 +599,7 @@ function FieldGroup({
             style={{
               fontStyle: "italic",
               fontSize: 14,
-              color: v1.inkFaint,
+              color: v2.text.primary,
               marginLeft: 5,
               fontWeight: 400,
             }}
