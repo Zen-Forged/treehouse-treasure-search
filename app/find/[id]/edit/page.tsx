@@ -510,8 +510,8 @@ export default function EditFindPage() {
                     border: "none",
                     cursor: removing ? "default" : "pointer",
                     textDecoration: "underline",
-                    textDecorationStyle: "dotted",
-                    textDecorationColor: v1.inkFaint,
+                    textDecorationStyle: "solid",
+                    textDecorationColor: v2.border.light,
                     textUnderlineOffset: 3,
                     padding: "4px 2px",
                   }}

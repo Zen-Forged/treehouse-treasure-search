@@ -644,8 +644,8 @@ export function MallBlock({
               color: v2.text.secondary,
               lineHeight: 1.55,
               textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v2.text.muted,
+              textDecorationStyle: "solid",
+              textDecorationColor: v2.border.light,
               textUnderlineOffset: 3,
             }}
           >
