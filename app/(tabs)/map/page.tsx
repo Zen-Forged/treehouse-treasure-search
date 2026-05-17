@@ -48,6 +48,7 @@
 export const dynamic = "force-dynamic";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import StickyMasthead from "@/components/StickyMasthead";
 import MastheadBackButton from "@/components/MastheadBackButton";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
@@ -69,6 +70,7 @@ import type { Mall } from "@/types/treehouse";
 let cachedMalls: Mall[] | null = null;
 
 export default function MapPage() {
+  const router = useRouter();
   const [mallId, setMallId] = useSavedMallId();
   const [malls, setMalls] = React.useState<Mall[]>(() => cachedMalls ?? []);
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
@@ -136,19 +138,25 @@ export default function MapPage() {
         onPinTap={(id) => setPeekedMallId(id)}
         onMapTap={() => setPeekedMallId(null)}
         onCommit={(id) => {
-          // Arc 1.3 — scope commit lands here; route handoff to /explore
-          // (Home) per D7 lands at Arc 3.1. For Arc 1.3, commit applies
-          // the scope locally so the chip text + carousel + map flyTo
-          // reflect the new scope; user stays on /map. Arc 3.1 will add
-          // router.push('/') after the setMallId call so the commit
-          // routes to Explore as per the design record.
+          // Arc 3.1 — D7: PinCallout "Explore" CTA on /map commits scope
+          // + routes back to / (Explore feed). The map page is "pick
+          // where to shop" utility — committing a scope means "let me
+          // see what's there" = Explore feed with the new scope active.
           //
-          // Analytics mirror TabsChrome's filter_applied event shape with
-          // source: "map_page_pin" to distinguish from drawer-context
-          // map_pin commits (which still fire on Home until Arc 3.2
-          // retires the drawer). Once Arc 3.2 retires the drawer, source
-          // values consolidate around map_page_pin + map_carousel_card +
-          // search_mall_match.
+          // useSavedMallId's cross-instance event broadcast (session 110
+          // fix to session 109 shared-layout drift) ensures the chip on
+          // Home hydrates to the new mall name synchronously on next
+          // nav — no flash through the all-Kentucky chip state on
+          // return.
+          //
+          // peekedMallId clear runs but is purely cosmetic at this point
+          // since /map is about to unmount on router.push('/').
+          //
+          // Analytics fire as filter_applied with source: "map_page_pin"
+          // to distinguish from drawer-context map_pin commits (which
+          // still fire on Home until Arc 3.2 retires the drawer). Once
+          // Arc 3.2 retires the drawer, source values consolidate around
+          // map_page_pin + map_carousel_card + search_mall_match.
           setMallId(id);
           setPeekedMallId(null);
           const picked = malls.find((m) => m.id === id);
@@ -158,6 +166,7 @@ export default function MapPage() {
             page:         "/map",
             source:       "map_page_pin",
           });
+          router.push("/");
         }}
         onReset={() => {
           // Reset is the single "back to the default Kentucky view"

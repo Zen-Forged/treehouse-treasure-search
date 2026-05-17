@@ -289,10 +289,26 @@ export default function TabsChrome() {
             // Reuses session 154 home_strip_tapped event name — same
             // semantic ("user tapped the mall picker chrome to engage map
             // wayfinding"); event-key stability avoids R3 schema drift.
+            //
+            // Session 178 F2 Arc 3.1 — handler swaps from toggleDrawer()
+            // to router.push('/map') per design record D1. Reverses
+            // session 109's /map page deletion + retires session 155's
+            // drawer-overlay reshape; chip becomes the canonical entry
+            // path to the new dedicated /map route.
+            //
+            // MallMapDrawer mount below remains until Arc 3.2 retires it
+            // — without toggleDrawer being called anywhere, drawerOpen
+            // stays false so the drawer never visually appears. Carry
+            // intermediate state is bounded to this single arc ship.
+            //
+            // Tier B5 (chip caret visual): chevron-down currently implies
+            // "opens drawer below"; post-Arc-3.1 it routes instead.
+            // Deferred to iPhone QA at Arc 5 — flip to chevron-right /
+            // PiArrowRight if QA flags ambiguity.
             track("home_strip_tapped", {
               mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
             });
-            toggleDrawer();
+            router.push("/map");
           }}
         />
       )}
