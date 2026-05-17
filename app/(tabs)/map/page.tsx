@@ -54,6 +54,7 @@ import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MallPickerChip from "@/components/MallPickerChip";
 import MapPageBody from "@/components/MapPageBody";
 import MapCarousel from "@/components/MapCarousel";
+import MallSheet from "@/components/MallSheet";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
@@ -72,6 +73,7 @@ export default function MapPage() {
   const [malls, setMalls] = React.useState<Mall[]>(() => cachedMalls ?? []);
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
   const [resetKey, setResetKey] = React.useState(0);
+  const [sheetOpen, setSheetOpen] = React.useState(false);
 
   React.useEffect(() => {
     getActiveMalls().then((next) => {
@@ -115,9 +117,14 @@ export default function MapPage() {
         // pins below it in document flow when scrolled).
         stickyTop={0}
         onTap={() => {
-          // Arc 1.2 — display-only. Arc 2.2 wires MallSheet picker per D6.
-          // eslint-disable-next-line no-console
-          console.log("[/map] MallPickerChip tap — picker lands at Arc 2.2");
+          // Arc 2.2 — opens MallSheet scope-picker per D6. Reuses
+          // home_strip_tapped analytics event name from TabsChrome (same
+          // semantic — "user tapped the mall picker chrome to engage
+          // scope wayfinding"); event-key stability avoids R3 schema drift.
+          track("home_strip_tapped", {
+            mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
+          });
+          setSheetOpen(true);
         }}
       />
 
@@ -181,6 +188,38 @@ export default function MapPage() {
         selectedMallId={mallId}
         peekedMallId={peekedMallId}
         onCardTap={(id) => setPeekedMallId(id)}
+      />
+
+      <MallSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        malls={malls}
+        activeMallId={mallId}
+        // D6 — tap a mall → commits scope + closes sheet (stays on /map,
+        // map flies to new scope via the useEffect inside TreehouseMap
+        // that fires on selectedMallId change). All-Kentucky row at top
+        // of the sheet maps to (mallId === null) → setMallId(null).
+        // Auto-peek the newly committed scope so PinCallout surfaces
+        // immediately with Directions/Explore CTAs visible — matches
+        // /map's mount-time auto-peek behavior; consistent affordance
+        // across both code-path entries to a scope.
+        onSelect={(id) => {
+          setMallId(id);
+          setPeekedMallId(id);
+          setSheetOpen(false);
+          const picked = id ? malls.find((m) => m.id === id) : null;
+          track("filter_applied", {
+            filter_type:  "mall",
+            filter_value: picked?.slug ?? (id ?? "all"),
+            page:         "/map",
+            source:       "map_page_sheet",
+          });
+        }}
+        // findCounts intentionally omitted — /map's scope picker is a
+        // "switch what slice of Kentucky you're looking at" affordance,
+        // not a "see find inventory per location" affordance (the
+        // MapCarousel + the map pins themselves surface inventory cues).
+        // Skipping findCounts also avoids an extra fetch on /map mount.
       />
     </>
   );
