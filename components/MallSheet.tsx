@@ -223,7 +223,7 @@ export default function MallSheet({
                   fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
-                  color: v1.inkMuted,
+                  color: v1.inkMid,
                   lineHeight: 1.5,
                 }}
               >
@@ -325,7 +325,7 @@ export default function MallSheet({
                           style={{
                             fontFamily: FONT_SYS,
                             fontSize: 13,
-                            color: v1.inkMuted,
+                            color: v1.inkMid,
                             lineHeight: 1.4,
                           }}
                         >
@@ -430,7 +430,7 @@ function MallRow({
               fontFamily: FONT_SYS,
               fontStyle: "italic",
               fontSize: 12.5,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               lineHeight: 1.4,
               whiteSpace: "nowrap",
             }}
@@ -443,7 +443,7 @@ function MallRow({
             style={{
               fontFamily: FONT_SYS,
               fontSize: 11,
-              color: v1.inkFaint,
+              color: v1.inkMid,
               lineHeight: 1.4,
             }}
           >

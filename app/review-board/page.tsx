@@ -212,7 +212,7 @@ export default function ReviewBoardPage() {
             <p
               style={{
                 fontSize:       11,
-                color:          v2.text.muted,
+                color: v2.text.secondary,
                 margin:         "0 0 24px",
                 letterSpacing:  "0.08em",
                 textTransform:  "uppercase",
@@ -225,7 +225,7 @@ export default function ReviewBoardPage() {
               <p
                 style={{
                   fontSize:   14,
-                  color:      v2.text.muted,
+                  color: v2.text.secondary,
                   fontStyle:  "italic",
                   margin:     "8px 0 0",
                 }}
@@ -280,7 +280,7 @@ function ReviewTileFrame({ tile }: { tile: ReviewTile }) {
           <div
             style={{
               fontSize: 12,
-              color:    v2.text.muted,
+              color: v2.text.secondary,
               marginTop: 4,
               lineHeight: 1.4,
             }}
@@ -325,7 +325,7 @@ function ReviewTileFrame({ tile }: { tile: ReviewTile }) {
         style={{
           marginTop:  10,
           fontSize:   11,
-          color:      v2.text.muted,
+          color: v2.text.secondary,
           fontFamily: "ui-monospace, SFMono-Regular, monospace",
           wordBreak:  "break-all",
         }}

@@ -181,7 +181,7 @@ export default function PinCallout({
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       ) : (
-        <MapPin size={16} strokeWidth={1.8} color={v2.text.muted} aria-hidden="true" />
+        <MapPin size={16} strokeWidth={1.8} color={v2.text.secondary} aria-hidden="true" />
       )}
     </div>
   );

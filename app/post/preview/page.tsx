@@ -447,7 +447,7 @@ function PostPreviewInner() {
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 15,
-            color: v2.text.muted,
+            color: v2.text.secondary,
           }}
         >
           Reading your find…
@@ -488,7 +488,7 @@ function PostPreviewInner() {
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 14,
-            color: v2.text.muted,
+            color: v2.text.secondary,
             textAlign: "center",
             lineHeight: 1.6,
           }}
@@ -500,7 +500,7 @@ function PostPreviewInner() {
             style={{
               fontFamily: FONT_INTER,
               fontSize: 11,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               textAlign: "left",
               lineHeight: 1.7,
               background: v2.surface.card,
@@ -540,7 +540,7 @@ function PostPreviewInner() {
               borderRadius: 14,
               fontFamily: FONT_INTER,
               fontSize: 13,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               background: "transparent",
               border: `1px solid ${v2.border.light}`,
               cursor: "pointer",
@@ -646,7 +646,7 @@ function PostPreviewInner() {
               // Pairs with login wordmark sub-text bump (16 → 18) — same
               // readability class shipped in the same commit.
               fontSize: 16,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               lineHeight: 1.5,
               maxWidth: 290,
               margin: "0 auto",
@@ -705,7 +705,7 @@ function PostPreviewInner() {
                   transform: "translateY(-50%)",
                   fontFamily: FONT_INTER,
                   fontSize: 16,
-                  color: v2.text.muted,
+                  color: v2.text.secondary,
                   pointerEvents: "none",
                 }}
               >
@@ -900,7 +900,7 @@ function FieldGroup({
         <span>
           {label}
           {optional && (
-            <span style={{ color: v2.text.muted, fontStyle: "italic", fontSize: 12, marginLeft: 5 }}>
+            <span style={{ color: v2.text.secondary, fontStyle: "italic", fontSize: 12, marginLeft: 5 }}>
               (optional)
             </span>
           )}

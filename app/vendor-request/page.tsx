@@ -73,7 +73,7 @@ const helperStyle: React.CSSProperties = {
   fontFamily: FONT_CORMORANT,
   fontStyle: "italic",
   fontSize: 13,
-  color: v2.text.muted,
+  color: v2.text.secondary,
   lineHeight: 1.5,
   marginTop: 6,
   marginLeft: 2,
@@ -82,7 +82,7 @@ const helperStyle: React.CSSProperties = {
 const optionalStyle: React.CSSProperties = {
   fontStyle: "italic",
   fontSize: 14,
-  color: v2.text.muted,
+  color: v2.text.secondary,
   marginLeft: 5,
   fontWeight: 400,
 };
@@ -541,7 +541,7 @@ function VendorRequestInner() {
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <PiCamera size={28} style={{ color: v2.text.muted, opacity: 0.75 }} />
+                <PiCamera size={28} style={{ color: v2.text.secondary, opacity: 0.75 }} />
                 <div
                   style={{
                     fontFamily: FONT_CORMORANT,
@@ -558,7 +558,7 @@ function VendorRequestInner() {
                     fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 13,
-                    color: v2.text.muted,
+                    color: v2.text.secondary,
                     lineHeight: 1.55,
                     maxWidth: 260,
                   }}
@@ -622,7 +622,7 @@ function VendorRequestInner() {
                 fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 13.5,
-                color: v2.text.muted,
+                color: v2.text.secondary,
                 lineHeight: 1.5,
               }}
             >
@@ -672,7 +672,7 @@ function VendorRequestInner() {
             style={{
               fontFamily: FONT_INTER,
               fontSize: 12,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               textAlign: "center",
               lineHeight: 1.6,
               margin: 0,
@@ -819,8 +819,8 @@ function DoneScreen({
             marginBottom: 0,
           }}
         >
-          <PiEnvelopeSimple size={14} style={{ color: v2.text.muted, flexShrink: 0 }} />
-          <span style={{ fontFamily: FONT_INTER, fontSize: 14, color: v2.text.muted, flexShrink: 0 }}>
+          <PiEnvelopeSimple size={14} style={{ color: v2.text.secondary, flexShrink: 0 }} />
+          <span style={{ fontFamily: FONT_INTER, fontSize: 14, color: v2.text.secondary, flexShrink: 0 }}>
             {state === "created" ? "Sent to\u00a0" : "On file for\u00a0"}
           </span>
           <span
@@ -860,8 +860,8 @@ function DoneScreen({
                   fontSize: 16,
                   color: v2.text.primary,
                   textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v2.text.muted,
+                  textDecorationStyle: "solid",
+                  textDecorationColor: v2.border.light,
                   textUnderlineOffset: 4,
                   cursor: "pointer",
                 }}
@@ -874,10 +874,10 @@ function DoneScreen({
                   fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 15,
-                  color: v2.text.muted,
+                  color: v2.text.secondary,
                   textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v2.text.muted,
+                  textDecorationStyle: "solid",
+                  textDecorationColor: v2.border.light,
                   textUnderlineOffset: 4,
                   cursor: "pointer",
                 }}
@@ -894,8 +894,8 @@ function DoneScreen({
                 fontSize: 16,
                 color: v2.text.primary,
                 textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v2.text.muted,
+                textDecorationStyle: "solid",
+                textDecorationColor: v2.border.light,
                 textUnderlineOffset: 4,
                 cursor: "pointer",
               }}
@@ -914,7 +914,7 @@ function DoneScreen({
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 13,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               lineHeight: 1.65,
               maxWidth: 320,
               margin: "28px auto 0",

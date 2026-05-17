@@ -261,7 +261,7 @@ function NoBooth() {
           marginBottom: 22,
         }}
       >
-        <PiLeafBold size={22} style={{ color: v2.text.muted }} />
+        <PiLeafBold size={22} style={{ color: v2.text.secondary }} />
       </div>
       <div
         style={{
@@ -279,7 +279,7 @@ function NoBooth() {
           fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 15,
-          color: v2.text.muted,
+          color: v2.text.secondary,
           lineHeight: 1.65,
           maxWidth: 280,
           margin: "0 auto",

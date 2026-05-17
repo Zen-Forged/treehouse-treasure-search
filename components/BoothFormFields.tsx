@@ -41,7 +41,7 @@ const changedStyle: React.CSSProperties = {
 const optionalStyle: React.CSSProperties = {
   fontStyle: "italic",
   fontSize: 12,
-  color: v1.inkFaint,
+  color: v1.inkMid,
   marginLeft: 5,
   fontWeight: 400,
 };

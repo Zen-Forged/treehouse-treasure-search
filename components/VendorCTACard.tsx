@@ -79,7 +79,7 @@ export default function VendorCTACard() {
         style={{
           fontFamily: FONT_SYS,
           fontSize: 13,
-          color: v1.inkMuted,
+          color: v1.inkMid,
           margin: "0 0 14px",
           lineHeight: 1.5,
           maxWidth: 240,

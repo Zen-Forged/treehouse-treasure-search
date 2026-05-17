@@ -322,7 +322,7 @@ function SetupContent() {
                 style={{
                   fontFamily: FONT_INTER,
                   fontSize: 13,
-                  color: v2.text.muted,
+                  color: v2.text.secondary,
                   margin: "0 0 24px",
                   maxWidth: 320,
                   lineHeight: 1.55,
@@ -345,7 +345,7 @@ function SetupContent() {
                 style={{
                   fontFamily: FONT_INTER,
                   fontSize: 12,
-                  color: v2.text.muted,
+                  color: v2.text.secondary,
                   margin: "0 0 18px",
                 }}
               >
@@ -440,8 +440,8 @@ function SetupContent() {
                     fontSize: 16,
                     color: v2.text.primary,
                     textDecoration: "underline",
-                    textDecorationStyle: "dotted",
-                    textDecorationColor: v2.text.muted,
+                    textDecorationStyle: "solid",
+                    textDecorationColor: v2.border.light,
                     textUnderlineOffset: 4,
                     cursor: "pointer",
                   }}
@@ -454,10 +454,10 @@ function SetupContent() {
                     fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 15,
-                    color: v2.text.muted,
+                    color: v2.text.secondary,
                     textDecoration: "underline",
-                    textDecorationStyle: "dotted",
-                    textDecorationColor: v2.text.muted,
+                    textDecorationStyle: "solid",
+                    textDecorationColor: v2.border.light,
                     textUnderlineOffset: 4,
                     cursor: "pointer",
                   }}
@@ -519,7 +519,7 @@ const heroSubheadStyle: React.CSSProperties = {
   fontFamily: FONT_CORMORANT,
   fontStyle: "italic",
   fontSize: 15,
-  color: v2.text.muted,
+  color: v2.text.secondary,
   textAlign: "center",
   lineHeight: 1.55,
   margin: "0 auto",

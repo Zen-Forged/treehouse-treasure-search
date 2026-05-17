@@ -240,7 +240,7 @@ function NotFound() {
           fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 14,
-          color: v1.inkMuted,
+          color: v1.inkPrimary,
           textAlign: "center",
           lineHeight: 1.65,
           margin: 0,
@@ -257,8 +257,8 @@ function NotFound() {
           fontSize: 15,
           color: v1.inkPrimary,
           textDecoration: "underline",
-          textDecorationStyle: "dotted",
-          textDecorationColor: v1.inkFaint,
+          textDecorationStyle: "solid",
+          textDecorationColor: v2.border.light,
           textUnderlineOffset: 3,
         }}
       >

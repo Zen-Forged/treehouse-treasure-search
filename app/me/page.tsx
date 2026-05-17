@@ -231,7 +231,7 @@ export default function MePage() {
             fontSize:       10,
             letterSpacing:  "0.16em",
             textTransform:  "uppercase",
-            color:          v2.text.muted,
+            color:          v2.text.secondary,
             margin:         "0 0 22px",
             lineHeight:     1,
           }}
@@ -308,7 +308,7 @@ function Stat({ n, label }: { n: number; label: string }) {
           fontSize:       10,
           letterSpacing:  "0.10em",
           textTransform:  "uppercase",
-          color:          v2.text.muted,
+          color:          v2.text.secondary,
           marginTop:      4,
           display:        "block",
         }}

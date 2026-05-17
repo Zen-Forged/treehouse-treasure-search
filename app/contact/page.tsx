@@ -107,7 +107,7 @@ export default function ContactPage() {
             fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 15,
-            color: v1.inkMuted,
+            color: v1.inkMid,
             textAlign: "center",
             lineHeight: 1.55,
             margin: "0 auto 28px",
@@ -149,7 +149,7 @@ export default function ContactPage() {
                 style={{
                   fontFamily: FONT_LORA,
                   fontSize: 17,
-                  color: v1.inkFaint,
+                  color: v1.inkMid,
                 }}
               >
                 →
@@ -163,7 +163,7 @@ export default function ContactPage() {
             fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 12,
-            color: v1.inkFaint,
+            color: v1.inkMid,
             textAlign: "center",
             lineHeight: 1.6,
             margin: "24px auto 0",

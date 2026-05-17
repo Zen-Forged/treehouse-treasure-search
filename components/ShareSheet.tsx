@@ -701,7 +701,7 @@ function EmailScreen({
           fontSize: 11,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: v2.text.muted,
+          color: v2.text.secondary,
           marginTop: 18,
           marginBottom: 6,
         }}
@@ -934,7 +934,7 @@ function SentBody({
           fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 13,
-          color: v2.text.muted,
+          color: v2.text.secondary,
           cursor: "pointer",
           WebkitTapHighlightColor: "transparent",
         }}
@@ -1107,7 +1107,7 @@ function QrDisplay({ url, caption }: { url: string; caption: string }) {
           fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 12,
-          color: v2.text.muted,
+          color: v2.text.secondary,
           marginTop: 10,
           textAlign: "center",
         }}
@@ -1130,7 +1130,7 @@ function ShareViaEyebrow() {
         fontWeight: 600,
         letterSpacing: "0.16em",
         textTransform: "uppercase",
-        color: v2.text.muted,
+        color: v2.text.secondary,
         textAlign: "center",
         marginTop: 16,
         marginBottom: 12,
@@ -1159,7 +1159,7 @@ function FooterDisclaimer({ copy }: { copy: string }) {
     >
       <PiLeafBold
         size={14}
-        color={v2.text.muted}
+        color={v2.text.secondary}
         style={{ marginTop: 2, flexShrink: 0 }}
         aria-hidden="true"
       />
@@ -1167,7 +1167,7 @@ function FooterDisclaimer({ copy }: { copy: string }) {
         style={{
           fontFamily: FONT_INTER,
           fontSize: 11,
-          color: v2.text.muted,
+          color: v2.text.secondary,
           lineHeight: 1.45,
           maxWidth: 260,
         }}

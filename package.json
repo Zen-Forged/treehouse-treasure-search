@@ -1,6 +1,6 @@
 {
   "name": "treehouse-treasure-search",
-  "version": "0.173.0",
+  "version": "0.174.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -18,7 +18,8 @@
     "lint:colors": "npx tsx scripts/lint-colors.ts",
     "lint:fonts": "npx tsx scripts/lint-fonts.ts",
     "lint:shadows": "npx tsx scripts/lint-shadows.ts",
-    "lint:radius": "npx tsx scripts/lint-radius.ts"
+    "lint:radius": "npx tsx scripts/lint-radius.ts",
+    "lint:contrast": "npx tsx scripts/lint-contrast.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

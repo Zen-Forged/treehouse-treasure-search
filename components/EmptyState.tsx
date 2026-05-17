@@ -75,7 +75,7 @@ export default function EmptyState({
             fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 14,
-            color: v1.inkMuted,
+            color: v1.inkMid,
             lineHeight: 1.7,
             maxWidth: 260,
             margin: 0,

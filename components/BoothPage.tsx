@@ -506,7 +506,7 @@ export function BoothTitleBlock({
               style={{
                 fontFamily: FONT_CORMORANT,
                 fontSize: 20,
-                color: v2.text.muted,
+                color: v2.text.secondary,
                 lineHeight: 1,
                 marginTop: 4,
               }}
@@ -641,11 +641,11 @@ export function MallBlock({
               // for visual hierarchy. Address de-emphasizes against mall
               // name (18px Cormorant) without losing legibility.
               fontSize: 13,
-              color: v2.text.secondary,
+              color: v2.text.primary,
               lineHeight: 1.55,
               textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v2.text.muted,
+              textDecorationStyle: "solid",
+              textDecorationColor: v2.border.light,
               textUnderlineOffset: 3,
             }}
           >
@@ -727,13 +727,13 @@ export function AddFindTile({
   };
   const inner = (
     <>
-      <ImagePlus size={22} strokeWidth={1.5} style={{ color: v2.text.muted }} />
+      <ImagePlus size={22} strokeWidth={1.5} style={{ color: v2.text.secondary }} />
       <span
         style={{
           fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 13,
-          color: v2.text.muted,
+          color: v2.text.secondary,
           lineHeight: 1,
         }}
       >
@@ -879,7 +879,7 @@ function WindowTile({
                 alignItems: "flex-end",
                 fontFamily: FONT_CORMORANT,
                 fontSize: 12,
-                color: v2.text.muted,
+                color: v2.text.secondary,
               }}
             >
               no photograph

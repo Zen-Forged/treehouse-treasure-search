@@ -193,7 +193,7 @@ export default function AddBoothInline({
   const optionalStyle: React.CSSProperties = {
     fontStyle: "italic",
     fontSize: 12,
-    color: v1.inkFaint,
+    color: v1.inkMid,
     marginLeft: 5,
     fontWeight: 400,
   };
@@ -236,12 +236,12 @@ export default function AddBoothInline({
           </div>
           <div style={{
             fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 11,
-            color: v1.inkMuted, lineHeight: 1.4, marginTop: 1,
+            color: v1.inkMid, lineHeight: 1.4, marginTop: 1,
           }}>
             Pre-seed a booth for later vendor claim
           </div>
         </div>
-        <ChevronRight size={13} style={{ color: v1.inkMuted, flexShrink: 0 }} strokeWidth={1.8} />
+        <ChevronRight size={13} style={{ color: v1.inkMid, flexShrink: 0 }} strokeWidth={1.8} />
       </button>
     );
   }
@@ -291,7 +291,7 @@ export default function AddBoothInline({
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <X size={14} style={{ color: v1.inkMuted }} />
+          <X size={14} style={{ color: v1.inkMid }} />
         </button>
       </div>
 
@@ -400,11 +400,11 @@ export default function AddBoothInline({
               fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 13,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <ImageIcon size={14} style={{ color: v1.inkMuted }} />
+            <ImageIcon size={14} style={{ color: v1.inkMid }} />
             Choose a photo
           </button>
         )}

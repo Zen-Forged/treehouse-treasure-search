@@ -75,7 +75,7 @@ export default function PostingAsBlock({ vendor }: PostingAsBlockProps) {
         borderBottom: `0.5px solid ${v1.inkHairline}`,
         fontFamily: FONT_SYS,
         fontSize: 13,
-        color: v1.inkMuted,
+        color: v1.inkMid,
         lineHeight: 1.4,
         flexWrap: "wrap",
       }}
@@ -98,7 +98,7 @@ export default function PostingAsBlock({ vendor }: PostingAsBlockProps) {
           key={`${frag}-${i}`}
           style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
         >
-          <span style={{ color: v1.inkFaint }} aria-hidden="true">·</span>
+          <span style={{ color: v1.inkMid }} aria-hidden="true">·</span>
           <span>{frag}</span>
         </span>
       ))}

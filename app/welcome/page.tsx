@@ -164,7 +164,7 @@ function WelcomeInner() {
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 13,
-              color: v2.text.secondary,
+              color: v2.text.primary,
               textAlign: "center",
               lineHeight: 1.5,
               margin: "0 auto 18px",
@@ -204,12 +204,12 @@ function WelcomeInner() {
             gap: 6,
           }}
         >
-          <HelpCircle size={16} strokeWidth={1.6} style={{ color: v2.text.muted }} />
+          <HelpCircle size={16} strokeWidth={1.6} style={{ color: v2.text.secondary }} />
           <span
             style={{
               textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v2.text.muted,
+              textDecorationStyle: "solid",
+              textDecorationColor: v2.border.light,
               textUnderlineOffset: 3,
             }}
           >
@@ -280,7 +280,7 @@ function WelcomeRow({
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 11.5,
-            color: v2.text.secondary,
+            color: v2.text.primary,
             lineHeight: 1.4,
             marginTop: 1,
           }}
@@ -290,7 +290,7 @@ function WelcomeRow({
       </div>
       <span
         style={{
-          color: v2.text.muted,
+          color: v2.text.secondary,
           fontSize: 22,
           lineHeight: 1,
           fontFamily: FONT_CORMORANT,

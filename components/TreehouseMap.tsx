@@ -812,7 +812,7 @@ export default function TreehouseMap({
             padding:         24,
             gap:             12,
             textAlign:       "center",
-            color:           v2.text.muted,
+            color: v2.text.secondary,
             fontStyle:       "italic",
             fontFamily:      "Georgia, serif",
             fontSize:        14,

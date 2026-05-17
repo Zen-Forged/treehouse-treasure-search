@@ -376,7 +376,7 @@ function PostTagInner() {
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               lineHeight: 1.5,
               maxWidth: 290,
               margin: "0 auto",
@@ -489,13 +489,13 @@ function PostTagInner() {
                   boxSizing: "border-box",
                 }}
               >
-                <PiTag size={26} style={{ color: v2.text.muted }} />
+                <PiTag size={26} style={{ color: v2.text.secondary }} />
                 <div
                   style={{
                     fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 14,
-                    color: v2.text.muted,
+                    color: v2.text.secondary,
                     textAlign: "center",
                     lineHeight: 1.3,
                   }}
@@ -525,7 +525,7 @@ function PostTagInner() {
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               textAlign: "center",
               marginTop: 18,
               lineHeight: 1.5,
@@ -595,7 +595,7 @@ function PostTagInner() {
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               background: "transparent",
               border: "none",
               textDecoration: "underline",

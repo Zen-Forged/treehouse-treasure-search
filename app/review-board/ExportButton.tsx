@@ -148,7 +148,7 @@ export default function ExportButton({ surfaces }: { surfaces: SurfaceMeta[] }) 
             all:            "unset",
             cursor:         "pointer",
             fontSize:       12,
-            color:          v2.text.muted,
+            color: v2.text.secondary,
             textDecoration: "underline",
             fontFamily:     FONT_INTER,
           }}

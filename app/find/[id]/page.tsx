@@ -311,7 +311,7 @@ function SoldLandingBody({
             fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 16,
-            color: v1.inkMuted,
+            color: v1.inkMid,
             lineHeight: 1.65,
             maxWidth: 300,
           }}
@@ -342,8 +342,8 @@ function SoldLandingBody({
               fontSize: 15,
               color: v1.inkMid,
               textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v1.inkFaint,
+              textDecorationStyle: "solid",
+              textDecorationColor: v2.border.light,
               textUnderlineOffset: 3,
               WebkitTapHighlightColor: "transparent",
             }}
@@ -359,8 +359,8 @@ function SoldLandingBody({
             fontSize: 15,
             color: v1.inkMid,
             textDecoration: "underline",
-            textDecorationStyle: "dotted",
-            textDecorationColor: v1.inkFaint,
+            textDecorationStyle: "solid",
+            textDecorationColor: v2.border.light,
             textUnderlineOffset: 3,
             WebkitTapHighlightColor: "transparent",
           }}
@@ -927,7 +927,7 @@ export default function FindDetailPage() {
                   fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
-                  color: v1.inkFaint,
+                  color: v1.inkMid,
                 }}
               >
                 no photograph
@@ -1122,7 +1122,7 @@ export default function FindDetailPage() {
             justifyContent: "center",
           }}
         >
-          <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", color: v1.inkMuted, fontSize: 15 }}>
+          <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", color: v1.inkPrimary, fontSize: 15 }}>
             Loading…
           </div>
         </div>
@@ -1149,13 +1149,13 @@ export default function FindDetailPage() {
               fontFamily: FONT_SYS,
               fontWeight: 500,
               fontSize: 15,
-              color: v1.inkMuted,
+              color: v1.inkPrimary,
               background: "none",
               border: "none",
               cursor: "pointer",
               textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v1.inkFaint,
+              textDecorationStyle: "solid",
+              textDecorationColor: v2.border.light,
               textUnderlineOffset: 4,
             }}
           >
@@ -1243,7 +1243,7 @@ export default function FindDetailPage() {
               fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 26,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               lineHeight: 0,
               verticalAlign: "-0.1em",
               marginRight: 2,
@@ -1267,7 +1267,7 @@ export default function FindDetailPage() {
               fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 26,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               lineHeight: 0,
               verticalAlign: "-0.1em",
               marginLeft: 2,

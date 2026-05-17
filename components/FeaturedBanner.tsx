@@ -73,7 +73,7 @@ export default function FeaturedBanner({
               fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 14,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               letterSpacing: "-0.005em",
             }}
           >
@@ -181,7 +181,7 @@ function BannerImage({
             fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 14,
-            color: v1.inkFaint,
+            color: v1.inkMid,
           }}
         >
           No banner set

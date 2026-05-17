@@ -95,7 +95,7 @@ function MonoLabel({ text }: { text: string }) {
       style={{
         fontFamily: MONO_FONT,
         fontSize:   type.size.xs,
-        color:      v2.text.muted,
+        color: v2.text.secondary,
         lineHeight: 1.4,
       }}
     >
