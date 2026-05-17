@@ -12,18 +12,55 @@
 
 ## Token reference
 
-Resolved from `:root` CSS variables in `lib/tokens.ts`:
+Resolved from `:root` CSS variables in `app/globals.css` (verified session 173 via direct file read; supersedes any stale values cited elsewhere in this doc):
 
 | Token | Hex | Role |
 |---|---|---|
 | `v2.text.primary` | `#2B211A` | Body / headings — high contrast |
 | `v2.text.secondary` | `#5C5246` | Subheads / metadata — darkened session 153 R8A (#756A5E → #5C5246) but **insufficient at italic + ≤16px** per this audit |
 | `v2.text.muted` | `#A39686` | Currently used for icons + dividers + form helpers + placeholders — **failing as a TEXT color at all tested sizes** |
-| `v2.bg.main` | `#E6DECF` | Body background, masthead, nav |
+| `v2.bg.main` | `#E6DECF` | Body background, masthead, nav (session 168 round 9 unification — was `#FBF6EA` pre-session-168; **23.9% worse for muted text since then** per REC-1 re-baseline) |
 | `v2.surface.warm` | `#FBF6EA` | Card warm bg |
 | `v2.surface.card` | `#FFFCF5` | Card light bg (also `v2.surface.input` — same value since session 157) |
-| `v1.inkMuted` | (legacy v1, ≈ #756A5E pre-darkening) | Used on a few remaining v1-layer surfaces (/find/[id], /shelf address) |
-| `v1.inkFaint` | (legacy v1, ≈ #B5AC9A) | Hairlines + dotted-underline decorations |
+| `v1.paperCream` | `#f2ecd8` | v1-layer paper bg (/find/[id], /shelf v1-layer surfaces — **WORST-case canvas in system** at 2.45:1 against muted text per REC-1) |
+| `v1.inkMuted` | `#A39686` | Session 168 foundation consolidation collapsed v1.inkMuted → v2.text.muted (same hex; pre-collapse ≈ #756A5E) — same fail-class as v2.text.muted |
+| `v1.inkFaint` | `#A39686` | Session 168 foundation consolidation collapsed v1.inkFaint → v2.text.muted (same hex; pre-collapse rgba(42,26,10,0.28)) — hairlines + dotted-underline decorations (see Bonus pattern table) |
+| `v1.inkPrimary` | `#2B211A` | Session 168 collapsed to v2.text.primary (same hex) |
+
+---
+
+## WCAG ratios reference matrix (session 173 — REC-1 re-baseline)
+
+Computed via Python WCAG 2.x relative luminance algorithm against the `:root` resolved hex values above. **All ratios are AGAINST CURRENT `:root` STATE (post-session-168 unification); any older framing elsewhere in this doc that cites `v2.bg.main = #FBF6EA` is stale.** This matrix is the ground-truth reference for all Tier 1 + Tier 2 + Tier 3 + Bonus pattern offender rows below; specific per-row ratios are derivable by reading the (current font color, current bg) pair from this table.
+
+**Thresholds:** WCAG 2.1 AA body text = 4.5:1 · AA-large (≥18pt OR ≥14pt bold) = 3.0:1 · SC 1.4.11 non-text (UI components, graphical objects) = 3.0:1
+
+| Foreground | Background | Ratio | AA (4.5) | AA-large (3.0) | 1.4.11 non-text (3.0) |
+|---|---|---|---|---|---|
+| `v2.text.muted` #A39686 | `v2.bg.main` #E6DECF | **2.16:1** | ✗ FAIL | ✗ FAIL | ✗ FAIL |
+| `v2.text.muted` #A39686 | `v1.paperCream` #f2ecd8 | **2.45:1** | ✗ FAIL | ✗ FAIL | ✗ FAIL |
+| `v2.text.muted` #A39686 | `v2.surface.warm` #FBF6EA | **2.68:1** | ✗ FAIL | ✗ FAIL | ✗ FAIL |
+| `v2.text.muted` #A39686 | `v2.surface.card` #FFFCF5 | **2.82:1** | ✗ FAIL | ✗ FAIL | ✗ FAIL |
+| `v2.text.secondary` #5C5246 | `v2.bg.main` #E6DECF | **5.71:1** | ✓ pass | ✓ pass | ✓ pass |
+| `v2.text.secondary` #5C5246 | `v1.paperCream` #f2ecd8 | **6.46:1** | ✓ pass | ✓ pass | ✓ pass |
+| `v2.text.secondary` #5C5246 | `v2.surface.warm` #FBF6EA | **7.08:1** | ✓ pass | ✓ pass | ✓ pass |
+| `v2.text.secondary` #5C5246 | `v2.surface.card` #FFFCF5 | **7.45:1** | ✓ pass | ✓ pass | ✓ pass |
+| `v2.text.primary` #2B211A | `v2.bg.main` #E6DECF | **11.77:1** | ✓ pass | ✓ pass | ✓ pass |
+| `v2.text.primary` #2B211A | `v1.paperCream` #f2ecd8 | **13.31:1** | ✓ pass | ✓ pass | ✓ pass |
+| `v2.text.primary` #2B211A | `v2.surface.warm` #FBF6EA | **14.58:1** | ✓ pass | ✓ pass | ✓ pass |
+| `v2.text.primary` #2B211A | `v2.surface.card` #FFFCF5 | **15.35:1** | ✓ pass | ✓ pass | ✓ pass |
+
+**Key findings derivable from the matrix:**
+
+1. **`v2.text.muted` FAILS WCAG on ALL 4 in-scope backgrounds.** Even the highest-contrast canvas (`v2.surface.card`, 2.82:1) fails AA-large (3.0:1) AND non-text 3:1. The blanket retire of muted-as-text-color in systemic recommendation #1 is justified by this matrix; there's no surface where muted-as-text reads acceptably.
+
+2. **`v2.bg.main` shift from `#FBF6EA` → `#E6DECF` made muted text 23.9% worse** (2.68:1 → 2.16:1). Audit's older framing cites the pre-session-168 baseline in some narrative; the offender tables below reference current bg.main resolved value. Tier classification stands but PERCEPTION on bg.main is worse than the audit's narrative implied.
+
+3. **`v1.paperCream` (#f2ecd8) is the worst-case canvas in the v1-layer system at 2.45:1.** The v1-layer surfaces (`/find/[id]` + `/shelf`) carry this bg; offender lines on those surfaces should be sequenced as high-priority within Arc 3 (Tier 1 ship).
+
+4. **`v2.text.secondary` PASSES WCAG AA on ALL 4 backgrounds** — universal safe target for muted-text retire. Lowest ratio is 5.71:1 on bg.main; all other backgrounds ≥6.46:1. ARC-2 replace_all `v2.text.muted → v2.text.secondary` lifts all 18 Tier 2 consumers from failing to passing AA in a single value swap.
+
+5. **`v2.text.primary` PASSES WCAG AAA on ALL 4 backgrounds** (lowest 11.77:1; AAA threshold is 7.0). Tier 1 promotion to primary gives generous headroom for italic stroke loss + small sizes.
 
 ---
 
