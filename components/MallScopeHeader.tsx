@@ -12,7 +12,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { v1, FONT_LORA, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
+import { v1, v2, FONT_LORA, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
 
 export type MallScopeGeoLine =
   | { kind: "address"; text: string; href?: string | null }
@@ -143,8 +143,8 @@ export default function MallScopeHeader({
                 fontSize: 14,
                 color: v1.inkMuted,
                 textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
+                textDecorationStyle: "solid",
+                textDecorationColor: v2.border.light,
                 textUnderlineOffset: 3,
                 lineHeight: 1.5,
               }}

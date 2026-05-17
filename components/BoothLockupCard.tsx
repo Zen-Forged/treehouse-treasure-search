@@ -31,7 +31,7 @@
 "use client";
 
 import { Bookmark } from "lucide-react";
-import { v1, FONT_LORA, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
+import { v1, v2, FONT_LORA, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
 
 export interface BoothLockupCardProps {
   vendorName:    string;
@@ -164,8 +164,8 @@ export default function BoothLockupCard({
                 fontSize: 11.5,
                 color: v1.inkMuted,
                 textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
+                textDecorationStyle: "solid",
+                textDecorationColor: v2.border.light,
                 textUnderlineOffset: 3,
                 marginTop: 2,
                 lineHeight: 1.4,

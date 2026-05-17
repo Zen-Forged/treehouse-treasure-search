@@ -121,8 +121,8 @@ export default function DestinationHero({
                 fontSize:             11.5,
                 color:                v2.text.secondary,
                 textDecoration:       "underline",
-                textDecorationStyle:  "dotted",
-                textDecorationColor:  v1.inkFaint,
+                textDecorationStyle:  "solid",
+                textDecorationColor:  v2.border.light,
                 textUnderlineOffset:  3,
                 lineHeight:           1.4,
               }}
