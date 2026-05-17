@@ -201,6 +201,20 @@ export default function TabsChrome() {
     : null;
   const mallName = selectedMall ? selectedMall.name : "All Kentucky locations";
 
+  // Session 178 F2 Arc 1.2 — /map renders its own chrome (StickyMasthead +
+  // MallPickerChip + MapPageBody + MapCarousel) since the (tabs)/ HomeHero
+  // pattern doesn't apply on the map page (no hero photo, standard masthead
+  // per D9 + D10). TabsChrome early-returns null on /map so we don't
+  // double-render the floating Profile overlay, HomeHero, or MallPickerChip.
+  // Placed AFTER all hook calls per React rules-of-hooks — hooks must run
+  // unconditionally so a route transition between (tabs)/ children doesn't
+  // change the hook order. This early-return is a temporary scaffold —
+  // Arc 3.2 simplifies TabsChrome substantially when MallMapDrawer +
+  // useMapDrawer retire (the drawer composition was TabsChrome's primary
+  // purpose; once retired the orchestrator may collapse to a thin layout
+  // shim or fold into (tabs)/layout.tsx directly).
+  if (pathname === "/map") return null;
+
   return (
     <>
       <HomeHero
