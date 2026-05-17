@@ -342,8 +342,8 @@ function SoldLandingBody({
               fontSize: 15,
               color: v1.inkMid,
               textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v1.inkFaint,
+              textDecorationStyle: "solid",
+              textDecorationColor: v2.border.light,
               textUnderlineOffset: 3,
               WebkitTapHighlightColor: "transparent",
             }}
@@ -359,8 +359,8 @@ function SoldLandingBody({
             fontSize: 15,
             color: v1.inkMid,
             textDecoration: "underline",
-            textDecorationStyle: "dotted",
-            textDecorationColor: v1.inkFaint,
+            textDecorationStyle: "solid",
+            textDecorationColor: v2.border.light,
             textUnderlineOffset: 3,
             WebkitTapHighlightColor: "transparent",
           }}
@@ -1154,8 +1154,8 @@ export default function FindDetailPage() {
               border: "none",
               cursor: "pointer",
               textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v1.inkFaint,
+              textDecorationStyle: "solid",
+              textDecorationColor: v2.border.light,
               textUnderlineOffset: 4,
             }}
           >

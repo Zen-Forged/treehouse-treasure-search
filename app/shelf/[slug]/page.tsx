@@ -257,8 +257,8 @@ function NotFound() {
           fontSize: 15,
           color: v1.inkPrimary,
           textDecoration: "underline",
-          textDecorationStyle: "dotted",
-          textDecorationColor: v1.inkFaint,
+          textDecorationStyle: "solid",
+          textDecorationColor: v2.border.light,
           textUnderlineOffset: 3,
         }}
       >
