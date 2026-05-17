@@ -273,7 +273,10 @@ export default function DestinationHero({
               display:                 "block",
               width:                   "100%",
               aspectRatio:             "16 / 9",
-              background:              v2.surface.warm,
+              // Session 177 C3 — placeholder bg neutral cream-grey so
+              // any loading/error sliver matches the muted light-v11
+              // palette rather than competing as warm-cream against it.
+              background:              "#F2EFEA",
               textDecoration:          "none",
               WebkitTapHighlightColor: "transparent",
             }}
@@ -290,16 +293,32 @@ export default function DestinationHero({
                 height:    "100%",
                 objectFit: "cover",
                 display:   "block",
-                // Session 171 dial #2 — push the Mapbox light-v11 default
-                // grey palette toward the project's cartographic warm-cream
-                // basemap (v1.basemap.cream #F1E9D2). Mapbox Static Images
-                // API doesn't accept the runtime palette overrides
-                // TreehouseMap applies via setPaintProperty — until a
-                // Mapbox Studio published style URL lands (carry from
-                // session 108 + 156), CSS filter is the cheapest seam.
-                // sepia warms grey → brown; hue-rotate nudges brown → cream;
-                // saturate restores color density lost to sepia.
-                filter:    "sepia(0.4) saturate(1.1) hue-rotate(-8deg)",
+                // Session 177 C3 — CSS filter retired per David's iPhone
+                // QA on v0.176.0: "The overlay on the map in the /find
+                // section is offputting due to the stark contrast i.e.
+                // warm hue on the map. We need it to be more muted like
+                // the mapbox background is."
+                //
+                // Bounded surface-locked design reversal of session 171
+                // dial #2 per feedback_surface_locked_design_reversals
+                // ✅ Promoted (~78+ cumulative firings). Session 171
+                // shipped `filter: sepia(0.4) saturate(1.1)
+                // hue-rotate(-8deg)` to push the static map's default
+                // grey palette toward v1.basemap.cream warmth so the
+                // thumbnail matched the /map page's interactive
+                // cartographic vocabulary. Production iPhone QA on
+                // v0.176.0 reads that warmth as stark contrast against
+                // the surrounding warm-cream cardstock — the muted
+                // light-v11 default sits more comfortably as a
+                // subordinate thumbnail.
+                //
+                // Bounded reversal scope: ONLY this /find/[id]
+                // thumbnail surface. /map page's interactive
+                // TreehouseMap keeps the cartographic warm-cream
+                // palette (session 156's resolveCssVar-fixed
+                // setPaintProperty overrides) — map IS the primary
+                // identity surface there, so the brand vocabulary is
+                // load-bearing. Here it was decorative.
               }}
             />
           </Link>
