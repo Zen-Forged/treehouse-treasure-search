@@ -231,7 +231,7 @@ export default function EditFindPage() {
           style={{
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
-            color: v2.text.muted,
+            color: v2.text.secondary,
             fontSize: 15,
           }}
         >
@@ -304,7 +304,7 @@ export default function EditFindPage() {
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               lineHeight: 1.5,
               maxWidth: 290,
               margin: "0 auto",
@@ -342,7 +342,7 @@ export default function EditFindPage() {
                   transform: "translateY(-50%)",
                   fontFamily: FONT_INTER,
                   fontSize: 16,
-                  color: v2.text.muted,
+                  color: v2.text.secondary,
                   pointerEvents: "none",
                 }}
               >
@@ -469,7 +469,7 @@ export default function EditFindPage() {
                   fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 13,
-                  color: v2.text.muted,
+                  color: v2.text.secondary,
                   marginBottom: 14,
                   lineHeight: 1.5,
                 }}
@@ -505,7 +505,7 @@ export default function EditFindPage() {
                     fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 14,
-                    color: v2.text.muted,
+                    color: v2.text.secondary,
                     background: "none",
                     border: "none",
                     cursor: removing ? "default" : "pointer",
@@ -631,7 +631,7 @@ function StatusPill({
         borderRadius: 999,
         fontFamily: FONT_CORMORANT,
         fontSize: 16,
-        color: active ? v2.text.primary : v2.text.muted,
+        color: active ? v2.text.primary : v2.text.secondary,
         fontWeight: active ? 500 : 400,
         background: v1.inkWash,
         border: active ? `1.5px solid ${v2.text.primary}` : "1.5px solid transparent",
