@@ -155,9 +155,41 @@ Reads as "broken underline" rather than "informational dotted" per session 46 pr
 | `app/admin/*` + `components/admin/*` | Dark theme reseller layer (#050f05); session 162 EXCLUDED_PREFIXES audit exclusion (beta scope) |
 | `app/finds`, `app/scan`, `app/decide` | Reseller-intel layer; different palette + audience |
 | Post-flow v1 cleanup (post/preview, post/edit, post/tag — beyond the surfaces flagged above) | Mapping pinned; full Arc 10 cleanup deferred |
-| Icons >14px in muted color | Decorative use; stroke less sensitive than text per session 45 precedent |
+| Decorative icons ≥22px in muted color | Stroke at large sizes tolerates lower contrast per session 45 precedent. **Session 173 REC-6 update:** session 45 precedent predates session 168 bg unification (12 sessions of luminance shift); state-conveying icons + icons <22px no longer covered — see §"Icon contrast spot-audit" below. |
 | Dividers / borders | Hairline 1px strokes (structural, not readable text) |
 | ≥15px non-italic muted | Assumed legible; dial-on-demand if iPhone QA flags |
+
+---
+
+## Icon contrast spot-audit (session 173 — REC-6)
+
+**Citation:** WCAG 2.1 success criterion 1.4.11 (non-text contrast — UI components + graphical objects require 3:1 against adjacent colors; state-conveying graphical objects effectively require 4.5:1 when they convey information). Computed: `v2.text.muted #A39686` on `v2.bg.main #E6DECF` = **2.16:1**, fails 1.4.11's 3:1 floor for ALL graphical objects at current bg. Session 45 precedent that gave rise to the audit's blanket >14px icons exclusion predates session 168's bg.main unification (12 sessions of luminance shift since); the exclusion is unsafe at current `:root` resolved values for sub-22px icons + state-conveying icons.
+
+**Inventory from grep `color={v2.text.muted}` + `color: v2.text.muted` across `app/` + `components/`** (admin / reseller layers excluded per project precedent):
+
+### State-conveying icons (needs color promotion to `v2.text.secondary` along with text retire)
+
+| File:line | Element | Size | Context | Rationale |
+|---|---|---|---|---|
+| [`components/ShareSheet.tsx:1162`](../components/ShareSheet.tsx) | `<PiLeafBold>` | 14px | Disclaimer footer text prefix | Leaf glyph conveys brand-identity affordance on disclaimer; state-conveying per WCAG 1.4.11 |
+| [`components/PinCallout.tsx:184`](../components/PinCallout.tsx) | `<MapPin>` | 16px | Map callout location glyph | State-conveying (identifies location pin); 2.16:1 fails 3:1 floor at bg.main |
+| [`app/vendor-request/page.tsx:822`](../app/vendor-request/page.tsx) | `<PiEnvelopeSimple>` | 14px | Form helper text inline icon prefix | State-conveying (affords contact action); paired with muted helper text — both fail |
+| [`app/login/page.tsx:732`](../app/login/page.tsx) | `<PiEnvelopeSimple>` | 14px | Login form helper text inline icon prefix | Same pattern as vendor-request:822; state-conveying contact glyph |
+
+### Decorative icons <22px (needs review — may demote to background icon or promote color)
+
+None found in current grep; all sub-22px icons in muted color resolve to state-conveying per audit. If iPhone QA surfaces a clearly-decorative sub-22px muted icon, ship as one-line color promote.
+
+### Decorative icons ≥22px (audit exclusion stands but worth spot-check during fix-bundle iPhone QA)
+
+| File:line | Element | Size | Context | Spot-check rationale |
+|---|---|---|---|---|
+| [`app/post/tag/page.tsx:492`](../app/post/tag/page.tsx) | `<PiTag>` | 26px | Placeholder tag icon | Decorative; ≥22px tolerates 2.16:1 per session 45; iPhone QA confirms read |
+| [`app/vendor-request/page.tsx:544`](../app/vendor-request/page.tsx) | `<PiCamera>` | 28px + `opacity: 0.75` | Photo dropzone placeholder | **Compound risk:** opacity 0.75 multiplies effective contrast to ~1.6:1; promote opacity to 1.0 OR promote color to `v2.text.secondary` |
+| [`app/my-shelf/page.tsx:264`](../app/my-shelf/page.tsx) | `<PiLeafBold>` | 22px | Empty state leaf glyph | Decorative; borderline at 22px; iPhone QA confirms read |
+| [`components/ShelfImageTemplate.tsx:352`](../components/ShelfImageTemplate.tsx) | `<PiLeafDuotone>` | 40px | **Parked code** (Share My Shelf social image generator, retired session 152 ⚠️ PARKED) | Out of runtime scope; documented for revive contract awareness |
+
+**Recommendation:** When fix-bundle ARC-2 ships (token-color remap), include the 4 state-conveying icons in the per-line edit pass — they're naturally part of the same scope-adjacent dead-code cleanup pattern per [`feedback_dead_code_cleanup_as_byproduct.md`](../memory/feedback_dead_code_cleanup_as_byproduct.md) ✅ Promoted (the icon + the text it prefixes are the same scope unit; promote them together). The vendor-request:544 `PiCamera` opacity-0.75 compound-risk is a separate single-line dial — surface during fix-bundle iPhone QA as a watch-item if camera placeholder reads ghostly.
 
 ---
 
