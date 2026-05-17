@@ -729,8 +729,8 @@ function LoginInner() {
                     marginBottom: 4,
                   }}
                 >
-                  <PiEnvelopeSimple size={14} style={{ color: v2.text.muted, flexShrink: 0 }} />
-                  <span style={{ fontFamily: FONT_INTER, fontSize: 14, color: v2.text.muted, flexShrink: 0 }}>
+                  <PiEnvelopeSimple size={14} style={{ color: v2.text.secondary, flexShrink: 0 }} />
+                  <span style={{ fontFamily: FONT_INTER, fontSize: 14, color: v2.text.secondary, flexShrink: 0 }}>
                     Sent to&nbsp;
                   </span>
                   <span

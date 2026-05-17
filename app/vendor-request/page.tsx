@@ -819,8 +819,8 @@ function DoneScreen({
             marginBottom: 0,
           }}
         >
-          <PiEnvelopeSimple size={14} style={{ color: v2.text.muted, flexShrink: 0 }} />
-          <span style={{ fontFamily: FONT_INTER, fontSize: 14, color: v2.text.muted, flexShrink: 0 }}>
+          <PiEnvelopeSimple size={14} style={{ color: v2.text.secondary, flexShrink: 0 }} />
+          <span style={{ fontFamily: FONT_INTER, fontSize: 14, color: v2.text.secondary, flexShrink: 0 }}>
             {state === "created" ? "Sent to\u00a0" : "On file for\u00a0"}
           </span>
           <span
