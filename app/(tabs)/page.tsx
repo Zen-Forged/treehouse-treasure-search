@@ -274,7 +274,7 @@ function MasonryTile({
                 fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 14,
-                color: v2.text.muted,
+                color: v2.text.secondary,
                 lineHeight: 1.35,
               }}
             >
@@ -656,7 +656,7 @@ function DiscoveryFeedInner() {
               paddingTop: 60,
               fontFamily: FONT_LORA,
               fontStyle: "italic",
-              color: v1.inkMuted,
+              color: v1.inkMid,
               fontSize: 15,
               lineHeight: 1.65,
             }}

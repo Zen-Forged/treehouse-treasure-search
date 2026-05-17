@@ -204,7 +204,7 @@ function WelcomeInner() {
             gap: 6,
           }}
         >
-          <HelpCircle size={16} strokeWidth={1.6} style={{ color: v2.text.muted }} />
+          <HelpCircle size={16} strokeWidth={1.6} style={{ color: v2.text.secondary }} />
           <span
             style={{
               textDecoration: "underline",
@@ -290,7 +290,7 @@ function WelcomeRow({
       </div>
       <span
         style={{
-          color: v2.text.muted,
+          color: v2.text.secondary,
           fontSize: 22,
           lineHeight: 1,
           fontFamily: FONT_CORMORANT,

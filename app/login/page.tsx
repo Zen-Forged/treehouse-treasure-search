@@ -595,7 +595,7 @@ function LoginInner() {
               // and hard to read esp on 'enter your email..' text." Second
               // bump on this string (was 14 → 16 at session 153 Finding 11B).
               fontSize: 18,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               lineHeight: 1.55,
               margin: "0 auto",
               maxWidth: 290,
@@ -697,7 +697,7 @@ function LoginInner() {
                     // rule; 14 matches the wordmark sub-text bump (16 → 18)
                     // paired in this commit.
                     fontSize: 14,
-                    color: v2.text.muted,
+                    color: v2.text.secondary,
                     textAlign: "center",
                     lineHeight: 1.5,
                     margin: "2px 0 0",
@@ -797,7 +797,7 @@ function LoginInner() {
                       fontFamily: FONT_CORMORANT,
                       fontStyle: "italic",
                       fontSize: 14,
-                      color: v2.text.muted,
+                      color: v2.text.secondary,
                       textDecoration: "underline",
                       textDecorationStyle: "solid",
                       textDecorationColor: v2.border.light,
@@ -847,7 +847,7 @@ function LoginInner() {
                       fontFamily: FONT_CORMORANT,
                       fontStyle: "italic",
                       fontSize: 13,
-                      color: v2.text.muted,
+                      color: v2.text.secondary,
                     }}
                   >
                     <Loader size={12} style={{ animation: "spin 0.9s linear infinite" }} />
@@ -860,7 +860,7 @@ function LoginInner() {
                     fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 13,
-                    color: v2.text.muted,
+                    color: v2.text.secondary,
                     textAlign: "center",
                     lineHeight: 1.65,
                     margin: "10px 0 0",
@@ -880,7 +880,7 @@ function LoginInner() {
                     fontSize: 13,
                   }}
                 >
-                  <span style={{ color: v2.text.muted }}>Didn&rsquo;t get it?</span>
+                  <span style={{ color: v2.text.secondary }}>Didn&rsquo;t get it?</span>
                   <button
                     onClick={handleResend}
                     disabled={resendIn > 0 || codeBusy}
@@ -1024,7 +1024,7 @@ function ActionCard({
               // on ActionCard. Matches the wordmark sub-text bump for
               // legibility consistency across all sub-text on /login.
               fontSize: 14,
-              color: v2.text.muted,
+              color: v2.text.secondary,
               lineHeight: 1.45,
             }}
           >
@@ -1033,7 +1033,7 @@ function ActionCard({
         </div>
         <span
           style={{
-            color: v2.text.muted,
+            color: v2.text.secondary,
             flexShrink: 0,
             fontSize: 22,
             lineHeight: 1,

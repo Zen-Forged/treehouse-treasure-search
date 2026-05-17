@@ -311,7 +311,7 @@ function SoldLandingBody({
             fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 16,
-            color: v1.inkMuted,
+            color: v1.inkMid,
             lineHeight: 1.65,
             maxWidth: 300,
           }}
@@ -927,7 +927,7 @@ export default function FindDetailPage() {
                   fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
-                  color: v1.inkFaint,
+                  color: v1.inkMid,
                 }}
               >
                 no photograph
@@ -1243,7 +1243,7 @@ export default function FindDetailPage() {
               fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 26,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               lineHeight: 0,
               verticalAlign: "-0.1em",
               marginRight: 2,
@@ -1267,7 +1267,7 @@ export default function FindDetailPage() {
               fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 26,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               lineHeight: 0,
               verticalAlign: "-0.1em",
               marginLeft: 2,
