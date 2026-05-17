@@ -8,6 +8,36 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.173.0] — 2026-05-17
+
+### Session 173 — Design-reviewer subagent registration validated via real dispatch + 4 audit-doc RECs applied to `docs/contrast-audit.md`
+
+4 audit-doc commits + 1 close (docs-only session — no runtime code changed). Shape A gameplan move #1 follow-on per session 172 close opener. Validates subagent registration end-to-end via real `subagent_type: "design-reviewer"` Agent tool dispatch (vs session 172's inline-threaded `general-purpose` workaround per `reference_subagent_registration_session_start_only` ✅ Promoted) — agent registered from disk at session N+1 exactly as the platform fact predicted. Reproducibility check: 4 of 6 session-172 RECs reconverged + 2 sharpenings; critical NEW finding the static audit doc AND session 172 dispatch both missed — 13 omitted decoration sites (76% miss rate vs audit's 4 enumerated) — recommends arc re-sequencing so decoration retire ships FIRST, dissolving mixed-consumer collision class before ARC-2 `replace_all` runs.
+
+All 4 advisory-actionable RECs applied to `docs/contrast-audit.md` per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted (+150/-18 lines, ~470+ cumulative firings); audit doc now sets up session 174's fix-bundle implementation as clean execution pass against fresh substrate. REC-3 (lint-script vs token-split architectural pick) + REC-4 (italic-serif brand voice scope) deferred to session 174 implementation opener — both need David's brand/arch input.
+
+### Changed
+
+- **`docs/contrast-audit.md` — 4 RECs applied via session 173 design-reviewer dispatch:**
+  - **REC-1 (Launch-blocking) — re-baseline:** Token reference table updated with current resolved hex values from `app/globals.css` `:root` (verified session 173 via direct file read; supersedes any stale values cited elsewhere in doc). NEW "WCAG ratios reference matrix" section after Token reference computes 12 fg×bg pairs via Python WCAG 2.x relative-luminance algorithm as ground-truth reference for all offender rows. Notes bg.main 23.9% drop since session 168 (`#FBF6EA` → `#E6DECF`) and `v1.paperCream` as WORST-case canvas at 2.45:1 (not tabulated in original audit). 5 key findings derivable from matrix: muted FAILS on ALL 4 backgrounds (even highest-contrast `v2.surface.card` at 2.82:1 fails AA-large + non-text 3:1); secondary PASSES AA on ALL 4 (universal safe target); primary PASSES AAA on ALL 4.
+  - **REC-2 (Launch-blocking) — 17-site enumeration + arc re-sequence (single coupled commit):** Bonus pattern table reorganized into 3 subsections (9 in-scope `v2.text.muted` decoration sites + 8 in-scope `v1.inkFaint` decoration sites + 4 post-flow excluded sites). Audit's BoothPage line :600 corrected to :648 (line drift post-session-171). Systemic recommendation #3 updated 4 → 17 instances + mixed-consumer collision risk flagged + sequencing-first guidance added. "Recommended fix-bundle sequencing" RE-ORDERED: OLD order (Arc 1 Tier 1 → Arc 2 Tier 2 sweep → Arc 3 Bonus → Arc 4 Token) → NEW order (Arc 1 Decoration retire → Arc 2 Tier 2 sweep (now safe) → Arc 3 Tier 1 ship → Arc 4 Token enforcement). Each arc gains vendor-flow-first sub-sequencing per REC-5. Arc 4 promoted from "(optional)" — JSDoc-only enforcement insufficient per `feedback_predicate_accumulating_patches_signals_wrong_shape` ✅ Promoted; lint-vs-token-split call deferred to session 174 opener. Session estimate updated 60-90 min → 75-105 min (Arc 1 expanded 4 → 17 sites).
+  - **REC-5 (Medium) — vendor-value sequencing framing:** NEW "Vendor-value sequencing framing (session 173 — REC-5)" section before "Recommended fix-bundle sequencing." Identifies 6 vendor-flow files in scope (`/find/[id]/edit` + `/post/preview` + `/post/tag` + `/me` + `BoothPage` + `ShareSheet`) for first-within-arc sequencing per `project_vendor_value_first_prioritization` ✅ Promoted. Verbatim implementation-session opener paragraph included so session 174's standup can copy-paste rather than re-derive rationale.
+  - **REC-6 (Medium) — icon spot-audit:** Exclusion table row tightened from "Icons >14px in muted" → "Decorative icons ≥22px in muted only"; sub-22px icons + state-conveying icons demoted out of exclusion to NEW "Icon contrast spot-audit (session 173 — REC-6)" section. Grep-derived inventory: 4 state-conveying icons needing color promotion (`ShareSheet:1162` PiLeafBold size 14 / `PinCallout:184` MapPin size 16 / `vendor-request:822` + `login:732` PiEnvelopeSimple size 14); 4 decorative ≥22px icons for iPhone QA spot-check (`vendor-request:544` PiCamera size 28 + opacity:0.75 flagged as COMPOUND RISK at ~1.6:1 effective contrast). Cites WCAG 2.1 SC 1.4.11 3:1 floor for non-text + session 45 precedent invalidation post-session-168.
+
+### Added
+
+- **2 memory files promoted-via-memory** (2nd cumulative firing per `feedback_tech_rule_promotion_destination` ✅ Promoted):
+  - **`feedback_subagent_ship_with_validating_test_case.md`** — When shipping a new subagent (or significantly extending an existing one), include a real-input test case dispatch in the same session as the agent ship. Validates trust contract works end-to-end + catches structural design flaws before they reach production use. Session 172 first firing (inline-threaded `general-purpose` workaround); session 173 second firing (real `subagent_type` dispatch validating registration path).
+  - **`feedback_subagent_dispatch_catches_audit_drift.md`** — When dispatching a read-only subagent against a static audit/design record/spec doc that was written 5+ sessions ago, the agent's fresh read of current substrate often surfaces drift the static doc missed (stale offender lists / stale baselines / stale exclusion rules / missing offenders). Dispatch as freshness check before treating doc as canonical. Session 172 first firing (bg-baseline drift); session 173 second firing (13 omitted decoration sites + WCAG 1.4.11 floor + worst-case `v1.paperCream`).
+
+### iPhone QA watch-items
+
+None — docs-only session; no user-visible chrome changed. Session 174 fix-bundle implementation will be the QA target.
+
+[v0.173.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.173.0
+
+---
+
 ## [v0.172.0] — 2026-05-17
 
 ### Session 172 — Design-reviewer subagent + /design-review slash command + validated test case against contrast audit
