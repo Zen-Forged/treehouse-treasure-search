@@ -66,9 +66,13 @@ import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil } from "lucide-react";
-// PiStorefront import retired in session 170 Arc 3 — was consumed by
-// the Explore Booth button (in the CTA pair that retired) and the
-// inline cartographic eyebrow (now owned by <DestinationHero>).
+// PiStorefrontBold REVIVED at session 177 C2 for the "Explore this Booth"
+// button under Flag the Find (David's iPhone QA on v0.176.0). Session 170
+// Arc 3 retired PiStorefront when both its consumers (Explore Booth CTA
+// + inline cartographic eyebrow) retired; the inline cartographic eyebrow
+// stays owned by <DestinationHero>, but the Explore Booth CTA returns as
+// a stacked button below Flag the Find per David's session-177 ask.
+import { PiStorefrontBold } from "react-icons/pi";
 import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPost } from "@/lib/posts";
@@ -1310,8 +1314,11 @@ export default function FindDetailPage() {
       {(vendorName || boothNumber) && (
         <div
           style={{
-            padding:      "0 22px",
-            marginBottom: 22,
+            padding:       "0 22px",
+            marginBottom:  22,
+            display:       "flex",
+            flexDirection: "column",
+            gap:           10,
           }}
         >
           <button
@@ -1348,6 +1355,72 @@ export default function FindDetailPage() {
             />
             {isSaved ? "Remove Flag" : "Flag the Find"}
           </button>
+
+          {/* Explore this Booth — secondary outlined navigation CTA
+              stacked below Flag the Find (session 177 C2 — David's
+              iPhone QA on v0.176.0: "Add a button under the 'Flag the
+              Find' button for 'Explore this Booth' (navigate to /shelf)").
+
+              Bounded revival of session 170 Arc 3's OTHER CTA-pair
+              half per feedback_surface_locked_design_reversals ✅
+              Promoted (~78+ cumulative firings). Session 169 round 2
+              shipped Explore Booth + Flag the Find as 50/50 side-by-
+              side; session 170 Arc 3 retired BOTH on Shape B thesis;
+              session 171 C6 bounded-revived Flag the Find under Price
+              (dual affordance with photograph save bubble); session
+              177 C2 (this commit) bounded-revives Explore Booth as a
+              STACKED button below Flag the Find (not side-by-side per
+              session 169 — David's session-177 ask is "a button under
+              the Flag the Find button," vertical stack vocabulary).
+
+              Booth navigation still ALSO covered by DestinationHero's
+              tappable vendor/booth strip (session 170 Arc 2 substrate
+              preserved); F4 is the discoverable second affordance for
+              the same intent. Reads as a parallel-affordance stack to
+              the Flag the Find ↔ photograph save bubble pair above.
+
+              Style mirrors session 169's original secondary outlined
+              treatment (cream bg + green text + 1px green outline) so
+              Flag the Find above stays the visually-primary engagement
+              CTA (lattice canonical per
+              project_layered_engagement_share_hierarchy) and Explore
+              this Booth reads as the navigation affordance.
+
+              PiStorefrontBold size 14 matches session 171's
+              PiStorefront → PiStorefrontBold sweep. Gated on
+              vendorSlug — only routes when slug exists (rare admin-
+              creation edge case where vendor row lacks slug); button
+              hides cleanly when absent. Label verbatim per David's
+              ask + feedback_user_provided_verbatim_values_ship_as_is. */}
+          {vendorSlug && (
+            <Link
+              href={`/shelf/${vendorSlug}`}
+              aria-label="Explore this booth"
+              style={{
+                width:                   "100%",
+                background:              v2.surface.input,
+                color:                   v2.accent.greenMid,
+                border:                  `1px solid ${v2.accent.greenMid}`,
+                borderRadius:            10,
+                padding:                 9,
+                fontFamily:              FONT_INTER,
+                fontSize:                11,
+                fontWeight:              600,
+                letterSpacing:           "0.12em",
+                textTransform:           "uppercase",
+                display:                 "flex",
+                alignItems:              "center",
+                justifyContent:          "center",
+                gap:                     8,
+                cursor:                  "pointer",
+                textDecoration:          "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <PiStorefrontBold size={14} aria-hidden style={{ flexShrink: 0 }} />
+              Explore this Booth
+            </Link>
+          )}
         </div>
       )}
 
