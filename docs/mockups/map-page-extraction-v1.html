@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Map page extraction — V1 mockup (R-session, session 176)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #F4EFE3;       /* v2.bg.main */
+      --bg-tabs: #E6DECF;       /* v2.bg.tabs */
+      --bg-warm: #FBF6EA;       /* v2.surface.warm */
+      --bg-card: #FFFCF5;       /* v2.surface.card */
+      --bg-input: #FFFCF5;      /* v2.surface.input */
+      --ink-primary: #2A1A07;   /* v2.text.primary */
+      --ink-secondary: #5C5246; /* v2.text.secondary (post-session-153 darken) */
+      --ink-muted: #756A5E;     /* legacy muted */
+      --accent-green: #285C3C;  /* v2.accent.green */
+      --accent-green-mid: #1F4A31;
+      --accent-green-soft: rgba(40,92,60,0.10);
+      --border-light: rgba(42,26,10,0.08);
+      --border-medium: rgba(42,26,10,0.16);
+
+      --basemap-cream: #F0E6D2;
+      --basemap-cream2: #E8DCC0;
+      --basemap-water: #C8D8DC;
+      --basemap-park: #D8E4C8;
+      --basemap-label: #6B5B47;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #2A1A07;
+      color: #F4EFE3;
+    }
+    h1 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px; margin: 24px 16px 8px; color: #F4EFE3; }
+    .session-note { margin: 0 16px 24px; color: rgba(244,239,227,0.6); font-size: 13px; max-width: 920px; line-height: 1.5; }
+    .frames-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      padding: 24px;
+      max-width: 1400px;
+    }
+    .frame-col h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: 20px;
+      margin: 0 0 4px;
+      color: #F4EFE3;
+    }
+    .frame-col h2 .frame-letter {
+      font-style: normal;
+      font-weight: 700;
+      color: var(--accent-green);
+      background: rgba(40,92,60,0.18);
+      padding: 2px 8px;
+      border-radius: 8px;
+      margin-right: 8px;
+      font-size: 16px;
+    }
+    .frame-col p.frame-thesis { font-size: 13px; color: rgba(244,239,227,0.7); margin: 0 0 12px; line-height: 1.4; }
+
+    /* Phone shell — iPhone SE-ish at 375px */
+    .phone {
+      width: 375px;
+      height: 720px;
+      margin: 0 auto;
+      background: var(--bg-page);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+      position: relative;
+      color: var(--ink-primary);
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Status bar */
+    .status-bar {
+      height: 28px;
+      background: var(--bg-page);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink-primary);
+    }
+
+    /* Masthead — back-button + profile bubble + wordmark */
+    .masthead {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .masthead.overlay {
+      position: absolute;
+      top: 28px;
+      left: 0; right: 0;
+      z-index: 10;
+    }
+    .icon-bubble {
+      width: 36px; height: 36px;
+      background: var(--bg-warm);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    }
+    .wordmark {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 17px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-primary);
+      text-align: center;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .wordmark .leaf {
+      display: inline-block;
+      transform: translateY(-2px);
+      margin-right: 6px;
+      color: var(--accent-green);
+    }
+
+    /* MallStrip — mirrors Home strip per D2 */
+    .mall-strip {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+    .mall-strip.overlay {
+      position: absolute;
+      top: 84px; /* below masthead */
+      left: 0; right: 0;
+      z-index: 9;
+      background: linear-gradient(180deg, rgba(244,239,227,0.85) 0%, rgba(244,239,227,0) 100%);
+    }
+    .strip-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 9999px;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: 16px;
+      color: var(--ink-primary);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .strip-chip .pin {
+      color: var(--accent-green);
+      font-size: 14px;
+    }
+    .strip-chip .caret {
+      color: var(--ink-secondary);
+      font-size: 11px;
+      margin-left: 2px;
+    }
+
+    /* MAP container — varies per frame */
+    .map-area {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* Frame A: bordered window */
+    .frame-a .map-window {
+      flex: 1;
+      margin: 12px 14px 0;
+      border: 1px solid var(--border-medium);
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      background: var(--basemap-cream);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+
+    /* Frame B: soft-padded (breathing room, no border) */
+    .frame-b .map-window {
+      flex: 1;
+      margin: 8px 12px 0;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      background: var(--basemap-cream);
+      box-shadow: 0 1px 3px rgba(42,26,10,0.06);
+    }
+
+    /* Frame C: full-bleed */
+    .frame-c .map-window {
+      flex: 1;
+      position: relative;
+      background: var(--basemap-cream);
+    }
+
+    /* Map content — simulated cartographic basemap */
+    .map-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 30%, var(--basemap-park) 0%, transparent 18%),
+        radial-gradient(circle at 70% 20%, var(--basemap-water) 0%, transparent 14%),
+        radial-gradient(circle at 35% 70%, var(--basemap-water) 0%, transparent 10%),
+        radial-gradient(circle at 80% 60%, var(--basemap-park) 0%, transparent 16%),
+        linear-gradient(135deg, var(--basemap-cream) 0%, var(--basemap-cream2) 100%);
+    }
+    .map-roads {
+      position: absolute;
+      inset: 0;
+      opacity: 0.20;
+      background:
+        linear-gradient(90deg, transparent 28%, var(--basemap-label) 28%, var(--basemap-label) 28.4%, transparent 28.4%),
+        linear-gradient(45deg, transparent 60%, var(--basemap-label) 60%, var(--basemap-label) 60.3%, transparent 60.3%),
+        linear-gradient(0deg, transparent 45%, var(--basemap-label) 45%, var(--basemap-label) 45.3%, transparent 45.3%);
+    }
+    .map-label {
+      position: absolute;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 10px;
+      color: var(--basemap-label);
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 3px rgba(240,230,210,0.9);
+    }
+
+    /* Leaf pin */
+    .leaf-pin {
+      position: absolute;
+      width: 32px; height: 32px;
+      background: var(--bg-warm);
+      border: 2px solid var(--accent-green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    }
+    .leaf-pin.selected {
+      background: var(--bg-card);
+      transform: translate(-50%, -50%) scale(1.12);
+      border-width: 2.5px;
+    }
+    .leaf-pin svg { color: var(--accent-green); }
+
+    /* User location pin */
+    .user-pin {
+      position: absolute;
+      width: 16px; height: 16px;
+      background: var(--accent-green);
+      border: 2.5px solid white;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      z-index: 5;
+    }
+    .user-pulse {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      border: 2px solid rgba(40,92,60,0.55);
+      background: rgba(40,92,60,0.16);
+      pointer-events: none;
+    }
+
+    /* PinCallout — for the peeked mall */
+    .pin-callout {
+      position: absolute;
+      transform: translate(-50%, calc(-100% - 12px));
+      min-width: 200px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.10);
+      z-index: 6;
+    }
+    .pin-callout .name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--ink-primary);
+    }
+    .pin-callout .stat {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 12px;
+      color: var(--accent-green);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .pin-callout .ctas {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .pin-callout .cta {
+      flex: 1;
+      padding: 5px 0;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 6px;
+    }
+    .pin-callout .cta.primary {
+      background: var(--accent-green);
+      color: white;
+    }
+    .pin-callout .cta.secondary {
+      background: transparent;
+      border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    /* MapControlPill — Reset affordance (session 161 always-visible) */
+    .map-pill {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 6px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink-secondary);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      z-index: 7;
+    }
+
+    /* MapCarousel — D3 canonical bottom shelf */
+    .map-carousel-shelf {
+      flex-shrink: 0;
+      padding: 14px 12px 12px;
+      background: var(--bg-page);
+      border-top: 1px solid var(--border-light);
+      box-shadow: 0 -2px 6px rgba(42,26,10,0.04);
+    }
+    .map-carousel-shelf.overlay {
+      position: absolute;
+      bottom: 56px; /* above BottomNav */
+      left: 0; right: 0;
+      z-index: 8;
+    }
+    .carousel-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .carousel-card {
+      flex-shrink: 0;
+      width: 142px;
+      height: 110px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .carousel-card.selected {
+      border: 1.5px solid var(--accent-green);
+      transform: translateY(-3px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    }
+    .carousel-card .photo {
+      height: 68px;
+      background: linear-gradient(135deg, var(--basemap-cream2) 0%, var(--basemap-park) 100%);
+    }
+    .carousel-card .body {
+      padding: 5px 8px;
+      flex: 1;
+    }
+    .carousel-card .name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--ink-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .carousel-card .dist {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent-green);
+      letter-spacing: 0.04em;
+    }
+
+    /* BottomNav */
+    .bottom-nav {
+      height: 56px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: var(--bg-tabs);
+      border-top: 1px solid var(--border-light);
+      flex-shrink: 0;
+    }
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--ink-secondary);
+    }
+    .nav-tab.active { color: var(--accent-green); }
+    .nav-tab svg { width: 20px; height: 20px; }
+
+    /* Trade-off matrix */
+    .matrix {
+      margin: 32px auto;
+      max-width: 1200px;
+      padding: 0 24px;
+    }
+    .matrix h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      font-weight: 500;
+      font-style: italic;
+      margin: 0 0 12px;
+      color: #F4EFE3;
+    }
+    .matrix table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(244,239,227,0.04);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .matrix th, .matrix td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(244,239,227,0.08);
+      font-size: 13px;
+    }
+    .matrix th { background: rgba(244,239,227,0.10); font-weight: 600; }
+    .matrix td:first-child { font-weight: 600; color: #F4EFE3; }
+    .matrix .check { color: #6FA984; font-weight: 700; }
+    .matrix .partial { color: #C8A56B; font-weight: 700; }
+    .matrix .miss { color: #B96A5A; font-weight: 700; }
+
+    .footer-note {
+      margin: 24px;
+      padding: 16px;
+      background: rgba(244,239,227,0.04);
+      border-radius: 12px;
+      border-left: 3px solid var(--accent-green);
+      max-width: 1100px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(244,239,227,0.85);
+    }
+    .footer-note strong { color: #F4EFE3; }
+  </style>
+</head>
+<body>
+  <h1>Map page extraction — V1 mockup</h1>
+  <p class="session-note">
+    Session 176 R-session. Locked decisions: <strong>D1</strong> MallStrip tap on Home routes to /map; <strong>D2</strong> MallStrip mirrors at top of /map; <strong>D3</strong> MapCarousel canonical bottom shelf; <strong>D4</strong> framer-motion slide-up transition. <br>
+    Open structural axis: <strong>containment geometry</strong> — bordered window (A) vs. soft-padded breathing room (B) vs. full-bleed (C). Each frame holds D1–D4 constant; only the map-container chrome varies.
+  </p>
+
+  <div class="frames-row">
+
+    <!-- ============ FRAME A: BORDERED WINDOW ============ -->
+    <div class="frame-col frame-a">
+      <h2><span class="frame-letter">A</span>Bordered window (pre-155 revival)</h2>
+      <p class="frame-thesis">1px hairline border + 14px radius around map. 14px page padding. Most explicit "this is a window" treatment. Tightest chrome → least map area.</p>
+      <div class="phone">
+        <div class="status-bar"><span>5:26</span><span>SOS 45</span></div>
+        <div class="masthead">
+          <div class="icon-bubble">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </div>
+          <div class="wordmark"><span class="leaf">🍃</span>TREEHOUSE FINDS</div>
+          <div class="icon-bubble">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+          </div>
+        </div>
+        <div class="mall-strip">
+          <div class="strip-chip">
+            <span class="pin">📍</span>
+            <span>Copper Awning Flea Market</span>
+            <span class="caret">▾</span>
+          </div>
+        </div>
+        <div class="map-area">
+          <div class="map-window">
+            <div class="map-bg"></div>
+            <div class="map-roads"></div>
+            <div class="map-label" style="top: 22%; left: 38%;">Cumberland</div>
+            <div class="map-label" style="top: 60%; left: 18%;">Owensboro</div>
+            <div class="map-pill">Reset</div>
+            <div class="user-pulse" style="top: 70%; left: 50%;"></div>
+            <div class="user-pin" style="top: 70%; left: 50%;"></div>
+            <div class="leaf-pin" style="top: 45%; left: 35%;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="leaf-pin selected" style="top: 30%; left: 65%;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="leaf-pin" style="top: 60%; left: 78%;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="pin-callout" style="top: 30%; left: 65%;">
+              <div class="name">Copper Awning Flea Market</div>
+              <div class="stat">2 fresh finds · 11 MI</div>
+              <div class="ctas">
+                <div class="cta secondary">Directions</div>
+                <div class="cta primary">Explore</div>
+              </div>
+            </div>
+          </div>
+          <div class="map-carousel-shelf">
+            <div class="carousel-row">
+              <div class="carousel-card selected">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">Copper Awning</div>
+                  <div class="dist">11 MI</div>
+                </div>
+              </div>
+              <div class="carousel-card">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">America's Antique Mall</div>
+                  <div class="dist">18 MI</div>
+                </div>
+              </div>
+              <div class="carousel-card">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">Kentucky Treehouse</div>
+                  <div class="dist">23 MI</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>Explore</div>
+          <div class="nav-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg>Saved</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ FRAME B: SOFT-PADDED ============ -->
+    <div class="frame-col frame-b">
+      <h2><span class="frame-letter">B</span>Soft-padded (breathing room, no border)</h2>
+      <p class="frame-thesis">12px page margins + 16px radius + subtle shadow. No hard border. "Contained" via breathing room alone. Middle ground — more map than A, more chrome than C.</p>
+      <div class="phone">
+        <div class="status-bar"><span>5:26</span><span>SOS 45</span></div>
+        <div class="masthead">
+          <div class="icon-bubble">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </div>
+          <div class="wordmark"><span class="leaf">🍃</span>TREEHOUSE FINDS</div>
+          <div class="icon-bubble">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+          </div>
+        </div>
+        <div class="mall-strip">
+          <div class="strip-chip">
+            <span class="pin">📍</span>
+            <span>Copper Awning Flea Market</span>
+            <span class="caret">▾</span>
+          </div>
+        </div>
+        <div class="map-area">
+          <div class="map-window">
+            <div class="map-bg"></div>
+            <div class="map-roads"></div>
+            <div class="map-label" style="top: 22%; left: 38%;">Cumberland</div>
+            <div class="map-label" style="top: 60%; left: 18%;">Owensboro</div>
+            <div class="map-pill">Reset</div>
+            <div class="user-pulse" style="top: 70%; left: 50%;"></div>
+            <div class="user-pin" style="top: 70%; left: 50%;"></div>
+            <div class="leaf-pin" style="top: 45%; left: 35%;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="leaf-pin selected" style="top: 30%; left: 65%;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="leaf-pin" style="top: 60%; left: 78%;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="pin-callout" style="top: 30%; left: 65%;">
+              <div class="name">Copper Awning Flea Market</div>
+              <div class="stat">2 fresh finds · 11 MI</div>
+              <div class="ctas">
+                <div class="cta secondary">Directions</div>
+                <div class="cta primary">Explore</div>
+              </div>
+            </div>
+          </div>
+          <div class="map-carousel-shelf">
+            <div class="carousel-row">
+              <div class="carousel-card selected">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">Copper Awning</div>
+                  <div class="dist">11 MI</div>
+                </div>
+              </div>
+              <div class="carousel-card">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">America's Antique Mall</div>
+                  <div class="dist">18 MI</div>
+                </div>
+              </div>
+              <div class="carousel-card">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">Kentucky Treehouse</div>
+                  <div class="dist">23 MI</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>Explore</div>
+          <div class="nav-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg>Saved</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ FRAME C: FULL-BLEED ============ -->
+    <div class="frame-col frame-c">
+      <h2><span class="frame-letter">C</span>Full-bleed (chrome floats on map)</h2>
+      <p class="frame-thesis">Map fills entire viewport edge-to-edge between masthead and BottomNav. Masthead + MallStrip overlay map (fade-to-cream gradient at top). MapCarousel floats above BottomNav. Most map area; least "contained."</p>
+      <div class="phone">
+        <div class="status-bar"><span>5:26</span><span>SOS 45</span></div>
+        <div class="map-area" style="position: relative;">
+          <div class="map-window" style="position: absolute; inset: 0; border-radius: 0;">
+            <div class="map-bg"></div>
+            <div class="map-roads"></div>
+            <div class="map-label" style="top: 22%; left: 38%;">Cumberland</div>
+            <div class="map-label" style="top: 60%; left: 18%;">Owensboro</div>
+            <div class="user-pulse" style="top: 60%; left: 50%;"></div>
+            <div class="user-pin" style="top: 60%; left: 50%;"></div>
+            <div class="leaf-pin" style="top: 40%; left: 35%;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="leaf-pin selected" style="top: 30%; left: 65%;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="leaf-pin" style="top: 50%; left: 78%;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg></div>
+            <div class="pin-callout" style="top: 30%; left: 65%;">
+              <div class="name">Copper Awning Flea Market</div>
+              <div class="stat">2 fresh finds · 11 MI</div>
+              <div class="ctas">
+                <div class="cta secondary">Directions</div>
+                <div class="cta primary">Explore</div>
+              </div>
+            </div>
+            <div class="map-pill" style="top: 96px;">Reset</div>
+          </div>
+          <!-- Floating chrome overlay -->
+          <div style="position: absolute; top: 28px; left: 0; right: 0; background: linear-gradient(180deg, rgba(244,239,227,0.92) 0%, rgba(244,239,227,0.75) 70%, rgba(244,239,227,0) 100%); padding-bottom: 12px; z-index: 10;">
+            <div class="masthead">
+              <div class="icon-bubble">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </div>
+              <div class="wordmark"><span class="leaf">🍃</span>TREEHOUSE FINDS</div>
+              <div class="icon-bubble">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+              </div>
+            </div>
+            <div class="mall-strip">
+              <div class="strip-chip">
+                <span class="pin">📍</span>
+                <span>Copper Awning Flea Market</span>
+                <span class="caret">▾</span>
+              </div>
+            </div>
+          </div>
+          <!-- Floating carousel above BottomNav -->
+          <div class="map-carousel-shelf overlay" style="background: rgba(244,239,227,0.92); border-top: none; backdrop-filter: blur(6px);">
+            <div class="carousel-row">
+              <div class="carousel-card selected">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">Copper Awning</div>
+                  <div class="dist">11 MI</div>
+                </div>
+              </div>
+              <div class="carousel-card">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">America's Antique Mall</div>
+                  <div class="dist">18 MI</div>
+                </div>
+              </div>
+              <div class="carousel-card">
+                <div class="photo"></div>
+                <div class="body">
+                  <div class="name">Kentucky Treehouse</div>
+                  <div class="dist">23 MI</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>Explore</div>
+          <div class="nav-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 8C8 10 5.9 16 3 21l1.8.8c1.6-3 3.3-6 4.6-8 1.4-2 2.5-3 4.6-3 1.3 0 2.5.5 3 1L17 8z"/></svg>Saved</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="matrix">
+    <h3>Trade-off matrix</h3>
+    <table>
+      <tr>
+        <th>Axis</th>
+        <th>Frame A (bordered)</th>
+        <th>Frame B (soft-padded)</th>
+        <th>Frame C (full-bleed)</th>
+      </tr>
+      <tr>
+        <td>"Contained window" feel</td>
+        <td class="check">Strongest</td>
+        <td class="partial">Moderate</td>
+        <td class="miss">Weakest</td>
+      </tr>
+      <tr>
+        <td>"Better use of screen"</td>
+        <td class="miss">Smallest map area</td>
+        <td class="partial">Mid map area</td>
+        <td class="check">Largest map area</td>
+      </tr>
+      <tr>
+        <td>Chrome separation from map</td>
+        <td class="check">Clear (border + bg)</td>
+        <td class="check">Clear (shadow + bg)</td>
+        <td class="partial">Soft (gradient overlay)</td>
+      </tr>
+      <tr>
+        <td>Map-edge label readability</td>
+        <td class="check">Always visible</td>
+        <td class="check">Always visible</td>
+        <td class="miss">Top labels under masthead-fade</td>
+      </tr>
+      <tr>
+        <td>"Seamless from drawer" feel</td>
+        <td class="miss">Reads as discrete page</td>
+        <td class="partial">Mid (familiar chrome)</td>
+        <td class="check">Map IS the surface (closest to drawer expansion)</td>
+      </tr>
+      <tr>
+        <td>Implementation complexity</td>
+        <td class="check">Lowest (standard chrome stack)</td>
+        <td class="check">Lowest</td>
+        <td class="partial">Higher (overlay + gradient + z-index)</td>
+      </tr>
+      <tr>
+        <td>Substrate reuse</td>
+        <td class="check">100% (existing components)</td>
+        <td class="check">100%</td>
+        <td class="check">100% (chrome positions differ only)</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer-note">
+    <strong>David's verbatim ask:</strong> "I want to pull the map portion back out from the explore page into it's own page. My goal is to still make it feel like a seamless transition though as much as possible. It needs to have a back button to go back to the explore page. It should not include a search bar. I want it to make better use of the screen and still feel part of the app. I liked the first iteration where it felt a bit contained in a window an not extending the entire screen."
+    <br><br>
+    <strong>Tension to resolve:</strong> "better use of screen" pulls toward C; "contained in a window not extending entire screen" pulls toward A. Frame B is the middle-ground hypothesis that honors both. Frame C maximizes the "seamless from drawer" feel (drawer was already a chrome-less expanding overlay).
+  </div>
+
+</body>
+</html>

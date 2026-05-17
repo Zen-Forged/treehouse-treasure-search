@@ -5,20 +5,34 @@
 // cream-fade overlay gradient at the bottom + embedded SearchBar anchored
 // 16px from hero bottom (Home only; Saved omits SearchBar per R18 lock).
 //
-// Sticky behavior (session 175 Option α — REVERSES session 164 D16-D19):
-//   - Home (showSearch=true):  position: sticky; top: 0; height: 33vh
-//     Hero stays at full 33vh pinned to viewport top throughout scroll.
-//     Page content scrolls under the hero. NO collapse — wordmark +
-//     SearchBar stay visible as full identity beat during scroll.
+// Sticky behavior (session 176 scroll-and-compress dial — BOUNDED revision
+// of session 175 Option α; session 175 reversed session 164 D16-D19):
+//   - Home (showSearch=true):  position: sticky; top: -SCROLL_BEFORE_STICKY_PX
+//     At scrollY=0 hero sits at top:0 (full 33vh visible, chrome bubbles
+//     overlay photograph as designed). User scrolls — hero scrolls UP with
+//     content for SCROLL_BEFORE_STICKY_PX pixels. Once user has scrolled
+//     past that threshold, sticky activates pinning hero with the top
+//     SCROLL_BEFORE_STICKY_PX of hero offscreen. Visible pinned hero =
+//     33vh - SCROLL_BEFORE_STICKY_PX (compressed but wordmark + SearchBar
+//     still visible).
 //   - Saved (showSearch=false): position: static; height: 33vh
 //     Hero renders in document flow at top of page as identity beat;
-//     scrolls away with content when user scrolls down.
+//     scrolls away with content when user scrolls down. (Unchanged from
+//     session 175 Option α — David's reference image for session 176.)
 //
-// David's session 175 iPhone QA: "I want the sticky hero image to stop
-// when it hits this location on the screen. This then is what is used
-// as a static (in-place) hero for the saved page." Reverses the
-// session 164 collapsing-header thesis (33vh → 90-191px on scroll) in
-// favor of full-identity sticky on Home + static identity beat on Saved.
+// David's session 176 iPhone QA: "I'd like to allow the hero header image
+// to scroll a bit more before it becomes sticky (see image from the saved
+// page as reference to the position)." Bounded revision of session 175
+// Option α — full-identity-beat thesis stays for scrollY=0 (hero at full
+// 33vh), partial-compression activates only AFTER user scrolls past
+// SCROLL_BEFORE_STICKY_PX threshold.
+//
+// BOUNDED REVIVAL of session 164 D16-D19 + session 166 dial 10
+// collapsing-header pattern (negative-top sticky), at smaller magnitude.
+// Session 164 collapsed to 158-191px (~58-72% compression on iPhone SE
+// 33vh = 220px). Session 176 compresses by SCROLL_BEFORE_STICKY_PX
+// (~36% on iPhone SE). The structural pattern (negative-top sticky)
+// returns; the magnitude tightens to "a bit" per David's verbatim ask.
 //
 // Consumers: app/(tabs)/layout.tsx (shared across Home + Saved).
 // Asset at /public/home-hero.png; swap mechanism is file replacement.
@@ -40,18 +54,33 @@ interface Props {
 
 const HERO_HEIGHT_VH = 33;
 
-// Session 175 Option α — hero's bottom edge in viewport coordinates when
-// the hero is sticky-pinned at top:0 (Home) OR when it sits at the top of
-// document flow (Saved at scrollY=0). Consumers (MallPickerChip + MallMap-
+// Session 176 — scroll distance allowed before hero pins via negative-top
+// sticky. At scrollY < SCROLL_BEFORE_STICKY_PX: hero scrolls naturally with
+// content (in-flow visual). At scrollY >= SCROLL_BEFORE_STICKY_PX: sticky
+// activates pinning hero at top:-SCROLL_BEFORE_STICKY_PX (top of hero
+// offscreen by that amount; bottom of hero at calc(33vh -
+// SCROLL_BEFORE_STICKY_PX) from viewport top). Easily dial-able from
+// David's iPhone QA (~80px = "a bit" per session 176 ask).
+const SCROLL_BEFORE_STICKY_PX = 80;
+
+// Session 176 — hero's VISIBLE bottom edge in viewport coordinates when the
+// hero is sticky-pinned (Home, scrollY > SCROLL_BEFORE_STICKY_PX) OR when
+// it sits at the top of document flow (Saved at scrollY=0; Home at
+// scrollY=0 with hero unpinned). Consumers (MallPickerChip + MallMap-
 // Drawer, both Home-only) pin themselves at or below this edge.
 //
-// Reverses session 164 D16-D19 + session 166 dial 10 — formerly
-// STICKY_THIN_HEIGHT named for the collapsing-header thin-strip state
-// (HERO_STRIP_HEIGHT_HOME = "calc(max(14, safe-area) + 144px)" ≈ 158-191px
-// per device safe area); now `${HERO_HEIGHT_VH}vh` since the hero no
-// longer collapses on scroll — it stays at full 33vh as the "stop state"
-// per David's session 175 iPhone QA.
-export const HERO_BOTTOM_EDGE = `${HERO_HEIGHT_VH}vh`;
+// Bounded-revises session 175 — formerly `${HERO_HEIGHT_VH}vh` (full hero
+// always visible when pinned per Option α). Now `calc(${HERO_HEIGHT_VH}vh
+// - ${SCROLL_BEFORE_STICKY_PX}px)` — hero compresses by
+// SCROLL_BEFORE_STICKY_PX when pinned because negative-top sticky leaves
+// that portion offscreen. Chip + drawer inherit the compressed bottom-edge
+// automatically via this single export.
+//
+// Session lineage: 164 D16-D19 named STICKY_THIN_HEIGHT (collapsed strip
+// 158-191px) → 175 Option α renamed to HERO_BOTTOM_EDGE (full 33vh, no
+// collapse) → 176 keeps name, value compresses by 80px (~36% iPhone SE).
+export const HERO_BOTTOM_EDGE =
+  `calc(${HERO_HEIGHT_VH}vh - ${SCROLL_BEFORE_STICKY_PX}px)`;
 const SEARCH_BOTTOM_OFFSET = 16;
 const SEARCH_HORIZ_PADDING = 16;
 
@@ -61,11 +90,12 @@ export default function HomeHero({
   searchPlaceholder,
 }: Props) {
   const showSearch = searchQuery !== undefined && onSearchChange !== undefined;
-  // Session 175 Option α — Home (showSearch=true) sticky-pinned at top:0;
+  // Session 176 — Home (showSearch=true) sticky-pinned with negative-top
+  // offset so hero scrolls SCROLL_BEFORE_STICKY_PX pixels before pinning;
   // Saved (showSearch=false) position:static in document flow. See file-top.
   const sectionStyle: React.CSSProperties = {
     position:           showSearch ? "sticky" : "static",
-    ...(showSearch ? { top: 0, zIndex: 10 } : {}),
+    ...(showSearch ? { top: -SCROLL_BEFORE_STICKY_PX, zIndex: 10 } : {}),
     width:              "100%",
     height:             `${HERO_HEIGHT_VH}vh`,
     // Layered backgrounds: cream-fade overlay (D9) on top, hero asset
