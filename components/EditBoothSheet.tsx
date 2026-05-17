@@ -251,12 +251,20 @@ export default function EditBoothSheet({
               <Pencil size={14} style={{ color: v2.accent.green }} strokeWidth={1.8} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_CORMORANT, fontSize: 16, color: v2.text.primary, lineHeight: 1.3 }}>
+              {/* Session 175 iPhone QA — title 16 → 20 + eyebrow 11 → 13.
+                  David: "Edit booth name text" and "kentucky treehouse..."
+                  text "is just way too low. Why wasn't this caught?" The
+                  contrast audit (sessions 173-174) was bounded to text COLOR
+                  WCAG contrast; these sizes (16 / 11) passed color but failed
+                  absolute legibility on iPhone arm-length. Size-legibility
+                  is the un-enumerated dimension — sub-pattern of
+                  feedback_audit_bounded_enumeration_is_patch_shape. */}
+              <div style={{ fontFamily: FONT_CORMORANT, fontSize: 20, color: v2.text.primary, lineHeight: 1.3 }}>
                 {mode === "vendor" ? "Edit booth name" : "Edit booth"}
               </div>
               <div
                 style={{
-                  fontFamily: FONT_CORMORANT, fontStyle: "italic", fontSize: 11,
+                  fontFamily: FONT_CORMORANT, fontStyle: "italic", fontSize: 13,
                   color: v2.text.secondary, lineHeight: 1.4, marginTop: 1,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}
@@ -449,6 +457,17 @@ export default function EditBoothSheet({
                 placeholder="e.g. ZenForged Finds"
                 disabled={submitting}
                 autoFocus
+                onFocus={(e) => {
+                  // Session 175 iPhone QA — iOS Safari keyboard covers the
+                  // booth name input when it gets focus inside this bottom
+                  // sheet. 300ms delay clears keyboard slide-up animation
+                  // (~250ms) + the sheet's entry transition (340ms at L227);
+                  // scrollIntoView lands the input in the visible viewport
+                  // above the keyboard. Captured `target` avoids stale ref
+                  // if the input unmounts during the delay.
+                  const target = e.currentTarget;
+                  setTimeout(() => target.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+                }}
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
@@ -468,7 +487,13 @@ export default function EditBoothSheet({
                 style={{
                   fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
-                  fontSize: 11,
+                  // Session 175 iPhone QA — helper 11 → 14. David: "Booth
+                  // number and location... text is just way too low." Paired
+                  // with title 16 → 20 + eyebrow 11 → 13 above. 14 matches
+                  // /login bottom sub-text bump (also 14 → 16 / weight 500
+                  // this session) for cross-surface Cormorant italic
+                  // helper-voice consistency.
+                  fontSize: 14,
                   color: v2.text.secondary,
                   lineHeight: 1.4,
                   marginTop: 6,

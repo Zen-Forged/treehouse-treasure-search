@@ -74,6 +74,17 @@ const OVERLAY_TOP    = "calc(max(14px, env(safe-area-inset-top, 14px)) + 14px)";
 const OVERLAY_X      = 18;
 const OVERLAY_Z      = 50;
 
+// Session 175 — module-scope cache for malls per
+// feedback_module_scope_cache_for_warm_nav_hydration ✅ Promoted
+// (5th cumulative firing post-promotion at session 168). On cold mount
+// the cache is null → getActiveMalls() fetches + populates; on warm-nav
+// re-mount (Saved → Explore tab switch) useState initializer hydrates
+// from cache synchronously, eliminating the chip's "All Kentucky
+// locations" → actual-mall-name flicker David surfaced on iPhone QA
+// session 175 (paired with useSavedMallId's cachedMallId for full
+// sync-hydration of selectedMall computation on warm-nav).
+let cachedMalls: Mall[] | null = null;
+
 export default function TabsChrome() {
   const pathname     = usePathname();
   const router       = useRouter();
@@ -81,52 +92,26 @@ export default function TabsChrome() {
 
   const [mallId, setMallId] = useSavedMallId();
   const { drawerOpen, closeDrawer, toggleDrawer } = useMapDrawer();
-  const [malls, setMalls] = useState<Mall[]>([]);
+  const [malls, setMalls] = useState<Mall[]>(() => cachedMalls ?? []);
 
   useEffect(() => {
-    getActiveMalls().then(setMalls);
+    getActiveMalls().then((next) => {
+      cachedMalls = next; // populate cache for future re-mounts
+      setMalls(next);
+    });
   }, []);
 
-  // Session 166 dial 3 (post-Arc-3.1.3 iPhone QA) — when drawer opens at
-  // scrollY=0, hero is still at full 33vh (no scroll engaged sticky-
-  // collapse yet), so the drawer renders BEHIND the hero from y=152 down.
-  // David's ask: "The hero and search header should collapse and move to
-  // the top as if the user had scrolled down past the hero-image."
-  //
-  // Force-scroll to a value just past the hero sticky-engagement threshold
-  // (33vh ≈ 280px - 90px sticky-visible-strip = 190px). 200px scrolls a
-  // hair past the threshold so both hero AND chip engage their sticky
-  // pins in one shot. Behavior 'smooth' so the auto-scroll reads as a
-  // natural transition not an abrupt jump. No-op when scrollY already
-  // past 190 (user scrolled before opening drawer — preserve their
-  // scroll position).
-  useEffect(() => {
-    if (!drawerOpen) return;
-    if (typeof window === "undefined") return;
-
-    // Session 166 dial 10 — compute the sticky-engagement threshold
-    // dynamically since STICKY_THIN_HEIGHT is now safe-area-aware (varies
-    // ~158px on non-notched → ~191px on notched iPhones via env(safe-area-
-    // inset-top)). Engagement happens at scrollY = 33vh - STICKY_THIN_HEIGHT.
-    //
-    // Reads --th-safe-area-inset-top (CSS var bridge in globals.css since
-    // env() can only be used inside CSS). Matches HomeHero's HERO_STRIP_
-    // HEIGHT_HOME formula: max(14, safe-area) + 84 + 60 = MASTHEAD_HEIGHT
-    // + 60. Scrolling to exactly this value flushes feed top with chip
-    // sticky-pinned bottom on any device.
-    const safeAreaTopRaw = getComputedStyle(document.documentElement)
-      .getPropertyValue("--th-safe-area-inset-top")
-      .trim();
-    const safeAreaTop      = parseFloat(safeAreaTopRaw) || 0;
-    const mastheadHeight   = Math.max(14, safeAreaTop) + 84;
-    const stickyThinHeight = mastheadHeight + 60;
-    const heroFlowPx       = window.innerHeight * 0.33;
-    const engagementY      = heroFlowPx - stickyThinHeight;
-
-    if (window.scrollY < engagementY) {
-      window.scrollTo({ top: engagementY, behavior: "smooth" });
-    }
-  }, [drawerOpen]);
+  // Session 175 Option α retired session 166 dial 3 drawer-open auto-scroll
+  // (formerly here). Rationale: the auto-scroll forced scrollY to the
+  // hero's sticky-engagement threshold so the hero would collapse out of
+  // the drawer's render area on drawer-open at scrollY=0. With Option α
+  // the hero stays full 33vh sticky at top:0 throughout scroll — the
+  // drawer pins at HERO_BOTTOM_EDGE + chip height (= 33vh + 48px ≈ 318px)
+  // regardless of scrollY, so there's no "drawer behind hero" race to
+  // resolve. Dead-code retire per feedback_dead_code_cleanup_as_byproduct
+  // ✅ Promoted. CSS var --th-safe-area-inset-top in globals.css kept as
+  // substrate for any future safe-area-aware JS consumer (single line,
+  // zero cost).
 
   // Session 168 round 4 finding 1 — David iPhone QA: "If map is expanded
   // and the user selects another page (i.e. saved) and navigates back to

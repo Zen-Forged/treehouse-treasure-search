@@ -590,11 +590,13 @@ function LoginInner() {
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              // Review Board Finding 6 (session 169) — sub-text 16 → 18.
-              // David: "Improve the readability of the text it feels small
-              // and hard to read esp on 'enter your email..' text." Second
-              // bump on this string (was 14 → 16 at session 153 Finding 11B).
-              fontSize: 18,
+              // Session 175 iPhone QA — size + weight bump for prominence.
+              // David: "Add font size and weight on sub-text 'enter your
+              // email..' and 'we'll emaill you....' on bottom." 18 → 20
+              // + weight 400 (default) → 500. Third bump on this string
+              // (14 → 16 session 153, 16 → 18 session 169, 18 → 20 here).
+              fontSize: 20,
+              fontWeight: 500,
               color: v2.text.secondary,
               lineHeight: 1.55,
               margin: "0 auto",
@@ -690,13 +692,13 @@ function LoginInner() {
                   style={{
                     fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
-                    // Review Board Finding 6 (session 169) — sub-text 12 → 14.
-                    // David: "Improve the readability of the text... esp on...
-                    // 'We'll email you..' text." 12px was too quiet for the
-                    // 40-65 demographic per the session-46 small-type sweep
-                    // rule; 14 matches the wordmark sub-text bump (16 → 18)
-                    // paired in this commit.
-                    fontSize: 14,
+                    // Session 175 iPhone QA — size + weight bump for prominence.
+                    // David: "Add font size and weight on sub-text 'enter your
+                    // email..' and 'we'll emaill you....' on bottom." 14 → 16
+                    // + weight 400 (default) → 500. Paired with top sub-text
+                    // 18 → 20 + weight 500 above.
+                    fontSize: 16,
+                    fontWeight: 500,
                     color: v2.text.secondary,
                     textAlign: "center",
                     lineHeight: 1.5,

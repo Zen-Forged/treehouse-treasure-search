@@ -1,22 +1,27 @@
 // components/HomeHero.tsx
-// Home hero primitive — Frame C + Shape A sticky behavior from
-// docs/home-hero-design.md.
+// Home hero primitive — Frame C composition from docs/home-hero-design.md.
 //
 // Composition: 33vh background-image hero (wordmark baked into asset) +
 // cream-fade overlay gradient at the bottom + embedded SearchBar anchored
-// 32px from hero bottom (D7 V2 dial).
+// 16px from hero bottom (Home only; Saved omits SearchBar per R18 lock).
 //
-// Sticky behavior (D16 V2 — reverses D5):
-//   position: sticky; top: calc(STICKY_THIN_HEIGHT_PX - 33vh)
-// As user scrolls, hero rises with feed content until its top edge reaches
-// the negative offset, then pins. Only the bottom STICKY_THIN_HEIGHT (90px)
-// stays visible at top of viewport — natural image continuity since it's
-// the same DOM node + same image scrolled into its sticky position.
-// Wordmark portion scrolls out the top naturally.
+// Sticky behavior (session 175 Option α — REVERSES session 164 D16-D19):
+//   - Home (showSearch=true):  position: sticky; top: 0; height: 33vh
+//     Hero stays at full 33vh pinned to viewport top throughout scroll.
+//     Page content scrolls under the hero. NO collapse — wordmark +
+//     SearchBar stay visible as full identity beat during scroll.
+//   - Saved (showSearch=false): position: static; height: 33vh
+//     Hero renders in document flow at top of page as identity beat;
+//     scrolls away with content when user scrolls down.
 //
-// Consumers: app/(tabs)/layout.tsx (Arc 3 adoption — shared across Home,
-// Saved, Map). Asset at /public/home-hero.png; swap mechanism is file
-// replacement per D4.
+// David's session 175 iPhone QA: "I want the sticky hero image to stop
+// when it hits this location on the screen. This then is what is used
+// as a static (in-place) hero for the saved page." Reverses the
+// session 164 collapsing-header thesis (33vh → 90-191px on scroll) in
+// favor of full-identity sticky on Home + static identity beat on Saved.
+//
+// Consumers: app/(tabs)/layout.tsx (shared across Home + Saved).
+// Asset at /public/home-hero.png; swap mechanism is file replacement.
 
 "use client";
 
@@ -33,46 +38,34 @@ interface Props {
   searchPlaceholder?: string;
 }
 
-const HERO_HEIGHT_VH        = 33;
+const HERO_HEIGHT_VH = 33;
 
-// Session 166 dial 10 (post-Shape-A iPhone QA) — sticky-stop point on Home
-// extends so the embedded SearchBar's TOP edge pins at the bottom of where
-// the /find + /shelf StickyMasthead would be (David's "top of search bar
-// hits what would be the bottom of the masthead").
+// Session 175 Option α — hero's bottom edge in viewport coordinates when
+// the hero is sticky-pinned at top:0 (Home) OR when it sits at the top of
+// document flow (Saved at scrollY=0). Consumers (MallPickerChip + MallMap-
+// Drawer, both Home-only) pin themselves at or below this edge.
 //
-// Math: MASTHEAD_HEIGHT (max(14, safe-area) + 84) + SearchBar height (44)
-// + SEARCH_BOTTOM_OFFSET (16) = MASTHEAD_HEIGHT + 60. Hero strip extends
-// down to viewport y = MASTHEAD_HEIGHT + 60.
-//
-// On Saved (no embedded SearchBar), keep the session-164 D17 strip height
-// of 90px since there's no search-bar-to-masthead alignment to satisfy.
-const HERO_STRIP_HEIGHT_HOME  = "calc(max(14px, env(safe-area-inset-top, 14px)) + 144px)";
-const HERO_STRIP_HEIGHT_SAVED = "90px";
-
-// Export the Home value — chip + drawer (Home-only consumers post-dial-7)
-// use this constant to align their sticky pin / drawer top with the hero
-// strip's bottom edge. Renamed from STICKY_THIN_HEIGHT_PX since it's no
-// longer a single pixel number.
-export const STICKY_THIN_HEIGHT = HERO_STRIP_HEIGHT_HOME;
-// Session 166 dial (post-Arc 3.1.3 iPhone QA) — search bar drops from 32 to
-// 16 per David's "drop down more so there is more headroom" call. In sticky-
-// collapsed state, this shifts search bar bottom from viewport y=58 to y=74,
-// freeing up 20px more headroom above the input within the 90px visible strip.
-const SEARCH_BOTTOM_OFFSET  = 16;
-const SEARCH_HORIZ_PADDING  = 16;
+// Reverses session 164 D16-D19 + session 166 dial 10 — formerly
+// STICKY_THIN_HEIGHT named for the collapsing-header thin-strip state
+// (HERO_STRIP_HEIGHT_HOME = "calc(max(14, safe-area) + 144px)" ≈ 158-191px
+// per device safe area); now `${HERO_HEIGHT_VH}vh` since the hero no
+// longer collapses on scroll — it stays at full 33vh as the "stop state"
+// per David's session 175 iPhone QA.
+export const HERO_BOTTOM_EDGE = `${HERO_HEIGHT_VH}vh`;
+const SEARCH_BOTTOM_OFFSET = 16;
+const SEARCH_HORIZ_PADDING = 16;
 
 export default function HomeHero({
   searchQuery,
   onSearchChange,
   searchPlaceholder,
 }: Props) {
-  const showSearch       = searchQuery !== undefined && onSearchChange !== undefined;
-  const stickyThinHeight = showSearch ? HERO_STRIP_HEIGHT_HOME : HERO_STRIP_HEIGHT_SAVED;
+  const showSearch = searchQuery !== undefined && onSearchChange !== undefined;
+  // Session 175 Option α — Home (showSearch=true) sticky-pinned at top:0;
+  // Saved (showSearch=false) position:static in document flow. See file-top.
   const sectionStyle: React.CSSProperties = {
-    // Shape A sticky-header behavior — see file-top comment.
-    position:           "sticky",
-    top:                `calc(${stickyThinHeight} - ${HERO_HEIGHT_VH}vh)`,
-    zIndex:             10,  // D18 — sit above scrolling feed content
+    position:           showSearch ? "sticky" : "static",
+    ...(showSearch ? { top: 0, zIndex: 10 } : {}),
     width:              "100%",
     height:             `${HERO_HEIGHT_VH}vh`,
     // Layered backgrounds: cream-fade overlay (D9) on top, hero asset
