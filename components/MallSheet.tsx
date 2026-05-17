@@ -1,9 +1,37 @@
 // components/MallSheet.tsx
 // MallSheet — canonical mall-selection bottom sheet for Treehouse v1.1i.
 //
+// Session 178 F2 Arc 2.1 — REVIVED from dormant per session 176 C2 design
+// record D6 (docs/map-page-extraction-design.md). MallSheet has been
+// dormant in (tabs)/ chrome since session 158 when MallMapDrawer became
+// the canonical (tabs)/ picker; v2 Arc cascade (138–148) migrated every
+// neighbor surface but skipped this dormant primitive. F2 Arc 2.2 wires
+// it as the /map scope-picker (D6: "MallStrip tap while on /map opens
+// MallSheet — bottom sheet, pre-155 revival. Lists active malls with
+// current scope highlighted. Tap a mall → commits scope + closes sheet").
+//
+// Revival audit (Arc 2.1 boundary): the v1-token-set this file uses
+// (v1.paperCream / v1.inkHairline / v1.inkFaint / v1.inkPrimary /
+// v1.inkMid + FONT_LORA + FONT_SYS) all still resolve correctly via the
+// session 144 Layer 1 CSS-var refactor — no breaking drift. Visual
+// vocabulary (paperCream sheet on warm-cream page bg, italic Lora
+// headers, FONT_SYS find counts) sits a half-tier away from /map's
+// v2-aligned chrome (v2.bg.tabs page bg, v2 accent.green pin) but reads
+// as deliberate "deeper-paper sheet sliding up from a chrome surface"
+// rather than visual drift. Keeping v1 tokens preserves the
+// commitment-ceremony pattern (sheet IS a momentary heavy chrome
+// affordance — different visual weight from inline page chrome is correct).
+// Future v2-token cascade can fold this in alongside other v1-survivors
+// (BottomSheet primitive, etc.) — out of scope here.
+//
+// Schema check vs D6: sheet contract matches design record D6 expectations
+// verbatim — onSelect(mallId | null) closes consumer's scope commit + the
+// "All Kentucky" row at top of list is built-in (no consumer wiring needed).
+// findCounts optional → MallMatchChip-style counts not required for /map
+// usage; /map consumer can omit findCounts entirely.
+//
 // Committed in docs/design-system.md §MallSheet (session 20). First consumer
-// is app/page.tsx (Feed); will be reused by /post and /vendor-request in a
-// future sprint.
+// was app/page.tsx (Feed) pre-session-109; reused now at /map (F2 Arc 2.2).
 //
 // Props contract (locked in spec):
 //
