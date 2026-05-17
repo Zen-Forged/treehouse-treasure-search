@@ -107,7 +107,14 @@ export default function MapPage() {
   return (
     <>
       <StickyMasthead
-        bg={v2.bg.tabs}
+        // Matches /find/[id] + /shelf/[slug] exactly — David QA: "I'd
+        // actually like the explore page masthead buttons to match... they
+        // should all appear the same." Step 1 unifies /map's masthead bg
+        // to the detail-page bg vocabulary (v2.surface.warm vs Arc 1.2's
+        // v2.bg.tabs). Step 2 (next commit) flips v1.iconBubble token
+        // value rgba → solid #EFEBDF so the button bubbles read identically
+        // across every masthead-consuming surface regardless of underlying bg.
+        bg={v2.surface.warm}
         left={<MastheadBackButton fallback="/" />}
         right={<MastheadProfileButton />}
       />
