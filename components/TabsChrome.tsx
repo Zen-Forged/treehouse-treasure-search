@@ -74,6 +74,17 @@ const OVERLAY_TOP    = "calc(max(14px, env(safe-area-inset-top, 14px)) + 14px)";
 const OVERLAY_X      = 18;
 const OVERLAY_Z      = 50;
 
+// Session 175 — module-scope cache for malls per
+// feedback_module_scope_cache_for_warm_nav_hydration ✅ Promoted
+// (5th cumulative firing post-promotion at session 168). On cold mount
+// the cache is null → getActiveMalls() fetches + populates; on warm-nav
+// re-mount (Saved → Explore tab switch) useState initializer hydrates
+// from cache synchronously, eliminating the chip's "All Kentucky
+// locations" → actual-mall-name flicker David surfaced on iPhone QA
+// session 175 (paired with useSavedMallId's cachedMallId for full
+// sync-hydration of selectedMall computation on warm-nav).
+let cachedMalls: Mall[] | null = null;
+
 export default function TabsChrome() {
   const pathname     = usePathname();
   const router       = useRouter();
@@ -81,10 +92,13 @@ export default function TabsChrome() {
 
   const [mallId, setMallId] = useSavedMallId();
   const { drawerOpen, closeDrawer, toggleDrawer } = useMapDrawer();
-  const [malls, setMalls] = useState<Mall[]>([]);
+  const [malls, setMalls] = useState<Mall[]>(() => cachedMalls ?? []);
 
   useEffect(() => {
-    getActiveMalls().then(setMalls);
+    getActiveMalls().then((next) => {
+      cachedMalls = next; // populate cache for future re-mounts
+      setMalls(next);
+    });
   }, []);
 
   // Session 175 Option α retired session 166 dial 3 drawer-open auto-scroll

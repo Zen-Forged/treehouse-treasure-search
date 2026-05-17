@@ -31,8 +31,27 @@ import { FIXTURE_SHOPPER } from "./fixtures";
 const SAVED_MALL_KEY   = "treehouse_saved_mall_id";
 const SAVED_MALL_EVENT = "treehouse:saved_mall_change";
 
+// Session 175 — module-scope cache for warm-nav sync hydration per
+// feedback_module_scope_cache_for_warm_nav_hydration ✅ Promoted
+// (5th cumulative firing post-promotion at session 168, where
+// cachedAuthUser + cachedRoleState + cachedShopperAuthState +
+// cachedVendorBundle established the pattern). On cold mount cache
+// is undefined → useEffect reads localStorage + populates cache; on
+// warm-nav re-mount (e.g., Saved → Explore tab switch) the useState
+// initializer reads the cache + hydrates synchronously, eliminating
+// the "All Kentucky locations" → actual-mall-name chip text flicker
+// David surfaced on iPhone QA session 175.
+//
+// `undefined` distinguishes "not yet read" from `null` ("read, no
+// mall picked"); both fall back to null in the initializer's return
+// value but cache stays undefined until first read.
+let cachedMallId: string | null | undefined = undefined;
+
 export function useSavedMallId(): [string | null, (id: string | null) => void] {
-  const [id, setId] = useState<string | null>(null);
+  const [id, setId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null; // SSR safe
+    return cachedMallId ?? null;
+  });
 
   // Review Board (session 150) — fixture-substitute. Synchronous hydration
   // before paint so the (tabs) layout's PostcardMallCard renders with
@@ -44,7 +63,9 @@ export function useSavedMallId(): [string | null, (id: string | null) => void] {
 
   useEffect(() => {
     if (isReviewMode()) return; // fixture state populated above
-    setId(safeStorage.getItem(SAVED_MALL_KEY));
+    const stored = safeStorage.getItem(SAVED_MALL_KEY);
+    cachedMallId = stored; // populate cache for sibling/future mounts
+    setId(stored);
 
     // Same-tab sync: any instance of this hook that calls the setter
     // dispatches this custom event. We pick it up + update local state.
@@ -59,6 +80,7 @@ export function useSavedMallId(): [string | null, (id: string | null) => void] {
     // windows of the same app.
     const onStorage = (e: StorageEvent) => {
       if (e.key !== SAVED_MALL_KEY) return;
+      cachedMallId = e.newValue; // cross-tab write also updates this tab's cache
       setId(e.newValue);
     };
     window.addEventListener("storage", onStorage);
@@ -71,6 +93,7 @@ export function useSavedMallId(): [string | null, (id: string | null) => void] {
 
   const update = useCallback((next: string | null) => {
     setId(next);
+    cachedMallId = next; // keep cache fresh for future re-mounts + sibling instances
     // Review Board (session 150) — skip localStorage write; broadcast
     // still fires so sibling instances in the iframe stay in sync.
     if (!isReviewMode()) {
