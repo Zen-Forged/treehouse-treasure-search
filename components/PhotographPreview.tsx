@@ -172,7 +172,7 @@ export default function PhotographPreview({
                 fontFamily: FONT_LORA,
                 fontStyle: "italic",
                 fontSize: 14,
-                color: v1.inkMuted,
+                color: v1.inkMid,
                 lineHeight: 1.1,
                 marginBottom: 6,
                 textAlign: "center",

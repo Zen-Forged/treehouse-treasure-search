@@ -506,7 +506,7 @@ export function BoothTitleBlock({
               style={{
                 fontFamily: FONT_CORMORANT,
                 fontSize: 20,
-                color: v2.text.muted,
+                color: v2.text.secondary,
                 lineHeight: 1,
                 marginTop: 4,
               }}

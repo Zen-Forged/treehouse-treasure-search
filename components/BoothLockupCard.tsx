@@ -162,7 +162,7 @@ export default function BoothLockupCard({
                 display: "inline-block",
                 fontFamily: FONT_SYS,
                 fontSize: 11.5,
-                color: v1.inkMuted,
+                color: v1.inkMid,
                 textDecoration: "underline",
                 textDecorationStyle: "solid",
                 textDecorationColor: v2.border.light,
@@ -178,7 +178,7 @@ export default function BoothLockupCard({
               style={{
                 fontFamily: FONT_SYS,
                 fontSize: 11.5,
-                color: v1.inkMuted,
+                color: v1.inkMid,
                 marginTop: 2,
                 lineHeight: 1.4,
               }}

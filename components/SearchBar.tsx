@@ -140,7 +140,7 @@ export default function SearchBar({
     outline:     "none",
     fontFamily:  FONT_LORA,
     fontSize:    15,
-    color:       v2.text.muted,
+    color: v2.text.secondary,
     // Native caret — green when typing, transparent (hidden) when empty +
     // focused so the custom caret takes over without visual overlap.
     caretColor:  showCustomCaret ? "transparent" : v1.green,
