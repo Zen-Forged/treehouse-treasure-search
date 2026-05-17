@@ -439,7 +439,7 @@ function LoginInner() {
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 15,
-            color: v2.text.muted,
+            color: v2.text.primary,
             lineHeight: 1.55,
             margin: 0,
           }}

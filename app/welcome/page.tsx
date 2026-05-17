@@ -164,7 +164,7 @@ function WelcomeInner() {
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 13,
-              color: v2.text.secondary,
+              color: v2.text.primary,
               textAlign: "center",
               lineHeight: 1.5,
               margin: "0 auto 18px",
@@ -280,7 +280,7 @@ function WelcomeRow({
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 11.5,
-            color: v2.text.secondary,
+            color: v2.text.primary,
             lineHeight: 1.4,
             marginTop: 1,
           }}

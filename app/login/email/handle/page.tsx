@@ -222,7 +222,7 @@ function HandlePickInner() {
             fontFamily:  FONT_CORMORANT,
             fontStyle:   "italic",
             fontSize:    15,
-            color:       v2.text.muted,
+            color:       v2.text.primary,
             textAlign:   "center",
             lineHeight:  1.55,
             margin:      "0 auto 28px",
@@ -277,9 +277,7 @@ function HandlePickInner() {
             style={{
               fontFamily:    FONT_INTER,
               fontSize:      12,
-              // v1.inkFaint maps to v2.text.muted — v2 namespace has no
-              // faint-tier; muted is the lightest text color in v2.
-              color:         v2.text.muted,
+              color:         v2.text.secondary,
               textAlign:     "center",
               lineHeight:    1.5,
               margin:        "16px auto 0",
