@@ -106,7 +106,7 @@ export default function InviteVendorSheet({
           style={{
             fontFamily: "Lora, Georgia, serif",
             fontSize: 12,
-            color: v1.inkMuted,
+            color: v1.inkMid,
             marginBottom: 14,
             fontStyle: "italic",
           }}

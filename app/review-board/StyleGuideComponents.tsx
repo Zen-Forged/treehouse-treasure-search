@@ -126,7 +126,7 @@ function PrimitiveCard({ name, importPath, propsLine, status, children }: Primit
           style={{
             fontFamily: MONO_FONT,
             fontSize:   type.size.xs,
-            color:      v2.text.muted,
+            color: v2.text.secondary,
             lineHeight: 1.5,
             wordBreak:  "break-all",
           }}
@@ -273,7 +273,7 @@ function BookmarkBoothBubbleDemo() {
   return (
     <div style={{ display: "flex", gap: space.s16, alignItems: "center" }}>
       <BookmarkBoothBubble saved={saved} onClick={() => setSaved((s) => !s)} />
-      <span style={{ fontFamily: FONT_INTER, fontSize: type.size.xs, color: v2.text.muted }}>
+      <span style={{ fontFamily: FONT_INTER, fontSize: type.size.xs, color: v2.text.secondary }}>
         tap to toggle
       </span>
     </div>
@@ -285,7 +285,7 @@ function StarFavoriteBubbleDemo() {
   return (
     <div style={{ display: "flex", gap: space.s16, alignItems: "center" }}>
       <StarFavoriteBubble isFavorite={fav} onToggle={() => setFav((f) => !f)} />
-      <span style={{ fontFamily: FONT_INTER, fontSize: type.size.xs, color: v2.text.muted }}>
+      <span style={{ fontFamily: FONT_INTER, fontSize: type.size.xs, color: v2.text.secondary }}>
         tap to toggle
       </span>
     </div>
@@ -329,7 +329,7 @@ function LocationActionsDemo() {
         style={{
           fontFamily: FONT_INTER,
           fontSize:   type.size.xs,
-          color:      v2.text.muted,
+          color: v2.text.secondary,
           lineHeight: 1.5,
         }}
       >
@@ -370,15 +370,15 @@ function FlagGlyphDemo() {
     <div style={{ display: "flex", gap: space.s16, alignItems: "center" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
         <FlagGlyph size={22} />
-        <code style={{ fontFamily: MONO_FONT, fontSize: type.size.xs, color: v2.text.muted }}>regular</code>
+        <code style={{ fontFamily: MONO_FONT, fontSize: type.size.xs, color: v2.text.secondary }}>regular</code>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
         <FlagGlyph size={22} weight="bold" />
-        <code style={{ fontFamily: MONO_FONT, fontSize: type.size.xs, color: v2.text.muted }}>bold</code>
+        <code style={{ fontFamily: MONO_FONT, fontSize: type.size.xs, color: v2.text.secondary }}>bold</code>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
         <FlagGlyph size={22} style={{ fill: v2.accent.green }} />
-        <code style={{ fontFamily: MONO_FONT, fontSize: type.size.xs, color: v2.text.muted }}>filled</code>
+        <code style={{ fontFamily: MONO_FONT, fontSize: type.size.xs, color: v2.text.secondary }}>filled</code>
       </div>
     </div>
   );

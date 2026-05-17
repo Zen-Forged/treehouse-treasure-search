@@ -133,7 +133,7 @@ export default function NotesPanel({ surfacePath }: { surfacePath: string }) {
         {hasFindings
           ? `${findings.length} finding${findings.length === 1 ? "" : "s"}`
           : "+ Add finding"}
-        <span style={{ color: v2.text.muted, fontSize: 10 }}>{expanded ? "▾" : "▸"}</span>
+        <span style={{ color: v2.text.secondary, fontSize: 10 }}>{expanded ? "▾" : "▸"}</span>
       </button>
 
       {expanded && (
@@ -176,7 +176,7 @@ export default function NotesPanel({ surfacePath }: { surfacePath: string }) {
                       all:            "unset",
                       cursor:         "pointer",
                       fontSize:       10,
-                      color:          v2.text.muted,
+                      color: v2.text.secondary,
                       marginTop:      4,
                       textDecoration: "underline",
                     }}

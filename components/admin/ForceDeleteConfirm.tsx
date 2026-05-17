@@ -108,7 +108,7 @@ export default function ForceDeleteConfirm({
             style={{
               display: "block",
               fontSize: 11,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
               marginBottom: 4,
             }}

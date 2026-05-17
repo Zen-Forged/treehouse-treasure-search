@@ -185,7 +185,7 @@ export default function RelinkSheet({
             <div
               style={{
                 fontSize: 11,
-                color: v1.inkMuted,
+                color: v1.inkMid,
                 marginTop: 3,
               }}
             >
@@ -354,7 +354,7 @@ function RequestCard({
           {isDiff && (
             <span
               style={{
-                color: v1.inkMuted,
+                color: v1.inkMid,
                 fontSize: 11,
                 fontStyle: "italic",
                 marginLeft: 6,
@@ -367,7 +367,7 @@ function RequestCard({
         <div
           style={{
             fontSize: 11,
-            color: v1.inkMuted,
+            color: v1.inkMid,
             marginTop: 2,
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -488,7 +488,7 @@ const footerStyle: React.CSSProperties = {
 const messageStyle: React.CSSProperties = {
   padding: "32px 8px",
   textAlign: "center",
-  color: v1.inkMuted,
+  color: v1.inkMid,
   fontFamily: "Lora, Georgia, serif",
   fontStyle: "italic",
   fontSize: 13,

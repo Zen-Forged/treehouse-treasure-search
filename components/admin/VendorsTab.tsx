@@ -628,7 +628,7 @@ function VendorRowAccordion({
           <div
             style={{
               fontSize: 11,
-              color: v1.inkMuted,
+              color: v1.inkMid,
               marginTop: 2,
               whiteSpace: "nowrap",
               overflow: "hidden",
@@ -660,7 +660,7 @@ function VendorRowAccordion({
           </span>
           <span
             style={{
-              color: v1.inkFaint,
+              color: v1.inkMid,
               fontSize: 18,
               lineHeight: 1,
               fontFamily: "Lora, Georgia, serif",
@@ -736,7 +736,7 @@ function VendorRowDetail({
         {noteName && (
           <span
             style={{
-              color: v1.inkMuted,
+              color: v1.inkMid,
               fontSize: 10,
               fontStyle: "italic",
               fontFamily: "Lora, Georgia, serif",
@@ -787,7 +787,7 @@ function VendorRowDetail({
         >
           ↗ public booth
         </a>
-        <span style={{ color: v1.inkFaint }}>·</span>
+        <span style={{ color: v1.inkMid }}>·</span>
         <a
           href={`/my-shelf?vendor=${vendor.id}`}
           target="_blank"
@@ -805,7 +805,7 @@ function Key({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        color: v1.inkMuted,
+        color: v1.inkMid,
         fontSize: 11,
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
         textAlign: "left",
@@ -1009,7 +1009,7 @@ const addBoothPillStyle: React.CSSProperties = {
 const messageStyle: React.CSSProperties = {
   padding: "32px 16px",
   textAlign: "center",
-  color: v1.inkMuted,
+  color: v1.inkMid,
   fontFamily: "Lora, Georgia, serif",
   fontStyle: "italic",
   fontSize: 14,
