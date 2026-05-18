@@ -8,6 +8,49 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.184.0] — 2026-05-18
+
+### Session 184 — Vendor profile enrichment design pass kickoff (Shape B) + Arc 0 ship: migration 022 schema additions + handle retirement single coupled commit (-203 LOC net)
+
+2 runtime commits + 1 close. David's session-opening ask: vendor-side profile enrichment — Facebook + Instagram URLs + bio + custom directions text + profile image update + retire @handle from setup ("handles don't quite make sense outside of other social platforms that use it, unless I'm missing something"). Per `project_vendor_value_first_prioritization` ✅ Promoted — matches the captured "vendor profile enrichment" candidate exactly. Audit-first via parallel reads localized current vendor architecture in 1 round-trip: `vendors` table already has `bio` + `avatar_url` + `facebook_url` + `hero_image_url` (only `instagram_url` + `directions_text` missing); handle is shopper-only (lives on shoppers table at `/login/email/handle` picker + `/me` `@handle` h1); vendors have no handle field at all. David's ambiguity-invitation ("unless I'm missing something") resolved with explicit take: for vendors, handle is redundant (booth name + booth slug serve as unique identity); for shoppers, handle serves no public-facing purpose (no social-graph). Cost-shape triage at 3 axes per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted via batched `AskUserQuestion` per `feedback_v2_options_before_drafting` ✅ Promoted — David picked all 3 RECOMMENDED options (retire handle picker + display entirely / reuse avatar_url + new placement / just FB+IG). Top-level cost-shape pick: **Shape B + Arc 0 today** (design pass in session 185; Arc 0 ships migration + handle retirement now to clear shopper-flow ambiguity before vendor profile arc).
+
+### Added
+
+- **`supabase/migrations/022_vendor_profile_enrichment.sql`** — additive nullable columns `vendors.instagram_url` + `vendors.directions_text`. NULL semantics documented inline: instagram_url NULL = no IG linked + UI hides icon; directions_text NULL = no custom directions + UI falls back to mall street address + R17 LocationActions alone. No backfill; existing rows render exactly as they did pre-migration. **HITL pending**: paste into both Supabase dashboards (prod + staging) before session 185 implementation arcs.
+- **`types/treehouse.ts` Vendor interface extended** — `instagram_url: string | null` + `directions_text: string | null`. 2 in-codebase Vendor literal sites updated additively: `lib/fixtures.ts` VENDOR_BASE (all 5 fixture vendors inherit via spread) + `components/admin/VendorsTab.tsx` vendorRowToVendor() helper (defaults to null since admin tab doesn't expose these fields yet).
+- **`lib/useShopperAuth.ts` silent auto-claim primitive** — module-scope `autoClaimPromise` dedupes the silent POST to /api/shopper-claim across concurrent useShopperAuth consumer mounts (Masthead + /me + /flagged footer all subscribe at once on warm nav). New `suggestHandleFromEmail()` helper (moved from retired picker page; strips non-alphanumeric, collapses hyphens, scout-XXXX fallback). New `autoClaimSilently(email)` POSTs with derived handle + any pending localStorage saves/booth-bookmarks; soft-fails with console.error; next page load retries naturally since promise resets on full page reload not warm nav. **7th cumulative firing of `feedback_module_scope_cache_for_warm_nav_hydration` ✅ Promoted at session 168** — pattern extends from READ layer (cachedRoleState + cachedShopperAuthState + cachedAuthUser + cachedMalls + cachedMallId + cachedVendorBundle) to WRITE layer (autoClaimPromise dedupes POST across concurrent mounts via Promise-cache vs state-cache).
+
+### Changed
+
+- **`lib/useShopperAuth.ts` `loadShopper` extended with `isRetry` guard** — when row null + user exists, commits `isLoading: true` (holds consumers in non-flashing state ~150–400ms), awaits `autoClaimSilently`, then recurses with `isRetry=true`. If retry STILL finds no row, the endpoint failed; renders authed-no-shopper state so caller surfaces a fallback path. Infinite-loop-guard via isRetry guarantees ≤2 queries per claim.
+- **`app/login/page.tsx`** — `pickDest` `?role=shopper` early return retargets /login/email/handle → /me. Saves a tap by routing direct to /me (where auto-claim fires silently) instead of /welcome detour. `handleSend` + `handleResend` magic-link redirect simplified — removed role-based redirectTo branching; explicit `?redirect=` still wins; role threading happens in pickDest.
+- **`app/me/page.tsx`** — removed /login/email/handle redirect; useShopperAuth's auto-claim handles the missing-row case transparently. Blank-surface guard (already covers loading + !shopper cases) keeps the page quiet during the ~150–400ms auto-claim window. File-top doc comment updated with session 184 handle retirement BOUNDED REVERSAL note + new auth-state-branching table.
+- **`app/welcome/page.tsx`** — "Just exploring" → /me directly (was /login/email/handle). File-top comment updated.
+- **`app/me/page.tsx` avatar margin-bottom 14 → 22** — compensates for retired @handle h1 (the avatar + scouting-since eyebrow now sit closer together; extra 8px preserves rhythm vs stats below).
+
+### Removed
+
+- **`app/login/email/handle/page.tsx` DELETED (-312 LOC)** — picker page wholesale retire per Q1 cost-shape pick "Retire picker + display." Suggestion logic moved to lib/useShopperAuth.ts module scope where it's the load-bearing input to silent auto-claim. **BOUNDED REVERSAL** of R1 Arc 3 ship (sessions 111-112) per `feedback_surface_locked_design_reversals` ✅ Promoted — original D7+D8 rationale (handle as explicit cross-device identity step) cited; counter-rationale: handle has no public-facing role (no social-graph), the picker step is pure friction over auto-suggestion.
+- **`app/me/page.tsx` `@{auth.shopper.handle}` h1 block (-14 LOC)** — BOUNDED REVERSAL of R1 D4 (h1 as Cormorant 22 / 500 / v2.text.primary identity beat); avatar + scouting-since eyebrow + private 3-stat row are sufficient identity for the shopper's OWN reflective destination. handle DB column + UNIQUE constraint + initials derivation preserved per `feedback_user_facing_copy_scrub_skip_db_identifiers` ✅ Promoted — avatar still renders initials derived from auto-claim-generated handle.
+- **`app/review-board/page.tsx` "Handle pick" tile entry** — scope-adjacent dead code retirement per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted (its target route deletes in same commit). Comment block in the System section documents the retire alongside the Welcome tile.
+
+### Fixed
+
+- **18th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161** — html2canvas-pro local-env miss caught by tsc at C1 commit-boundary gate (fresh worktree, dep missing locally); canonical recipe (`npm install`) resolved in 1 round-trip.
+
+### iPhone QA watch-items
+
+- **/me display on Vercel preview v0.184.0** ⭐ load-bearing — sign out → sign back in (existing shopper) → /me renders avatar + scouting-since + private 3-stat row, NO `@handle` h1 above the eyebrow. Avatar spacing should feel balanced vs stats row.
+- **Fresh-email sign-in flow** — sign in with email that's never been used → /login form → magic link → /login?confirmed=1 → polls → routes to /welcome → "Just exploring" → /me → blank surface ~200ms (auto-claim window) → populated state with derived initials.
+- **Existing-shopper sign-in flow** — sign in with email that has shopper row → routes direct to /me with populated state (no auto-claim fires; existing row hydrates synchronously).
+- **/flagged sync footer (guest with saves) → magic link → /me with saves migrated** — verifies auto-claim's silent migration of `loadFollowedIds()` + `loadBookmarkedBoothIds()` localStorage IDs to DB via /api/shopper-claim.
+- **HITL pending**: paste migration 022 into prod + staging Supabase dashboards before session 185 implementation arcs.
+- **NEW Tech Rule candidate (single firing this session, promotes on 2nd)**: "Hook-internal silent primitive replaces explicit picker page when UI step has no real user choice" — when a UI step is purely mechanical (auto-suggest from existing data; no validation needed), eliminate the surface by moving the work into a hook's internal lifecycle. Generalizes beyond auth/handle to any "we ask the user but they have no real choice" friction pattern.
+
+[v0.184.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.184.0
+
+---
+
 ## [v0.183.0] — 2026-05-18
 
 ### Session 183 — iPhone QA round 1 on production v0.182.0: F1 ✅ PASS retires carry + 3-commit fix bundle smallest→largest closes F4 /login footer + F2 TabsChrome Shape B split (chrome flicker root-cause kill) + F3 Next/Image round 3 escalation (BoothHero load delay)

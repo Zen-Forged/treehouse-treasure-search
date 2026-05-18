@@ -9,7 +9,9 @@
 // Shown when an authed user has neither a vendors row nor a shoppers row
 // (detectUserRole returns "none"). Two paths:
 //   "I have a booth"   → /vendor-request (auth email pre-filled — see Arc 3)
-//   "Just exploring"   → /login/email/handle (creates shoppers row → /me)
+//   "Just exploring"   → /me (useShopperAuth silent auto-claim creates the
+//                        shoppers row + migrates localStorage saves+bookmarks
+//                        per session 184 handle retirement)
 //
 // Subsequent sign-ins skip this page via detectUserRole since one of the
 // two rows will exist by then. A "none" user who taps back / dismisses
@@ -185,7 +187,7 @@ function WelcomeInner() {
               title="Just exploring"
               subtitle="Save your finds and come back to them."
               icon={<Bookmark size={16} strokeWidth={1.7} />}
-              onClick={() => router.push("/login/email/handle")}
+              onClick={() => router.push("/me")}
             />
           </div>
         </div>

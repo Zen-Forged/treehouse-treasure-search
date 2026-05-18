@@ -8,23 +8,34 @@
 // Session 143 — v2 visual migration Arc 6.1: typography (FONT_LORA →
 // FONT_CORMORANT + FONT_SYS → FONT_INTER; FONT_NUMERAL preserved per
 // project canonical) + palette (v1.* → v2.*) + page bg → v2.bg.main +
-// back button bubble → v2.surface.warm + v2.border.light. Structure +
-// auth-state branching + redirect flow preserved verbatim from R1 Arc 2.
+// back button bubble → v2.surface.warm + v2.border.light.
+//
+// Session 184 handle retirement (D4 BOUNDED REVERSAL per
+// feedback_surface_locked_design_reversals ✅ Promoted) — the @{handle}
+// h1 retired entirely. The avatar + scouting-since eyebrow + private
+// 3-stat row are sufficient identity for the shopper's OWN reflective
+// destination; the @-display served no public role and David's session-184
+// framing ("handles don't quite make sense outside of other social platforms")
+// scoped the retirement. handle DB column + initials derivation preserved
+// per feedback_user_facing_copy_scrub_skip_db_identifiers ✅ Promoted —
+// the avatar still renders initials derived from the auto-claim-generated
+// handle (suggestHandleFromEmail in lib/useShopperAuth.ts).
 //
 // Frame B (Glass-shape reflective destination) ships:
 //   - back-button masthead (matches /find/[id] + /shelf/[slug] family)
 //   - 84px avatar with 2-char initials in v2.accent.green circle (D11)
-//   - handle in Cormorant 22 / 500 / v2.text.primary (D4)
 //   - "SCOUTING SINCE [MONTH YYYY]" eyebrow in FONT_INTER small-caps (D10)
 //   - 3-stat row — Finds saved · Booths bookmarked · Locations (D9).
 //     FONT_NUMERAL numerals + FONT_INTER labels. Stats are PRIVATE per D2.
 //   - Sign-out italic-Cormorant link in v2.accent.green (D15)
 //
 // Auth-state branching:
-//   - shopper auth still loading → blank surface (no flash)
-//   - guest                       → redirect to /login
-//   - authed but no shopper row   → redirect to /login/email/handle (claim flow)
-//   - authed + shopper row        → render the Frame B layout
+//   - shopper auth still loading       → blank surface (no flash)
+//   - guest                            → redirect to /login
+//   - authed but no shopper row        → blank surface; useShopperAuth's
+//                                        silent auto-claim fires + auth.shopper
+//                                        populates on re-query (session 184)
+//   - authed + shopper row             → render the Frame B layout
 //
 // /me deliberately lives OUTSIDE app/(tabs)/ per D17 — it's a destination
 // behind the masthead profile bubble, not a tab.
@@ -91,17 +102,22 @@ export default function MePage() {
     return () => { cancelled = true; };
   }, [saves.ids, saves.isLoading]);
 
-  // Auth-state redirects fire after the auth check resolves. While
+  // Auth-state redirect fires after the auth check resolves. While
   // loading we render a blank surface to avoid a flash of the form.
   // !isAuthed → / so handleSignOut's router.push("/") agrees with this
   // useEffect's race-fired router.replace; deep-linked guests also bounce
   // home (where the masthead bubble + tab chrome surface their sign-in
   // path) rather than into a vendor-tinted /login form.
+  //
+  // Session 184 handle retirement — the authed-but-no-shopper-row redirect
+  // to /login/email/handle retired. useShopperAuth fires silent auto-claim
+  // on the missing-row case + holds isLoading: true during the claim window
+  // so the blank-surface guard below (which already covers the loading +
+  // !shopper cases) keeps the page quiet until auth.shopper populates.
   useEffect(() => {
     if (auth.isLoading) return;
-    if (!auth.isAuthed)         router.replace("/");
-    else if (!auth.shopper)     router.replace("/login/email/handle");
-  }, [auth.isLoading, auth.isAuthed, auth.shopper, router]);
+    if (!auth.isAuthed) router.replace("/");
+  }, [auth.isLoading, auth.isAuthed, router]);
 
   async function handleSignOut() {
     try {
@@ -178,7 +194,11 @@ export default function MePage() {
           flex:         1,
         }}
       >
-        {/* ─── Avatar 84 ───────────────────────────────────────────────── */}
+        {/* ─── Avatar 84 ─────────────────────────────────────────────────
+            Session 184 — margin-bottom bumped 14 → 22 to compensate for
+            retired @handle h1 (the avatar + scouting-since eyebrow now
+            sit closer together; the extra 8px keeps the rhythm vs the
+            stats below). */}
         <div
           aria-hidden="true"
           style={{
@@ -189,7 +209,7 @@ export default function MePage() {
             display:         "flex",
             alignItems:      "center",
             justifyContent:  "center",
-            margin:          "0 auto 14px",
+            margin:          "0 auto 22px",
             boxShadow:       "0 2px 8px rgba(42,26,10,0.18)",
           }}
         >
@@ -206,22 +226,6 @@ export default function MePage() {
             {auth.shopper.initials}
           </span>
         </div>
-
-        {/* ─── Handle ─────────────────────────────────────────────────── */}
-        <h1
-          style={{
-            textAlign:     "center",
-            fontFamily:    FONT_CORMORANT,
-            fontWeight:    500,
-            fontSize:      22,
-            color:         v2.text.primary,
-            margin:        "0 0 4px",
-            letterSpacing: "-0.005em",
-            lineHeight:    1.3,
-          }}
-        >
-          @{auth.shopper.handle}
-        </h1>
 
         {/* ─── Scouting-since eyebrow ─────────────────────────────────── */}
         <div

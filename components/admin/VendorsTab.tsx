@@ -451,6 +451,8 @@ function vendorRowToVendor(v: VendorRow): Vendor {
     avatar_url:     null,
     slug:           v.slug,
     facebook_url:   null,
+    instagram_url:  null,
+    directions_text: null,
     hero_image_url: v.hero_image_url,
   };
 }

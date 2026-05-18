@@ -81,6 +81,8 @@ const VENDOR_BASE = {
   bio:            null,
   avatar_url:     null,
   facebook_url:   null,
+  instagram_url:  null,
+  directions_text: null,
 };
 
 export const FIXTURE_VENDORS: Vendor[] = [
