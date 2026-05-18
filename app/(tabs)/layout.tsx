@@ -52,8 +52,16 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   // mall-filter version needed.
   const bookmarkCount = saves.ids.size;
 
-  const activeNav: "home" | "flagged" =
-    pathname === "/flagged" ? "flagged" : "home";
+  // Session 179 — Map tab restored at position 3 (BottomNav.tsx). Active
+  // prop now branches on pathname === "/map" so the Map nav slot highlights
+  // when user is on /map. Coupled with BottomNav.tsx tabs[] extension in
+  // same commit per feedback_single_coupled_commit_when_must_move_together
+  // ✅ Promoted — adding the tab without wiring active prop would render
+  // the Map slot permanently un-highlighted mid-commit.
+  const activeNav: "home" | "flagged" | "map" =
+    pathname === "/flagged" ? "flagged" :
+    pathname === "/map"     ? "map" :
+    "home";
 
   return (
     <div

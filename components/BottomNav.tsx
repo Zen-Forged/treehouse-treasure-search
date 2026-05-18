@@ -120,7 +120,7 @@ import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MdOutlineExplore } from "react-icons/md";
-import { PiLeafBold, PiStorefrontBold } from "react-icons/pi";
+import { PiLeafBold, PiMapPinBold, PiStorefrontBold } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
 import { useUserRole } from "@/lib/useUserRole";
 
@@ -136,16 +136,41 @@ import { useUserRole } from "@/lib/useUserRole";
 // button directly (Commit 4 in session 160 added that routing branch).
 // Shopper + guest stay 2-tab universal.
 //
-// 7th iteration of R10 D1 history (Profile is OUT, vendor Booth IS BACK):
-//   Guest / shopper:  Explore · Saved                          (2-tab)
-//   Vendor:           Explore · Saved · Booth                  (3-tab,
-//                                            Booth rightmost per session-114
-//                                            "rightmost = role-specialty
-//                                            when present" rule)
-//   Admin:            Explore · Saved                          (2-tab;
-//                                            admin role-specialty demotes
-//                                            from nav-tab to Profile-button
-//                                            destination per Commit 4)
+// Session 179 — David iPhone QA on production v0.178.0 surfaced Interp 2
+// design reversal: Map nav icon restored at position 3 (after Saved) as
+// PEER entry path to /map alongside the MallPickerChip. The chip stays
+// (session 178 D1 — "chip is canonical entry path to dedicated /map
+// route") but is no longer the sole path; nav icon is the additional
+// muscle-memory + discoverability path.
+//
+// 8th iteration of R10 D1 history:
+//   Before (session 178):
+//     Guest / shopper / admin:  Explore · Saved                  (2-tab)
+//     Vendor:                   Explore · Saved · Booth          (3-tab)
+//   After (session 179):
+//     Guest / shopper / admin:  Explore · Saved · Map            (3-tab)
+//     Vendor:                   Explore · Saved · Map · Booth    (4-tab,
+//                                          Booth rightmost per session-114
+//                                          "rightmost = role-specialty
+//                                          when present" rule preserved)
+//
+// 4th cumulative iteration adding/removing Map from nav:
+//   - Session 107 v1:    Home · Map · Profile · Saved (Map added)
+//   - Session 110 v1.2:  Home · Saved (Map RETIRED #1)
+//   - Session 121 R18:   Home · Saved · Map · [role-tab] (Map RESTORED)
+//   - Session 155 D6:    Map RETIRED #2 (drawer chrome + strip toggle
+//                        replaced it on Home)
+//   - Session 178 D1:    /map dedicated route revived; chip on Home is
+//                        canonical entry path; nav stays Map-less
+//   - Session 179:       Map RESTORED as peer entry path alongside chip
+//
+// Reversals stack explicitly per feedback_surface_locked_design_reversals
+// ✅ Promoted (~80+ cumulative firings across project). David QA
+// reasoning for restoring: chip is muscle-memory dependent (user has to
+// know the chip is the entry path); nav icon is discoverability + peer
+// path (universal nav vocabulary across many products). Both paths active
+// = chip-aware users have one fast tap from Home identity strip, nav-aware
+// users have one fast tap from any tabs/ surface.
 //
 // History note: "login" / "admin" / "profile" members still preserved in
 // NavTab type (no consumer renders them; type stays for callsite compat).
@@ -205,10 +230,22 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       key: "flagged", label: "Saved", href: "/flagged",
       icon: <PiLeafBold size={21} />, badge: true,
     },
+    // Session 179 — Map tab restored at position 3 (after Saved) per
+    // David QA Interp 2 design reversal. PiMapPinBold (outlined, weight-bold
+    // family matching PiLeafBold + PiStorefrontBold; reserves PiMapPinFill
+    // for primary-glyph identity contexts like the chip + /find/[id]
+    // cartographic eyebrow per session 178 paired-glyph vocabulary).
+    {
+      key: "map", label: "Map", href: "/map",
+      icon: <PiMapPinBold size={22} />,
+    },
     // Session 160 — Booth at rightmost slot per session-114 "rightmost =
     // role-specialty when present" rule. /my-shelf already passes
     // active="booth" (carryover from session 113); active highlight
-    // works without changes to consumer surfaces.
+    // works without changes to consumer surfaces. Session 179 — slot
+    // shifts from position 3 to position 4 since Map now occupies slot
+    // 3; rightmost-when-present rule preserved (Booth still rightmost
+    // when vendor authed; Map sits between Saved + Booth).
     ...(showBoothTab ? [{
       key: "booth" as NavTab,
       label: "Booth",
