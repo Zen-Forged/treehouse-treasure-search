@@ -64,7 +64,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useState } from "react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Pencil, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
@@ -151,41 +152,27 @@ export function BoothHero({
   // nothing to enlarge.
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  // Session 182 — paint-in upgrade per feedback_kill_bug_class_after_3_patches
-  // ✅ Promoted. David reported the BoothHero hero-image flicker resurfaced
-  // at session 182 despite session 171 dial #1's `new Image().src` preloader
-  // + fetchPriority="high" + decoding="async" hints. Patch round 2 of the
-  // same bug class — escalate to the W3C-canonical primitive.
+  // Session 183 C3 — Round 3 escalation per feedback_kill_bug_class_after_3_
+  // patches ✅ Promoted. Round 1 session 171 (`new Image()` useEffect — fired
+  // post-paint, didn't help cold-start). Round 2 session 182 (useLayoutEffect
+  // + <link rel="preload"> document.head.appendChild — got into high-priority
+  // slot but didn't reduce physical network time for Supabase 500ms-1s cold
+  // fetches; David's session 182 iPhone QA finding 3 surfaced the persisting
+  // delay). Round 3 here: Next/Image + Vercel Image API + edge cache.
   //
-  // Root cause (session 171 dial #1's analysis still correct, fix shape was
-  // wrong): <img> at line ~180 mounts AFTER React commits with the resolved
-  // heroImageUrl prop. The session 171 `new Image()` preloader fired in
-  // useEffect AFTER the first paint — meaning the cold-start race wasn't
-  // helped at all (preloader only warmed cache for warm-nav re-mounts).
+  // Why Next/Image kills the bug class structurally (not patches the symptom):
+  //   - Vercel Image API re-encodes Supabase JPEG/PNG to AVIF/WebP at request
+  //     time → 50-80% smaller payload → shorter network time.
+  //   - Resizes to device-appropriate width via `sizes` prop → mobile downloads
+  //     ~640px-wide variant instead of full Supabase original (~1500px+).
+  //   - Edge-caches the optimized output → cold-start once per region; warm
+  //     fetches from edge instantly.
+  //   - With `priority`, auto-emits <link rel="preload" imagesrcset="...">
+  //     in head as part of React tree — retires the manual useLayoutEffect
+  //     primitive from session 182 C2 as scope-adjacent dead code per
+  //     feedback_dead_code_cleanup_as_byproduct ✅ Promoted.
   //
-  // Fix shape: inject `<link rel="preload" as="image">` into document.head
-  // via useLayoutEffect — runs synchronously BEFORE browser paint, in the
-  // same render cycle as the img element mount. The browser sees the
-  // preload link and the img src in the same paint cycle and dedupes the
-  // fetch into the high-priority preload slot.
-  //
-  // useLayoutEffect (not useEffect) is the load-bearing axis: useEffect
-  // fires post-paint (too late to influence the paint that's about to
-  // happen); useLayoutEffect fires post-commit-pre-paint (exactly when we
-  // need the preload hint to land). Cleanup removes the link on unmount /
-  // heroImageUrl change so we don't leak link tags on per-vendor nav.
-  useLayoutEffect(() => {
-    if (!heroImageUrl) return;
-    const link = document.createElement("link");
-    link.rel = "preload";
-    link.as = "image";
-    link.href = heroImageUrl;
-    link.setAttribute("fetchpriority", "high");
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, [heroImageUrl]);
+  // useLayoutEffect import + manual preload primitive both retire this commit.
 
   return (
     <div style={{ padding: "0 10px", position: "relative" }}>
@@ -213,24 +200,23 @@ export function BoothHero({
           }}
         >
           {heroImageUrl && (
-            <img
+            <Image
               key={heroKey}
               src={heroImageUrl}
               alt=""
-              // Session 171 paint-in dial #1 — HTML5 hints. fetchpriority
-              // tells the browser to schedule this image early (overrides
-              // default "low" for images discovered late in the parse
-              // cycle); decoding="async" allows off-main-thread decode so
-              // paint isn't blocked. Paired with the preloader useEffect
-              // above so warm-nav re-mounts paint from the HTTP cache the
-              // preloader populated when heroImageUrl first became known.
-              fetchPriority="high"
-              decoding="async"
+              // Session 183 C3 — Next/Image with `fill` covers the motion.div
+              // parent (position: absolute; inset: 0 — qualifies as
+              // positioning context per Next.js docs). `priority` marks as
+              // LCP candidate so Next auto-emits <link rel="preload"
+              // imagesrcset="..."> in head + uses high fetchpriority. `sizes`
+              // tells Next.js which width variant to serve: layout caps at
+              // 430px maxWidth; mobile renders ~355-410px wide with 10px
+              // outer padding. Next.js picks the closest deviceSizes entry
+              // (640 by default) and serves AVIF/WebP variant at that width.
+              fill
+              priority
+              sizes="(max-width: 430px) 100vw, 430px"
               style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
                 objectFit: "cover",
                 objectPosition: "center",
               }}

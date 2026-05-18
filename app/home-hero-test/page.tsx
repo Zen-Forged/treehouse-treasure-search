@@ -40,8 +40,7 @@ const MOCK_MALLS = [
 ];
 
 export default function HomeHeroTestPage() {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [mallIndex,   setMallIndex]   = React.useState(0);
+  const [mallIndex, setMallIndex] = React.useState(0);
 
   const currentMall = MOCK_MALLS[mallIndex];
 
@@ -53,10 +52,14 @@ export default function HomeHeroTestPage() {
         paddingBottom: 80,
       }}
     >
-      <HomeHero
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+      {/* Session 183 — HomeHero API simplified to showSearch?: boolean
+          (was searchQuery + onSearchChange). SearchBar URL plumbing
+          internalized via own Suspense boundary; typing in the search
+          bar on this smoke route will router.replace to / (URL writes
+          are scope-bound to the production / surface). Smoke route
+          remains useful for visual validation of hero photo + cream-fade
+          + chip composition + sticky-collapse behavior. */}
+      <HomeHero showSearch />
 
       {/* Arc 2.2 — MallPickerChip directly below hero per D10 + D11.
           Verifies the 22px top breathing room reads right against the
@@ -94,9 +97,6 @@ export default function HomeHeroTestPage() {
             marginBottom: 32,
           }}
         >
-          <strong>Debounced query:</strong>{" "}
-          {searchQuery === "" ? <em>(empty)</em> : <code>{searchQuery}</code>}
-          <br />
           <strong>Selected mall:</strong> <code>{currentMall}</code>
         </div>
 

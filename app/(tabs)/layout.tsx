@@ -37,6 +37,7 @@ import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import TabsChrome from "@/components/TabsChrome";
+import MallParamReceiver from "@/components/MallParamReceiver";
 import { useShopperSaves } from "@/lib/useShopperSaves";
 import { v2 } from "@/lib/tokens";
 
@@ -96,12 +97,18 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
         flexDirection:  "column",
       }}
     >
-      {/* TabsChrome owns HomeHero + MallPickerChip + MallMapDrawer +
-          URL plumbing. Suspense-wrapped because it consumes
-          useSearchParams — without the boundary, Next.js 14 forces every
-          child page into dynamic rendering. */}
+      {/* Session 183 F2 Shape B — TabsChrome (Base chrome: HomeHero photo,
+          Profile overlay, MallPickerChip) renders OUTSIDE Suspense since
+          it no longer calls useSearchParams. URL-dependent code split into
+          two Suspense-contained components: SearchBarSlot (inside HomeHero,
+          for ?q= read/write) + MallParamReceiver (sibling here, for
+          ?mall= intake). On warm-nav from /find/[id] → /, the floating
+          chrome stack paints synchronously while only the URL-bound
+          subtrees suspend briefly — addresses David's session 182 iPhone
+          QA finding 2 (whole-chrome-invisible-during-Suspense-fallback). */}
+      <TabsChrome />
       <Suspense fallback={null}>
-        <TabsChrome />
+        <MallParamReceiver />
       </Suspense>
 
       {children}

@@ -20,91 +20,91 @@
 //     scrolls away with content when user scrolls down. (Unchanged from
 //     session 175 Option α — David's reference image for session 176.)
 //
-// David's session 176 iPhone QA: "I'd like to allow the hero header image
-// to scroll a bit more before it becomes sticky (see image from the saved
-// page as reference to the position)." Bounded revision of session 175
-// Option α — full-identity-beat thesis stays for scrollY=0 (hero at full
-// 33vh), partial-compression activates only AFTER user scrolls past
-// SCROLL_BEFORE_STICKY_PX threshold.
+// Session 183 F2 Shape B — SearchBar URL state internalized via own
+// Suspense boundary. David's session 182 iPhone QA finding 2 root cause:
+// (tabs)/layout.tsx wrapped TabsChrome in <Suspense fallback={null}>;
+// useSearchParams in TabsChrome forced Next.js 14 Suspense bailout. On
+// warm-nav back to /, TabsChrome suspended → null fallback → entire
+// floating chrome (HomeHero photo + Profile overlay + MallPickerChip)
+// invisible until URL hydrated. Fix shape: split TabsChrome so non-URL
+// chrome renders outside Suspense + URL-dependent code (SearchBar reads
+// ?q / writes ?q) moves INSIDE HomeHero wrapped in its own Suspense.
+// Now: hero photo + cream-fade paint synchronously regardless of URL
+// hydration; only the SearchBar slot suspends briefly (contained to its
+// own bottom-anchored 16px slot inside the hero — visually negligible).
 //
-// BOUNDED REVIVAL of session 164 D16-D19 + session 166 dial 10
-// collapsing-header pattern (negative-top sticky), at smaller magnitude.
-// Session 164 collapsed to 158-191px (~58-72% compression on iPhone SE
-// 33vh = 220px). Session 176 compresses by SCROLL_BEFORE_STICKY_PX
-// (~36% on iPhone SE). The structural pattern (negative-top sticky)
-// returns; the magnitude tightens to "a bit" per David's verbatim ask.
-//
-// Consumers: app/(tabs)/layout.tsx (shared across Home + Saved).
-// Asset at /public/home-hero.png; swap mechanism is file replacement.
+// API change: HomeHero accepts showSearch?: boolean (was: searchQuery +
+// onSearchChange optional). Caller no longer plumbs URL state through
+// HomeHero's props — HomeHero owns the URL state for its own SearchBar
+// slot.
 
 "use client";
 
 import * as React from "react";
+import { Suspense, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import { v2 } from "@/lib/tokens";
 
 interface Props {
-  // Session 166 Arc 3.1.1 — search props now optional per Call 2 Option C.
-  // When omitted (e.g., on Saved per session 121 R18 D-lock), HomeHero
-  // renders the hero photo + cream-fade only, no embedded SearchBar.
-  searchQuery?:       string;
-  onSearchChange?:    (q: string) => void;
+  // Session 183 — simplified prop. When true, SearchBar slot mounts inside
+  // hero's bottom-anchored position (Home only). When false/omitted, hero
+  // renders as photo + cream-fade only (Saved per session 121 R18 D-lock).
+  showSearch?:        boolean;
   searchPlaceholder?: string;
 }
 
 const HERO_HEIGHT_VH = 33;
 
 // Session 176 — scroll distance allowed before hero pins via negative-top
-// sticky. At scrollY < SCROLL_BEFORE_STICKY_PX: hero scrolls naturally with
-// content (in-flow visual). At scrollY >= SCROLL_BEFORE_STICKY_PX: sticky
-// activates pinning hero at top:-SCROLL_BEFORE_STICKY_PX (top of hero
-// offscreen by that amount; bottom of hero at calc(33vh -
-// SCROLL_BEFORE_STICKY_PX) from viewport top). Easily dial-able from
-// David's iPhone QA.
-//
-// Session 177 dial — 80 → 40 per David's iPhone QA on v0.176.0: "The
-// sticky position of the explore header goes too far and cuts off part
-// of the logo. It should look more like the second image attached with
-// just some padding between the top of the logo and the screen up top."
-// 80px compression pushed the wordmark's leaf glyph flush against the
-// URL bar at compressed state; 40px halves the compression magnitude so
-// ~40px of breathing room above the wordmark remains visible when
-// sticky-pinned. Bounded refinement of session 176 C1 — structural
-// pattern (negative-top sticky) preserved; magnitude tightens.
+// sticky. See session 177 dial — 80 → 40 (iPhone QA on v0.176.0 cut wordmark
+// flush against URL bar at 80; 40 halves compression so wordmark breathes).
 const SCROLL_BEFORE_STICKY_PX = 40;
 
 // Session 176 — hero's VISIBLE bottom edge in viewport coordinates when the
 // hero is sticky-pinned (Home, scrollY > SCROLL_BEFORE_STICKY_PX) OR when
-// it sits at the top of document flow (Saved at scrollY=0; Home at
-// scrollY=0 with hero unpinned). Consumers (MallPickerChip + MallMap-
+// it sits at the top of document flow. Consumers (MallPickerChip + MallMap-
 // Drawer, both Home-only) pin themselves at or below this edge.
-//
-// Bounded-revises session 175 — formerly `${HERO_HEIGHT_VH}vh` (full hero
-// always visible when pinned per Option α). Now `calc(${HERO_HEIGHT_VH}vh
-// - ${SCROLL_BEFORE_STICKY_PX}px)` — hero compresses by
-// SCROLL_BEFORE_STICKY_PX when pinned because negative-top sticky leaves
-// that portion offscreen. Chip + drawer inherit the compressed bottom-edge
-// automatically via this single export.
-//
-// Session lineage: 164 D16-D19 named STICKY_THIN_HEIGHT (collapsed strip
-// 158-191px) → 175 Option α renamed to HERO_BOTTOM_EDGE (full 33vh, no
-// collapse) → 176 keeps name, value compresses by 80px (~36% iPhone SE).
 export const HERO_BOTTOM_EDGE =
   `calc(${HERO_HEIGHT_VH}vh - ${SCROLL_BEFORE_STICKY_PX}px)`;
 const SEARCH_BOTTOM_OFFSET = 16;
 const SEARCH_HORIZ_PADDING = 16;
 
+// Session 183 F2 Shape B — SearchBar slot wraps the URL-aware read/write
+// in its own component so Suspense boundary contains the useSearchParams
+// bailout to JUST this slot (visually a 16px-from-bottom inset bar that's
+// briefly empty on warm-nav, surrounded by fully-painted hero photograph).
+function SearchBarSlot({ placeholder }: { placeholder?: string }) {
+  const searchParams = useSearchParams();
+  const router       = useRouter();
+  const q            = searchParams.get("q") ?? "";
+
+  const handleChange = useCallback((next: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next.trim().length > 0) params.set("q", next);
+    else                        params.delete("q");
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+  }, [router, searchParams]);
+
+  return (
+    <SearchBar
+      initialQuery={q}
+      placeholder={placeholder}
+      onChange={handleChange}
+    />
+  );
+}
+
 export default function HomeHero({
-  searchQuery,
-  onSearchChange,
+  showSearch,
   searchPlaceholder,
 }: Props) {
-  const showSearch = searchQuery !== undefined && onSearchChange !== undefined;
-  // Session 176 — Home (showSearch=true) sticky-pinned with negative-top
-  // offset so hero scrolls SCROLL_BEFORE_STICKY_PX pixels before pinning;
-  // Saved (showSearch=false) position:static in document flow. See file-top.
+  // Sticky on Home (showSearch=true), static on Saved (showSearch=false).
+  // See file-top — preserved verbatim from session 175 Option α + session
+  // 176 scroll-and-compress dial.
   const sectionStyle: React.CSSProperties = {
-    position:           showSearch ? "sticky" : "static",
+    position: showSearch ? "sticky" : "static",
     ...(showSearch ? { top: -SCROLL_BEFORE_STICKY_PX, zIndex: 10 } : {}),
     width:              "100%",
     height:             `${HERO_HEIGHT_VH}vh`,
@@ -141,11 +141,13 @@ export default function HomeHero({
     <section style={sectionStyle} aria-label="Treehouse Finds">
       {showSearch && (
         <div style={searchWrapStyle}>
-          <SearchBar
-            initialQuery={searchQuery}
-            placeholder={searchPlaceholder}
-            onChange={onSearchChange}
-          />
+          {/* Suspense boundary CONTAINS useSearchParams bailout. Only this
+              16px-anchored slot suspends on warm-nav URL hydration; hero
+              photograph + cream-fade + wordmark all paint synchronously
+              around it. */}
+          <Suspense fallback={null}>
+            <SearchBarSlot placeholder={searchPlaceholder} />
+          </Suspense>
         </div>
       )}
     </section>
