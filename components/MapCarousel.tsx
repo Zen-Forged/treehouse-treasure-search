@@ -125,7 +125,20 @@ export default function MapCarousel({
           }}
           style={{
             position:      "fixed",
-            bottom:        "max(87px, calc(env(safe-area-inset-bottom, 0px) + 87px))",
+            // Session 179 — David iPhone QA finding 5: "Reduce padding of
+            // carousel between the navbar." Session 161 math: nav-top sits
+            // at 75 from screen bottom (max(22px, safe-area+22px) + nav
+            // height ~53). Wrapper-bottom 87 left a 12px gap shelf↔nav,
+            // and the shelf's internal padding-bottom 12 added another
+            // 12px between cards-bottom and shelf-bottom = ~24px perceived
+            // padding between cards and nav. Halving: wrapper-bottom
+            // 87 → 81 (6px gap shelf↔nav) AND shelf padding-bottom 12 → 6
+            // (cards-bottom now 12px above nav-top vs 24px). Coupled
+            // change since both contribute to the same perceived padding;
+            // splitting would leave intermediate state with mismatched
+            // internal-vs-external gaps. Safe-area math preserved
+            // verbatim (notched iPhones still get safe-area + 81).
+            bottom:        "max(81px, calc(env(safe-area-inset-bottom, 0px) + 81px))",
             left:          0,
             right:         0,
             zIndex:        35,
@@ -148,9 +161,16 @@ export default function MapCarousel({
               // headroom (translateY −12 + scale 1.12 lifts the card edge
               // up to ~16px above its normal slot; 22px top padding keeps
               // the rise visible without clipping at the scroll container's
-              // implicit overflow-y boundary). Bottom 12 + horizontal 12
-              // preserved.
-              padding:                 "22px 12px 12px",
+              // implicit overflow-y boundary).
+              //
+              // Session 179 — David iPhone QA finding 5: padding-bottom
+              // 12 → 6 (coupled with wrapper-bottom 87 → 81 above) to
+              // halve perceived cards-to-nav padding from ~24px to ~12px.
+              // Top stays 22 since the selected card "peek up" geometry
+              // hasn't been dialed back yet (C6 reduces selected scale +
+              // translateY; top padding may also come down then if peek
+              // headroom requirement shrinks).
+              padding:                 "22px 12px 6px",
               maxWidth:                430,
               margin:                  "0 auto",
               pointerEvents:           "auto",
