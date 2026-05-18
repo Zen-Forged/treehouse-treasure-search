@@ -219,7 +219,21 @@ export default function MapCarousel({
                     // a visual change — aligns carousel cards to the same
                     // surface tier as form inputs + nav bar so future v2.input
                     // value flips cascade here automatically.
-                    background:    v2.surface.input,
+                    //
+                    // Session 179 C7 — David iPhone QA finding 7: "Change the
+                    // selected carousel thumbnail to the highlighted selected
+                    // state we use on the nav bar." Selected bg →
+                    // rgba(30,77,43,0.10) matching BottomNav.tsx C.greenLight
+                    // (line 168). Replaces the geometric-distinction-only
+                    // emphasis from session 165 R2 (which C6 dialed back) with
+                    // chromatic distinction mirroring the active-nav-tab pill
+                    // vocabulary. Non-peeked keeps v2.surface.input as before
+                    // — only the swap-on-selection is new. Cross-surface
+                    // visual continuity: selected nav tab + selected carousel
+                    // card both read with the same green-tint highlight.
+                    background:    isPeeked
+                      ? "rgba(30,77,43,0.10)"
+                      : v2.surface.input,
                     // Session 161 — non-peeked border tier light → medium per David's
                     // "Add thin stroke around the mall cards so they have some separation
                     // from the bg, it can be a lighter grey color or something we've
@@ -235,15 +249,20 @@ export default function MapCarousel({
                     // rgba(42,26,10,0.18) matching BottomNav stroke vocabulary
                     // (BottomNav.tsx C.border line 165 + nav-outer-border line 257)
                     // since David's finding-7 anchored this dial bundle to nav-bar
-                    // visual continuity. Cross-surface vocabulary match — chrome
-                    // boundaries on /map share the same stroke value as nav-bar
-                    // chrome boundaries. Peeked state may change in C7 (selected
-                    // bg → nav greenLight per finding 7); deferred until that
-                    // commit decides whether to keep green border or match
-                    // non-peeked stroke.
-                    border:        isPeeked
-                      ? `1.5px solid ${v2.accent.green}`
-                      : `1px solid rgba(42,26,10,0.18)`,
+                    // visual continuity.
+                    //
+                    // Session 179 C7 — peeked border unified with non-peeked per
+                    // feedback_dead_code_cleanup_as_byproduct ✅ Promoted. With
+                    // C6 scale-down (1.12 → 1.03) + C7 green-tint bg, the bright
+                    // 1.5px v2.accent.green border (session 161) becomes a
+                    // redundant 3rd emphasis cue stacked atop bg + scale. Nav-pill
+                    // vocabulary uses bg-only distinction (no border on active tab);
+                    // mirroring that here: bg carries the "selected" signal, all
+                    // cards share the same thin stroke for card-identity
+                    // continuity. Single coupled commit with the bg flip since
+                    // both contribute to the same "match nav-pill vocabulary"
+                    // dial.
+                    border:        `1px solid rgba(42,26,10,0.18)`,
                     borderRadius:  10,
                     overflow:      "hidden",
                     display:       "flex",
