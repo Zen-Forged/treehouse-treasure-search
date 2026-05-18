@@ -514,6 +514,16 @@ export default function EditBoothSheet({
             />
           )}
 
+          {/* Session 186 — Vendor identity section divider per D2 in
+              docs/vendor-profile-enrichment-design.md. Quiet 1px hairline
+              with 24px breathing room above + below; no header text (D14
+              relies on visual grouping + field labels for semantic
+              clarity). Renders in both vendor + admin modes per D15
+              (admin-on-behalf gets identical enrichment surface).
+              Commit 5 fills the section with 5 new field renderers
+              (avatar + bio + 2 URL inputs + directions textarea). */}
+          <div style={{ height: 1, background: v2.border.light, margin: "10px 0 18px" }} />
+
           {/* Conflict / error */}
           {error && (
             <div
