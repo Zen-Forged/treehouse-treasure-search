@@ -594,15 +594,28 @@ export default function EditBoothSheet({
                 onChange={e => setDisplayName(e.target.value)}
                 placeholder="e.g. ZenForged Finds"
                 disabled={submitting}
-                autoFocus
+                // Session 186 — autoFocus retired. With the new Vendor
+                // identity section (commit 5 — avatar + bio + 2 URL inputs
+                // + directions), the sheet has 7 editable fields and no
+                // canonical "primary edit target"; auto-focusing booth
+                // name on every open pops the iOS keyboard immediately
+                // and covers most of the header text the user is trying
+                // to read. David: "keyboard shouldn't auto-pop up as it
+                // covers most of the text. Keyboard should only pop-up
+                // on click inside the menu input."
+                //
+                // Structural fix per `feedback_kill_bug_class_after_3_patches`
+                // — session 175 patched the keyboard-cover symptom via
+                // onFocus + scrollIntoView, which only fired AFTER
+                // auto-focus had already pushed the keyboard up. Removing
+                // autoFocus removes the symptom at its source. The
+                // onFocus scrollIntoView is retained because it still
+                // matters when the user manually taps the input (the
+                // sheet is bottom-anchored + the input sits high in the
+                // sheet body, so scrolling the input into the
+                // above-keyboard region is still load-bearing on user
+                // tap).
                 onFocus={(e) => {
-                  // Session 175 iPhone QA — iOS Safari keyboard covers the
-                  // booth name input when it gets focus inside this bottom
-                  // sheet. 300ms delay clears keyboard slide-up animation
-                  // (~250ms) + the sheet's entry transition (340ms at L227);
-                  // scrollIntoView lands the input in the visible viewport
-                  // above the keyboard. Captured `target` avoids stale ref
-                  // if the input unmounts during the delay.
                   const target = e.currentTarget;
                   setTimeout(() => target.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
                 }}
