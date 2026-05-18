@@ -46,6 +46,8 @@ export interface Vendor {
   avatar_url:     string | null;
   slug:           string;
   facebook_url:   string | null;
+  instagram_url:  string | null;  // Session 184 migration 022 — vendor profile enrichment
+  directions_text: string | null; // Session 184 migration 022 — free-text in-mall directions
   hero_image_url: string | null;
   // Joined
   mall?: Mall;
