@@ -33,20 +33,13 @@ import { requireAuth } from "@/lib/adminAuth";
 import { isAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/posts";
 import { recordEvent } from "@/lib/events";
+import { normalizeFacebookUrl, normalizeInstagramUrl } from "@/lib/socialUrls";
 
 export const dynamic = "force-dynamic";
 
 const BIO_MAX_LEN             = 280;  // D7 — UI counter mirrors this
 const DIRECTIONS_TEXT_MAX_LEN = 500;  // D10 — safety cap; no UI counter
-const URL_MAX_LEN             = 500;  // defensive: lenient validation but bounded length
-
-function isValidHttpUrl(value: string): boolean {
-  // D8 — lenient: any URL starting with http:// or https://. Vendors can
-  // paste shortlinks (fb.me, instagr.am, m.facebook.com, etc.); no host
-  // allowlist. Length capped at 500 chars defensively.
-  if (value.length > URL_MAX_LEN) return false;
-  return /^https?:\/\/\S+/i.test(value);
-}
+const URL_MAX_LEN              = 500;  // length cap on raw input before normalization
 
 // Normalizes incoming optional string fields. Three intents collapse to:
 //   - undefined  → field absent from payload → don't touch column
@@ -81,8 +74,8 @@ export async function PATCH(req: Request) {
   const vendorId       = body.vendorId?.trim();
   const displayName    = body.display_name?.trim();
   const bio            = normalizeOptionalString(body.bio);
-  const facebookUrl    = normalizeOptionalString(body.facebook_url);
-  const instagramUrl   = normalizeOptionalString(body.instagram_url);
+  const facebookInput  = normalizeOptionalString(body.facebook_url);
+  const instagramInput = normalizeOptionalString(body.instagram_url);
   const directionsText = normalizeOptionalString(body.directions_text);
 
   if (!vendorId) {
@@ -97,23 +90,51 @@ export async function PATCH(req: Request) {
       { status: 400 },
     );
   }
-  if (facebookUrl !== undefined && facebookUrl !== null && !isValidHttpUrl(facebookUrl)) {
-    return NextResponse.json(
-      { error: "facebook_url must be a valid http:// or https:// URL." },
-      { status: 400 },
-    );
-  }
-  if (instagramUrl !== undefined && instagramUrl !== null && !isValidHttpUrl(instagramUrl)) {
-    return NextResponse.json(
-      { error: "instagram_url must be a valid http:// or https:// URL." },
-      { status: 400 },
-    );
-  }
   if (directionsText !== undefined && directionsText !== null && directionsText.length > DIRECTIONS_TEXT_MAX_LEN) {
     return NextResponse.json(
       { error: `directions_text must be ${DIRECTIONS_TEXT_MAX_LEN} characters or fewer.` },
       { status: 400 },
     );
+  }
+
+  // Session 186 URL UX refinement — accept any shape the vendor pastes
+  // (bare handle / @handle / host+path / full URL / share-page URL) and
+  // normalize to canonical form via lib/socialUrls helpers. The client
+  // also normalizes pre-PATCH; the server is defensive against admin
+  // tools / direct API hits / future ingest paths sending raw input.
+  let facebookUrl: string | null | undefined = facebookInput;
+  if (facebookInput !== undefined && facebookInput !== null) {
+    if (facebookInput.length > URL_MAX_LEN) {
+      return NextResponse.json(
+        { error: `facebook_url must be ${URL_MAX_LEN} characters or fewer.` },
+        { status: 400 },
+      );
+    }
+    const normalized = normalizeFacebookUrl(facebookInput);
+    if (normalized === null) {
+      return NextResponse.json(
+        { error: "facebook_url isn't recognized. Use a Facebook URL or handle (e.g. facebook.com/yourbooth)." },
+        { status: 400 },
+      );
+    }
+    facebookUrl = normalized;
+  }
+  let instagramUrl: string | null | undefined = instagramInput;
+  if (instagramInput !== undefined && instagramInput !== null) {
+    if (instagramInput.length > URL_MAX_LEN) {
+      return NextResponse.json(
+        { error: `instagram_url must be ${URL_MAX_LEN} characters or fewer.` },
+        { status: 400 },
+      );
+    }
+    const normalized = normalizeInstagramUrl(instagramInput);
+    if (normalized === null) {
+      return NextResponse.json(
+        { error: "instagram_url isn't recognized. Use a handle or Instagram URL (e.g. @yourbooth, instagram.com/yourbooth)." },
+        { status: 400 },
+      );
+    }
+    instagramUrl = normalized;
   }
 
   // Must have AT LEAST one mutating field. Empty PATCH is a no-op error

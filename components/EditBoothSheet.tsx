@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 import { Pencil, X, Loader as LoaderIcon, AlertTriangle, ImagePlus, Trash2, User as UserIcon } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { compressImage } from "@/lib/imageUpload";
+import { normalizeFacebookUrl, normalizeInstagramUrl } from "@/lib/socialUrls";
 import { v2, FONT_CORMORANT, FONT_INTER, FONT_LORA } from "@/lib/tokens";
 import { vendorHueBg } from "@/lib/utils";
 import BoothFormFields from "@/components/BoothFormFields";
@@ -117,12 +118,16 @@ export default function EditBoothSheet({
     trimmedFb   !== initial.facebookUrl.trim() ||
     trimmedIg   !== initial.instagramUrl.trim() ||
     trimmedDirs !== initial.directionsText.trim();
-  // Lenient URL validation per D8 — accept any http(s):// scheme, no host
-  // allowlist. Server enforces the same regex; client validation is just
-  // for early disable of Save button.
-  const isValidHttpUrl  = (v: string) => v === "" || /^https?:\/\/\S+/i.test(v);
-  const urlsValid       = isValidHttpUrl(trimmedFb) && isValidHttpUrl(trimmedIg);
-  const bioValid        = trimmedBio.length <= BIO_MAX_LEN;
+  // Session 186 URL UX refinement — accept any shape the vendor types
+  // and normalize via lib/socialUrls. Canonical values feed both the
+  // Save-time PATCH payload AND the field-level invalid-state border.
+  // Server normalizes again defensively (admin / direct-API paths).
+  const facebookCanonical  = trimmedFb === "" ? null : normalizeFacebookUrl(trimmedFb);
+  const instagramCanonical = trimmedIg === "" ? null : normalizeInstagramUrl(trimmedIg);
+  const fbInputInvalid     = trimmedFb !== "" && facebookCanonical  === null;
+  const igInputInvalid     = trimmedIg !== "" && instagramCanonical === null;
+  const urlsValid          = !fbInputInvalid && !igInputInvalid;
+  const bioValid           = trimmedBio.length <= BIO_MAX_LEN;
   const hasChange =
     mode === "vendor"
       ? (trimmedName !== initial.displayName.trim() || enrichmentDirty)
@@ -296,8 +301,10 @@ export default function EditBoothSheet({
             vendorId: vendor.id,
             ...(trimmedName !== initial.displayName.trim() ? { display_name: trimmedName } : {}),
             ...(trimmedBio  !== initial.bio.trim()         ? { bio:             trimmedBio  || null } : {}),
-            ...(trimmedFb   !== initial.facebookUrl.trim() ? { facebook_url:    trimmedFb   || null } : {}),
-            ...(trimmedIg   !== initial.instagramUrl.trim()? { instagram_url:   trimmedIg   || null } : {}),
+            // Session 186 URL UX refinement — send canonical URLs from
+            // lib/socialUrls; empty input ships as null (clear column).
+            ...(trimmedFb   !== initial.facebookUrl.trim() ? { facebook_url:    facebookCanonical } : {}),
+            ...(trimmedIg   !== initial.instagramUrl.trim()? { instagram_url:   instagramCanonical } : {}),
             ...(trimmedDirs !== initial.directionsText.trim() ? { directions_text: trimmedDirs || null } : {}),
           }
         : {
@@ -898,7 +905,7 @@ export default function EditBoothSheet({
                 <input
                   value={facebookUrl}
                   onChange={(e) => setFacebookUrl(e.target.value)}
-                  placeholder="https://facebook.com/yourbooth"
+                  placeholder="facebook.com/yourbooth"
                   disabled={submitting}
                   inputMode="url"
                   autoCapitalize="off"
@@ -911,7 +918,7 @@ export default function EditBoothSheet({
                     borderRadius:    10,
                     background:      trimmedFb !== initial.facebookUrl.trim() ? v2.accent.greenSoft : v2.surface.card,
                     border:          `1px solid ${
-                      trimmedFb !== "" && !isValidHttpUrl(trimmedFb)
+                      fbInputInvalid
                         ? v2.accent.red
                         : trimmedFb !== initial.facebookUrl.trim() ? v2.accent.green : v2.border.light
                     }`,
@@ -942,7 +949,7 @@ export default function EditBoothSheet({
                 <input
                   value={instagramUrl}
                   onChange={(e) => setInstagramUrl(e.target.value)}
-                  placeholder="https://instagram.com/yourbooth"
+                  placeholder="@yourbooth or instagram.com/yourbooth"
                   disabled={submitting}
                   inputMode="url"
                   autoCapitalize="off"
@@ -955,7 +962,7 @@ export default function EditBoothSheet({
                     borderRadius:    10,
                     background:      trimmedIg !== initial.instagramUrl.trim() ? v2.accent.greenSoft : v2.surface.card,
                     border:          `1px solid ${
-                      trimmedIg !== "" && !isValidHttpUrl(trimmedIg)
+                      igInputInvalid
                         ? v2.accent.red
                         : trimmedIg !== initial.instagramUrl.trim() ? v2.accent.green : v2.border.light
                     }`,
