@@ -64,7 +64,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Pencil, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
@@ -151,27 +151,40 @@ export function BoothHero({
   // nothing to enlarge.
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  // Session 171 dial #1 — paint-in fix. David: "Anytime the /shelf is
-  // loaded it flickers the hero image we should paint this in if possible."
+  // Session 182 — paint-in upgrade per feedback_kill_bug_class_after_3_patches
+  // ✅ Promoted. David reported the BoothHero hero-image flicker resurfaced
+  // at session 182 despite session 171 dial #1's `new Image().src` preloader
+  // + fetchPriority="high" + decoding="async" hints. Patch round 2 of the
+  // same bug class — escalate to the W3C-canonical primitive.
   //
-  // Root cause: <img> at line ~180 mounts AFTER React commits with the
-  // resolved heroImageUrl prop. Between commit and paint, the browser
-  // starts the network fetch for the image. The "flicker" is the empty
-  // img → loaded img transition.
+  // Root cause (session 171 dial #1's analysis still correct, fix shape was
+  // wrong): <img> at line ~180 mounts AFTER React commits with the resolved
+  // heroImageUrl prop. The session 171 `new Image()` preloader fired in
+  // useEffect AFTER the first paint — meaning the cold-start race wasn't
+  // helped at all (preloader only warmed cache for warm-nav re-mounts).
   //
-  // Fix shape: warm browser cache via new Image().src as soon as
-  // heroImageUrl is known. The img mount that follows paints from the
-  // cache instantly (typically within a single frame). Doesn't affect
-  // cold-start fetch latency, but the fetchpriority="high" hint on the
-  // <img> itself (line 184) does — combined effect is "first frame
-  // painted" on warm-nav and "fastest-possible paint" on cold-start.
+  // Fix shape: inject `<link rel="preload" as="image">` into document.head
+  // via useLayoutEffect — runs synchronously BEFORE browser paint, in the
+  // same render cycle as the img element mount. The browser sees the
+  // preload link and the img src in the same paint cycle and dedupes the
+  // fetch into the high-priority preload slot.
   //
-  // Cleanup-free: new Image() with no DOM attachment relies on browser
-  // GC; the request stays in HTTP cache for the subsequent <img> mount.
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) is the load-bearing axis: useEffect
+  // fires post-paint (too late to influence the paint that's about to
+  // happen); useLayoutEffect fires post-commit-pre-paint (exactly when we
+  // need the preload hint to land). Cleanup removes the link on unmount /
+  // heroImageUrl change so we don't leak link tags on per-vendor nav.
+  useLayoutEffect(() => {
     if (!heroImageUrl) return;
-    const preloader = new Image();
-    preloader.src = heroImageUrl;
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = heroImageUrl;
+    link.setAttribute("fetchpriority", "high");
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
   }, [heroImageUrl]);
 
   return (
