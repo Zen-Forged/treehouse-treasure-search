@@ -28,7 +28,7 @@
 "use client";
 
 import * as React from "react";
-import { PiMapPinFill, PiCaretDown } from "react-icons/pi";
+import { PiMapPinFill, PiCaretDown, PiCaretUp } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT } from "@/lib/tokens";
 import { HERO_BOTTOM_EDGE } from "@/components/HomeHero";
 
@@ -51,6 +51,23 @@ interface MallPickerChipProps {
    * default preserves all current consumers verbatim.
    */
   stickyTop?: string | number;
+  /**
+   * Session 179 — David iPhone QA finding 3: "The carat should be turned
+   * on the Map page to show it's opened." When the chip is in an "open"
+   * context (i.e., user is already on /map = inside the picker context),
+   * carat points UP indicating "tap to collapse / exit back to Explore."
+   * Default "down" preserves Home consumer's "tap to expand" mental model.
+   *
+   * Mirror relationship with finding-4's chip-as-back behavior on /map:
+   *   Home (chevronDirection="down"): chevron points down = "tap to
+   *     expand to map" (chip routes forward to /map).
+   *   /map (chevronDirection="up"):  chevron points up = "tap to collapse
+   *     to explore" (chip routes back to /).
+   *
+   * Additive prop per feedback_schema_forced_deviation_not_design_reversal
+   * ✅ Promoted (6th cumulative firing post-promotion at session 141).
+   */
+  chevronDirection?: "down" | "up";
 }
 
 // Session 166 dial 6 (post-dial-3 iPhone QA round 3) — TOP_PADDING 22 → 12,
@@ -99,7 +116,9 @@ export default function MallPickerChip({
   mallName,
   onTap,
   stickyTop = HERO_BOTTOM_EDGE,
+  chevronDirection = "down",
 }: MallPickerChipProps) {
+  const ChevronGlyph = chevronDirection === "up" ? PiCaretUp : PiCaretDown;
   return (
     <div
       style={{
@@ -127,7 +146,11 @@ export default function MallPickerChip({
       <button
         type="button"
         onClick={onTap}
-        aria-label={`Change location — current: ${mallName}`}
+        aria-label={
+          chevronDirection === "up"
+            ? `Back to Explore — current location: ${mallName}`
+            : `Change location — current: ${mallName}`
+        }
         style={{
           display:        "inline-flex",
           alignItems:     "center",
@@ -161,7 +184,7 @@ export default function MallPickerChip({
         >
           {mallName}
         </span>
-        <PiCaretDown
+        <ChevronGlyph
           size={CHEVRON_SIZE}
           color={v2.text.secondary}
           aria-hidden="true"
