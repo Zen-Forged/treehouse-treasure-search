@@ -60,9 +60,21 @@ interface MallPickerChipProps {
 // feedback_within_session_design_record_reversal ✅ Promoted-via-memory.
 // Tightens the chip strip from 62px tall to 48px (-14px), giving the feed
 // more vertical real estate when chip is sticky-pinned.
-const TOP_PADDING       = 12;
+//
+// Session 179 — David iPhone QA finding 8 on /map: "reduce height of the
+// thin mall-chip selector to get it more vertically centered between the
+// map and the masthead." Asymmetric 12/6 padding biased the chip's content
+// upward within its row (less breathing room below button than above).
+// Symmetric 8/8 padding (equal top + bottom) centers the button visually
+// within the chip row while shrinking total chip-row height from 46px to
+// 44px. Second bounded refinement of session-164 D11 within the same
+// magnitude band per feedback_within_session_design_record_reversal
+// ✅ Promoted-via-memory (3 firings of D11 dial: 22/10 → 12/6 → 8/8).
+// Applied universally (chip on Home + chip on /map both get symmetric
+// padding; the centering ask is geometric not surface-specific).
+const TOP_PADDING       = 8;
 const HORIZ_PADDING     = 18;
-const BOTTOM_PADDING    = 6;
+const BOTTOM_PADDING    = 8;
 const PIN_SIZE          = 22;
 const NAME_FONT_SIZE    = 22;
 const CHEVRON_SIZE      = 18;
