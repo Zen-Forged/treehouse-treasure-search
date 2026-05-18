@@ -85,8 +85,13 @@ async function pickDest(user: User | null, searchParams: ReadonlyURLSearchParams
   // R1 — shopper claim flow. Threaded through magic-link redirectTo by
   // /flagged sync footer or any caller that sets ?role=shopper. Saves a
   // tap by skipping /welcome for users who've already signaled shopper
-  // intent. Returning shoppers are bounced to /me by /login/email/handle.
-  if (searchParams.get("role") === "shopper") return "/login/email/handle";
+  // intent.
+  // Session 184 handle retirement — routes directly to /me (was
+  // /login/email/handle). useShopperAuth's silent auto-claim fires on
+  // /me mount when the user has no shoppers row, so the explicit picker
+  // step retires entirely. /me holds blank surface during the brief
+  // (~150–400ms) claim window.
+  if (searchParams.get("role") === "shopper") return "/me";
 
   // Auto-claim variant — repairs the approved-but-unlinked vendor case
   // (vendors row inserted with user_id=NULL by admin approval; linked
@@ -307,13 +312,14 @@ function LoginInner() {
     if (!trimmed.includes("@")) { setError("Please enter a valid email address."); return; }
     setBusy(true); setError(null);
 
-    // R1 (preserved) — when role=shopper, thread /login/email/handle as
-    // the magic-link redirectTo so the email round-trip lands on the
-    // handle picker. Explicit ?redirect= still wins.
+    // Magic-link redirectTo: explicit ?redirect= param wins; otherwise
+    // null and Supabase uses its dashboard-configured site URL (lands on
+    // /login?confirmed=1 which polls auth + pickDest routes from there).
+    // Session 184 handle retirement — role-based redirect to /login/email/handle
+    // retired with the picker page itself; role threading still happens via
+    // pickDest (sends shopper intent direct to /me where auto-claim fires).
     const explicit = searchParams.get("redirect") ?? undefined;
-    const role     = searchParams.get("role");
-    const redirect = explicit ?? (role === "shopper" ? "/login/email/handle" : undefined);
-    const { error: err } = await sendMagicLink(trimmed, redirect);
+    const { error: err } = await sendMagicLink(trimmed, explicit);
 
     setBusy(false);
     if (err) { setError("Couldn't send the link. Try again in a moment."); return; }
@@ -376,10 +382,10 @@ function LoginInner() {
     if (resendIn > 0 || !sentTo) return;
     setCodeError(null);
     setResendNotice(null);
+    // Session 184 handle retirement — mirrors handleSend simplification;
+    // explicit ?redirect= wins, role threading is handled by pickDest.
     const explicit = searchParams.get("redirect") ?? undefined;
-    const role     = searchParams.get("role");
-    const redirect = explicit ?? (role === "shopper" ? "/login/email/handle" : undefined);
-    const { error: err } = await sendMagicLink(sentTo, redirect);
+    const { error: err } = await sendMagicLink(sentTo, explicit);
     if (err) {
       setCodeError("Couldn't resend. Try again in a moment.");
       return;

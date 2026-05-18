@@ -84,7 +84,9 @@ const CATEGORIES: Category[] = [
     hint: "Auth-bridge + first-run disambiguation",
     tiles: [
       { label: "Welcome",      description: "First-sign-in role disambiguation", path: "/welcome" },
-      { label: "Handle pick",  description: "Shopper claim — handle form",       path: "/login/email/handle" },
+      // Session 184 — "Handle pick" tile retired alongside /login/email/handle
+      // page deletion (handle retirement; shopper rows now created silently
+      // via useShopperAuth auto-claim on first /me mount).
     ],
   },
 ];
