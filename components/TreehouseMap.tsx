@@ -1,12 +1,15 @@
 // components/TreehouseMap.tsx
 // R10 (session 108) Arc 3 — Mapbox custom-styled map for /map page.
 //
-// This commit (1/4 in Arc 3) ships only the shell: mapbox-gl loads, the
-// map renders against KY-bounded view with the default Mapbox light style,
-// and pan/zoom are constrained so the user can't scroll out of the state.
-// Cartographic warm-cream palette per D25 lands in commit 2; leaf-bubble
-// pins per D24 land in commit 3; peek-then-commit interaction per D26
-// lands in commit 4.
+// Style: mapbox://styles/kentuckytreehouse/cmpak5jem000x01ry5jwe5t6w
+// (Treehouse Cream v1 — custom Studio style baking the v1.basemap.* palette
+// directly into Mapbox style JSON; generated via scripts/generate-cream-mapbox-style.ts
+// from mapbox/light-v11 source then uploaded to Studio). Replaces the
+// session 108–180 runtime applyCartographicPalette helper that walked
+// light-v11's layers and overrode paint properties per-id; the custom
+// style ships those colors natively so both this live map AND the
+// Mapbox Static Images consumer (lib/mapStaticImage.ts) render with
+// identical cartographic vocabulary.
 //
 // Browser-only — mapbox-gl touches WebGL + window, so the whole module is
 // "use client" and the map is initialized in useEffect after mount. The
@@ -34,118 +37,6 @@ import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
-
-// Mapbox setPaintProperty expects literal color strings (hex/rgb/rgba) — it
-// doesn't resolve CSS variables, which the v1.basemap.* tokens reference since
-// the session 144 Layer 1 token refactor moved tokens from literal hex to
-// CSS var references for theme-able runtime resolution. Bridge here: walk
-// var() references back to their computed :root value before handing to
-// Mapbox. Pass-through for any already-literal value.
-function resolveCssVar(value: string): string {
-  if (typeof window === "undefined") return value;
-  const match = value.match(/^var\((--[^)]+)\)$/);
-  if (!match) return value;
-  return (
-    getComputedStyle(document.documentElement)
-      .getPropertyValue(match[1])
-      .trim() || value
-  );
-}
-
-// D25 cartographic warm-cream palette. Walks the loaded light-v11 style
-// layers and overrides paint properties to swap Mapbox's grayscale defaults
-// for our v1.basemap.* tokens. Italic-Lora label font is deferred — custom
-// font upload requires Mapbox Studio per the design record memo. For now
-// we color labels in v1.basemap.label and let them fall back to Mapbox's
-// default sans face. When David moves to a Studio-hosted style URL, this
-// helper retires (style URL provides the palette + labels native).
-function applyCartographicPalette(map: mapboxgl.Map): void {
-  const style = map.getStyle();
-  if (!style?.layers) return;
-
-  // Pre-resolve CSS vars once — Mapbox setPaintProperty needs literal values.
-  const palette = {
-    cream:  resolveCssVar(v1.basemap.cream),
-    cream2: resolveCssVar(v1.basemap.cream2),
-    water:  resolveCssVar(v1.basemap.water),
-    water2: resolveCssVar(v1.basemap.water2),
-    park:   resolveCssVar(v1.basemap.park),
-    label:  resolveCssVar(v1.basemap.label),
-  };
-
-  for (const layer of style.layers) {
-    const id = layer.id;
-    try {
-      // Background fill = cream landmass.
-      if (layer.type === "background") {
-        map.setPaintProperty(id, "background-color", palette.cream);
-        continue;
-      }
-
-      // Land + landcover + landuse fills. Parks get the green park token,
-      // everything else gets cream2 (slightly warmer landcover).
-      if (layer.type === "fill") {
-        if (id === "land") {
-          map.setPaintProperty(id, "fill-color", palette.cream);
-        } else if (
-          id.includes("national-park") ||
-          id.includes("park") ||
-          id.includes("pitch") ||
-          id.includes("golf")
-        ) {
-          map.setPaintProperty(id, "fill-color", palette.park);
-          map.setPaintProperty(id, "fill-opacity", 0.7);
-        } else if (
-          id === "water" ||
-          id === "water-shadow" ||
-          id.startsWith("water-")
-        ) {
-          map.setPaintProperty(id, "fill-color", palette.water);
-        } else if (id.includes("landcover") || id.includes("landuse")) {
-          map.setPaintProperty(id, "fill-color", palette.cream2);
-          map.setPaintProperty(id, "fill-opacity", 0.55);
-        } else if (id.includes("hillshade")) {
-          // Soften terrain shading so it doesn't overwhelm the cream.
-          map.setPaintProperty(id, "fill-opacity", 0.15);
-        }
-        continue;
-      }
-
-      // Waterways (rivers, streams) — line layer in deeper sage.
-      if (layer.type === "line" && (id === "waterway" || id.startsWith("waterway-"))) {
-        map.setPaintProperty(id, "line-color", palette.water2);
-        continue;
-      }
-
-      // Roads — collapse the multi-tier hierarchy to plain white lines.
-      if (
-        layer.type === "line" &&
-        (id.startsWith("road-") || id.startsWith("bridge-") || id.startsWith("tunnel-"))
-      ) {
-        map.setPaintProperty(id, "line-color", "#ffffff");
-        continue;
-      }
-
-      // Admin boundaries (state, county) — soften with low-opacity ink.
-      if (layer.type === "line" && id.startsWith("admin-")) {
-        map.setPaintProperty(id, "line-color", "rgba(42,26,10,0.20)");
-        continue;
-      }
-
-      // Labels (country, state, place, settlement, road) — paint in our
-      // cartographic ink with a paper-cream halo so they read against
-      // both cream landmass and sage water.
-      if (layer.type === "symbol") {
-        map.setPaintProperty(id, "text-color", palette.label);
-        map.setPaintProperty(id, "text-halo-color", "rgba(245,242,235,0.85)");
-        map.setPaintProperty(id, "text-halo-width", 1.2);
-        continue;
-      }
-    } catch {
-      // Layer doesn't have this paint property in the loaded style — skip.
-    }
-  }
-}
 
 // Session 158 — Map enrichment D7 (revised session 161 for 10-mile reach).
 // Pulse animation keyframes for the user location pin's outer ring. Injected
@@ -485,7 +376,7 @@ export default function TreehouseMap({
 
     const map = new mapboxgl.Map({
       container:    containerRef.current,
-      style:        "mapbox://styles/mapbox/light-v11",
+      style:        "mapbox://styles/kentuckytreehouse/cmpak5jem000x01ry5jwe5t6w",
       center:       KY_CENTER,
       zoom:         KY_FIT_ZOOM,
       minZoom:      5.5,
@@ -511,7 +402,6 @@ export default function TreehouseMap({
     }, 7000);
 
     map.on("style.load", () => {
-      applyCartographicPalette(map);
       styleLoadedRef.current = true;
       // Resize after style.load — handles the container-size race when the
       // map was initialized inside an animating container (drawer slide-up
@@ -825,7 +715,7 @@ export default function TreehouseMap({
             fontStyle:       "italic",
             fontFamily:      "Georgia, serif",
             fontSize:        14,
-            background:      resolveCssVar(v1.basemap.cream),
+            background:      v1.basemap.cream,
             border:          "none",
             cursor:          "pointer",
             WebkitTapHighlightColor: "transparent",
