@@ -908,20 +908,45 @@ function LoginInner() {
           </AnimatePresence>
         </div>
 
-        {/* Session 157 Review Board Login #2 — David: "Remove 'New here?...'
-            text as this is already part of the triage process."
-            Session-153 minimal footer link retires. /welcome already
-            handles new-vendor + new-shopper disambiguation post-first-
-            sign-in, and the /login screen ahead routes new vendors
-            through that triage anyway — the redundant discoverability
-            footer earned its retirement.
+        {/* Session 182 — restore minimal Inter italic 11px footer link for
+            vendor-request discoverability. Bounded reversal of session 157
+            commit 5c75af0 ("retire 'New here?...' text as this is already
+            part of the triage process") per
+            feedback_surface_locked_design_reversals ✅ Promoted (~80+
+            cumulative firings; 10th firing this session).
 
-            Reverses session 153 Review Board Finding 11B's minimal-
-            footer-as-vestigial-CTA per feedback_surface_locked_design_reversals.
-            Session 153 reasoning was "preserve discoverability without
-            visual real estate cost"; David's call now: the triage
-            process below already provides discoverability, so even the
-            minimal footer is redundant chrome. */}
+            Session 157 reasoning quoted verbatim: "the triage process
+            below already provides discoverability." Empirically that
+            path requires the new vendor to be in the system already —
+            brand-new vendors with no email on file have no way to
+            surface the /vendor-request entry from /login. Session 157
+            retirement assumed /welcome's post-magic-link triage caught
+            new vendors, but it only triages users who can already sign
+            in. The footer link closes that gap.
+
+            Restores session 153 Review Board Finding 11B baseline
+            verbatim (minimal Inter 11px italic + dotted underline +
+            v2.text.muted — preserves discoverability without visual
+            real estate cost). */}
+        {renderState === "form" && screen === "enter-email" && (
+          <div style={{ textAlign: "center", marginTop: 22, padding: "0 4px" }}>
+            <Link
+              href="/vendor-request"
+              style={{
+                fontFamily: FONT_INTER,
+                fontStyle: "italic",
+                fontSize: 11,
+                color: v2.text.muted,
+                textDecoration: "underline",
+                textDecorationStyle: "dotted",
+                textDecorationColor: v2.text.muted,
+                textUnderlineOffset: 3,
+              }}
+            >
+              New here? Request a digital booth &rarr;
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Sign-out — bottom of authed-cards screen */}

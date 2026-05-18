@@ -48,6 +48,7 @@ import HomeHero from "@/components/HomeHero";
 import MallPickerChip from "@/components/MallPickerChip";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadBackButton from "@/components/MastheadBackButton";
+import StickyMasthead from "@/components/StickyMasthead";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
@@ -190,6 +191,43 @@ export default function TabsChrome() {
   // shim or fold into (tabs)/layout.tsx directly).
   if (pathname === "/map") return null;
 
+  // Session 182 — Saved chrome restructure per David's "I want to change
+  // the header on the saved page to match the other pages (not explore
+  // page)." Replace HomeHero (33vh background-image identity beat) with
+  // the slim <StickyMasthead> pattern /me + /map + /find/[id] + /shelf
+  // use. Saved gains the same back-button-left + wordmark-center +
+  // Profile-right chrome as /map, so the cross-(tabs) chrome reads
+  // consistently when navigating Home → Saved → Map.
+  //
+  // Floating MastheadBackButton + MastheadProfileButton overlays retire
+  // on Saved this commit — their slots now live inside StickyMasthead's
+  // left + right props. Home keeps the floating Profile overlay (HomeHero
+  // has no slots for Profile to sit in) + no back button (Home is the
+  // root, no back-from route).
+  //
+  // BOUNDED REVERSAL of session 175 Option α + session 121 R18 D-lock per
+  // feedback_surface_locked_design_reversals ✅ Promoted (~80+ cumulative
+  // firings; 11th firing this session). Session 175 made the hero
+  // universal across Home + Saved as a full-identity-beat thesis ("hero
+  // stays full 33vh sticky on Home; static on Saved"). David's session
+  // 182 redirect scopes that reversal narrowly: Home keeps the hero
+  // (still load-bearing identity beat for the Explore surface); Saved
+  // adopts the slim StickyMasthead because shoppers reaching Saved
+  // already know what app they're in — the identity beat is redundant
+  // chrome competing with their saved-finds content.
+  //
+  // bg prop omitted — StickyMasthead defaults to v2.bg.main (#E6DECF)
+  // which matches Saved's page bg (v2.bg.tabs, same hex per session 166
+  // dial 8 tier extraction). No bg dial needed.
+  if (pathname === "/flagged") {
+    return (
+      <StickyMasthead
+        left={<MastheadBackButton fallback="/" />}
+        right={<MastheadProfileButton />}
+      />
+    );
+  }
+
   return (
     <>
       <HomeHero
@@ -198,42 +236,29 @@ export default function TabsChrome() {
         // no chip below it) as identity beat. R18 (session 121) retired
         // mall-scoping for Saved content, so chip would be a dead
         // affordance there.
+        //
+        // Session 182 — Saved path now early-returns above with
+        // StickyMasthead instead of mounting HomeHero. HomeHero on this
+        // path only renders for pathname === "/" (Home). The Saved-branch
+        // of `searchQuery` ternary is dormant but kept for traceability;
+        // if a future Saved-page redesign re-mounts HomeHero, the prop
+        // contract still works.
         searchQuery={isHome ? q : undefined}
         onSearchChange={isHome ? handleSearchChange : undefined}
       />
 
-      {/* Session 166 Shape A commit 2 — Back button as floating overlay at
-          top-left of viewport on /flagged (Saved). Saved is a destination
-          reachable from Explore via BottomNav nav; floating back overlay
-          at the same slot routes back to / (Explore) via router.back()
-          with fallback.
-          Session 178 F2 Arc 3.2 — drawer-close branch retired alongside
-          MallMapDrawer. Was: render also when drawerOpen, with onClick
-          firing closeDrawer. Post-Arc-3.2 drawer no longer exists; back
-          overlay reduces to the Saved-page case only. */}
-      {pathname === "/flagged" && (
-        <div
-          style={{
-            position: "fixed",
-            top:      OVERLAY_TOP,
-            left:     OVERLAY_X,
-            zIndex:   OVERLAY_Z,
-          }}
-        >
-          <MastheadBackButton fallback="/" />
-        </div>
-      )}
-
       {/* Session 166 Shape A commit 1 — Profile chrome affordance restored
           as floating overlay at top-right of viewport. Arc 3.1.3 retired
           StickyMasthead from (tabs)/ which also retired the masthead-right
-          Profile slot (session 159 placement). Universal across Home +
-          Saved per the original session 159 Q3 lock ("Profile universal
-          across all pages"). MastheadProfileButton self-derives auth state
-          via useShopperAuth — routes guest→/login, admin→/admin,
-          shopper→/me. Floats over hero photo at top (dark woodgrain area
-          of asset; doesn't compete with centered wordmark) and stays
-          pinned at viewport top during scroll. */}
+          Profile slot (session 159 placement). Session 182 — Saved branch
+          retired (Profile now lives in StickyMasthead right slot for
+          Saved); Profile overlay is now Home-only since Home is the only
+          surface where HomeHero (no slots) is the chrome primitive.
+          MastheadProfileButton self-derives auth state via useShopperAuth
+          — routes guest→/login, admin→/admin, shopper→/me. Floats over
+          hero photo at top (dark woodgrain area of asset; doesn't compete
+          with centered wordmark) and stays pinned at viewport top during
+          scroll. */}
       <div
         style={{
           position: "fixed",
