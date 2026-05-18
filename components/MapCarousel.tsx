@@ -166,11 +166,13 @@ export default function MapCarousel({
               // Session 179 — David iPhone QA finding 5: padding-bottom
               // 12 → 6 (coupled with wrapper-bottom 87 → 81 above) to
               // halve perceived cards-to-nav padding from ~24px to ~12px.
-              // Top stays 22 since the selected card "peek up" geometry
-              // hasn't been dialed back yet (C6 reduces selected scale +
-              // translateY; top padding may also come down then if peek
-              // headroom requirement shrinks).
-              padding:                 "22px 12px 6px",
+              //
+              // Session 179 C6 — David iPhone QA finding 6: selected scale
+              // 1.12 → 1.03 + translateY −12 → 0 (subtle distinction; no
+              // peek-up) means the 22px top headroom is no longer needed.
+              // Top padding 22 → 12 (matches the new subtle-emphasis
+              // peeked state's geometry).
+              padding:                 "12px 12px 6px",
               maxWidth:                430,
               margin:                  "0 auto",
               pointerEvents:           "auto",
@@ -254,29 +256,31 @@ export default function MapCarousel({
                     // Round 2: "Selected mall card is a bit larger, I think,
                     // but still not very noticable. Possibly make larger and
                     // allow it to peak outside of the container." Shape A
-                    // dial: scale 1.05 → 1.12 + translateY −3 → −12. The
-                    // ~16px upward visual rise fits within the shelf's
-                    // newly bumped 22px top padding so the card "peeks up"
-                    // visibly within the shelf bg without escaping it.
+                    // dial: scale 1.05 → 1.12 + translateY −3 → −12.
                     //
-                    // True peek-OUTSIDE-shelf-wrapper (Shape B) requires
-                    // restructuring the scroll container to render the
-                    // selected card as a sibling overlay outside the
-                    // overflow-x:auto bounds — Shape A first per iPhone QA
-                    // post-walk; Shape B follow-on if "still not enough."
-                    transform:     isPeeked ? "translateY(-12px) scale(1.12)" : "translateY(0) scale(1)",
+                    // Session 179 C6 — David iPhone QA finding 6: "Keep
+                    // the selected thumbnail roughly the same size as the
+                    // others, only slightly larger as right now they collide
+                    // visually when selected." Reverses session-165 R2's
+                    // pronounced lift (scale 1.12 + translateY −12) within
+                    // bounded scope per feedback_surface_locked_design_reversals
+                    // ✅ Promoted. Scale 1.03 + translateY 0 = subtle "in
+                    // focus" cue via geometry alone; bg-color distinction
+                    // in C7 carries the rest of the emphasis. Neighbors no
+                    // longer collide laterally (1.03 vs 1.0 ~= 4px lateral
+                    // expansion total, fits within 8px shelf gap between
+                    // cards) and no vertical peek-up to clip neighbors.
+                    transform:     isPeeked ? "translateY(0) scale(1.03)" : "translateY(0) scale(1)",
                     transformOrigin: "center center",
                     transition:    "transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease",
-                    // Box shadow swaps by peek state — non-peeked uses the
-                    // baseline session-161 subtle resting shadow; peeked
-                    // gets a more pronounced lift shadow that combined with
-                    // the scale + translateY reads clearly as "this is in
-                    // focus" not just "this has a green border." Shadow
-                    // alpha tier 0.18/0.10 mirrors v1.shadow.callout for
-                    // vocabulary consistency with the PinCallout above.
-                    boxShadow:     isPeeked
-                      ? "0 6px 14px rgba(42,26,10,0.18), 0 2px 4px rgba(42,26,10,0.10)"
-                      : "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
+                    // Session 179 C6 — Box shadow dialed back alongside
+                    // the scale-down. Pronounced 0 6px 14px lift shadow
+                    // (session 165 R2) over-amplified the new subtle 1.03
+                    // scale; peeked shadow now matches non-peeked baseline.
+                    // Bg-color emphasis in C7 carries the "in focus" weight
+                    // (nav-pill greenLight vocabulary) rather than
+                    // elevation-shadow distinction.
+                    boxShadow:     "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
                     textAlign:     "left",
                     WebkitTapHighlightColor: "transparent",
                   }}
