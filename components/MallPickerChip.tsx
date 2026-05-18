@@ -68,6 +68,23 @@ interface MallPickerChipProps {
    * ✅ Promoted (6th cumulative firing post-promotion at session 141).
    */
   chevronDirection?: "down" | "up";
+  /**
+   * Session 180 — David iPhone QA finding 2: "Change the mall selector
+   * chip at the top to the same bg color as the rest of the page." On
+   * /map the page bg is v2.surface.warm (#FBF6EA) per (tabs)/layout's
+   * pathname branch (session 179), but this primitive hardcoded
+   * v2.bg.tabs (#E6DECF) producing a visible color stripe between the
+   * masthead and the bordered window. Additive prop with default
+   * v2.bg.tabs preserves the Home consumer verbatim (Home page bg is
+   * v2.bg.tabs so chip continues to blend); /map passes v2.surface.warm.
+   *
+   * 8th cumulative firing of
+   * feedback_schema_forced_deviation_not_design_reversal ✅ Promoted —
+   * the original design record D11 ("MallStrip directly below masthead,
+   * same sticky-pin behavior as Home") assumed the same bg vocabulary
+   * would carry; /map's page-bg override surfaces the gap.
+   */
+  stickyBg?: string;
 }
 
 // Session 166 dial 6 (post-dial-3 iPhone QA round 3) — TOP_PADDING 22 → 12,
@@ -117,6 +134,7 @@ export default function MallPickerChip({
   onTap,
   stickyTop = HERO_BOTTOM_EDGE,
   chevronDirection = "down",
+  stickyBg,
 }: MallPickerChipProps) {
   const ChevronGlyph = chevronDirection === "up" ? PiCaretUp : PiCaretDown;
   return (
@@ -140,7 +158,12 @@ export default function MallPickerChip({
         // Session 166 dial 8 — chip sticky bg follows (tabs)/-surfaces
         // tier so seam between feed-scrolling-under-chip and the chip
         // strip itself stays visually continuous.
-        background: v2.bg.tabs,
+        //
+        // Session 180 — `stickyBg` prop override lets /map pass
+        // v2.surface.warm so chip dissolves into /map's page-bg surface
+        // (matches the (tabs)/layout pathname branch). Default fall-back
+        // to v2.bg.tabs preserves Home consumer.
+        background: stickyBg ?? v2.bg.tabs,
       }}
     >
       <button

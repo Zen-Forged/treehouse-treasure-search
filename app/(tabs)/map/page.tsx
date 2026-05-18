@@ -144,6 +144,15 @@ export default function MapPage() {
         // viewport; its spacer reserves the page-flow height so the chip
         // pins below it in document flow when scrolled).
         stickyTop={0}
+        // Session 180 — David iPhone QA finding 2: "Change the mall
+        // selector chip at the top to the same bg color as the rest of
+        // the page." /map's page bg is v2.surface.warm (#FBF6EA) per
+        // session 179 (tabs)/layout pathname branch; passing the same
+        // value as stickyBg dissolves the chip's sticky-strip color
+        // boundary into the page-bg surface. Schema-forced extension
+        // (additive prop) per feedback_schema_forced_deviation_not_
+        // design_reversal ✅ Promoted — 8th cumulative firing.
+        stickyBg={v2.surface.warm}
         // Session 179 — David iPhone QA finding 3: "The carat should be
         // turned on the Map page to show it's opened." chevron-up on /map
         // mirrors Home's chevron-down: tap-down = expand to /map,
