@@ -88,7 +88,22 @@ export interface MapPageBodyProps {
 // the same values (e.g., page-level layout reservation for the MapCarousel
 // sibling that sits flush below the window's bottom edge).
 const FRAME_PAD_X = 14;
-const FRAME_PAD_TOP = 14;
+// Session 180 — David iPhone QA finding 1 of 5: "anchor the top of the
+// map to the bottom of the masthead, no padding." With C1's chip-bg
+// flip dissolving the chip strip into the warm page-bg, the masthead +
+// chip + page-bg above the bordered window read as one continuous
+// chrome surface; the 14px top breathing room above the bordered window
+// became a visible page-bg gap between chip-bottom and bordered-window-
+// top. Retiring it (14 → 0) anchors the bordered window's top edge
+// flush against the chip-bottom edge (= visual bottom of the unified
+// masthead/chip/page-bg chrome stack).
+//
+// Within-session dial of session-178 design-record D14 value (FRAME_PAD_
+// TOP=14, "14px page padding (left/right/top)") per
+// feedback_within_session_design_record_reversal ✅ Promoted-via-memory
+// at session 128. Bounded reversal — side padding (FRAME_PAD_X=14)
+// preserved so bordered window doesn't extend edge-to-edge horizontally.
+const FRAME_PAD_TOP = 0;
 const FRAME_RADIUS = 14;
 const FRAME_BORDER = 1;
 const FRAME_SHADOW = "0 2px 6px rgba(0,0,0,0.04)";
@@ -115,7 +130,25 @@ export default function MapPageBody({
         // flex:1 so this primitive fills whatever vertical space the page
         // gives it between MallStrip-top and MapCarousel-bottom (D13).
         flex:    1,
-        padding: `${FRAME_PAD_TOP}px ${FRAME_PAD_X}px 0`,
+        // Session 180 — David iPhone QA finding 3 of 5: "Anchor the bottom
+        // of the map to the top of the mall carousel (no padding)."
+        // Bottom padding reserves the carousel's vertical extent so the
+        // bordered window's bottom edge sits at the carousel-rectangle-top
+        // (= visual top of cards once C3's bg flip dissolves the carousel
+        // shelf into page-bg).
+        //
+        // 213px = 81px (carousel bottom offset, unchanged) + 132px
+        // (carousel content vertical extent: 12 top padding + 114 card
+        // height + 6 bottom padding; borderTop=1px retired in this
+        // commit so total = 132 not 133). Safe-area-aware to match the
+        // carousel's own bottom math on notched iPhones.
+        //
+        // Coupled with MapCarousel chrome retire + bg flip in same
+        // commit per feedback_single_coupled_commit_when_must_move_
+        // together ✅ Promoted — without this reservation the bordered
+        // window extends behind the (now-invisible page-bg) carousel
+        // shelf and map peeks through behind the cards.
+        padding: `${FRAME_PAD_TOP}px ${FRAME_PAD_X}px max(213px, calc(env(safe-area-inset-bottom, 0px) + 213px))`,
         minHeight: 0,
         display: "flex",
         flexDirection: "column",

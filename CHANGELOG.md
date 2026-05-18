@@ -8,6 +8,45 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.180.0] — 2026-05-17
+
+### Session 180 — /map page chrome-cohesion 5-dial bundle (Shape A compressed into 3 smartly-coupled commits) + 1 iPhone-QA-driven MAP_PEEK_OFFSET_Y dial
+
+4 runtime commits + 1 close. David opened with `/session-open`; standup recommended iPhone QA on production v0.179.0 + 26-session-deep Mapbox preview-only token + 8-session-deep launch-gaps strategic session. David redirected with a verbatim 5-finding dial bundle on /map page chrome geometry + color cohesion: (1) anchor top of map to bottom of masthead, no padding; (2) MallPickerChip bg → page bg; (3) anchor bottom of map to top of mall carousel, no padding; (4) extend carousel bg to bottom of page; (5) carousel bg → page bg. Per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132, Shape A picked implicitly (5 surgical dials with explicit values; well-scoped); 5 dials compressed into 3 smartly-coupled commits per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted. David's iPhone QA on Vercel preview: *"looks good. Walk clean."* Net change: ~+90 / −20 LOC across 4 files in ~30-min execution window.
+
+### Added
+
+- **MallPickerChip `stickyBg?: string` additive prop** with default `v2.bg.tabs` (preserves Home consumer verbatim — Home page bg is v2.bg.tabs so chip continues to blend); /map passes `v2.surface.warm` to match /map's page bg per (tabs)/layout pathname branch (session 179). **8th cumulative firing of `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted** at session 141 — design record D11 assumed the same bg vocabulary would carry; /map's page-bg override surfaces the gap. NOT a reversal — design didn't reach the surface-specific-bg dimension. Mirrors session 179 chevronDirection additive prop shape (7th firing).
+- **MapPageBody outer wrapper `paddingBottom: max(213px, calc(safe-area + 213px))`** — reserves carousel's vertical extent so bordered window's bottom edge sits at carousel-rectangle-top per David's "anchor bottom of map to top of carousel" ask. 213 = 81 (carousel bottom offset, unchanged) + 132 (content vertical extent: 12 top + 114 card + 6 bottom padding after borderTop retirement). Safe-area-aware to match carousel's own bottom math on notched iPhones. NEW Tech Rule candidate: "Bordered-window padding-bottom reservation as primitive pattern for fixed-bottom-chrome geometry."
+
+### Changed
+
+- **MapPageBody FRAME_PAD_TOP 14 → 0** (David ask 1) — with chip-bg flip dissolving the chip strip into warm v2.surface.warm page-bg, the 14px top breathing room above the bordered window became a visible page-bg gap between chip-bottom and bordered-window-top. Retiring it anchors the bordered window's top edge flush against the chip-bottom edge — the visual bottom of the unified masthead/chip/page-bg chrome stack. Within-session dial of session-178 D14 per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128. Bounded reversal — side padding FRAME_PAD_X=14 preserved.
+- **MapCarousel background `v2.bg.main #F7F3EB` → `v2.surface.warm #FBF6EA`** (David asks 4 + 5) — matches /map's page-bg per (tabs)/layout pathname branch (session 179). With bg=page-bg the shelf is visually continuous with page-bg above the carousel (where bordered-window-bottom now sits) AND below (where page-bg shows through BottomNav's floating-overlay chrome). David's "extend bg to bottom of page" reads as the visual continuity achieved by the bg match — page-bg flows uninterrupted from carousel top through BottomNav's gap.
+- **MAP_PEEK_OFFSET_Y `-20` → `+60`** (David iPhone QA on Shape A bundle: selected mall callout "appears too high and gets cutoff") — root cause: C2 (FRAME_PAD_TOP 14 → 0) + C3 (paddingBottom 0 → 213px) made bordered window ~199px shorter; session 179's -20 offset was calibrated for the taller container, putting pin proportionally higher relative to top edge. +60 inverts direction — pin now sits 60px BELOW container vertical center; with callout-above-pin ~155px tall + tail, element CENTER (~pin - 62) lands at ~container center, reading visually centered per David's literal ask. **3rd iteration of MAP_PEEK_OFFSET_Y dial chain** within bounded magnitude per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128 (session 158: -60, session 179: -20, session 180: +60). NEW Tech Rule candidate: "Container-geometry change cascades to recalibrate Mapbox easeTo offset" — sub-pattern of within-session-design-record-reversal extended from token values to camera-geometry constants.
+
+### Removed
+
+- **MapCarousel `borderTop: 1px solid v2.border.medium`** — session-161 substrate defining shelf edge against map above when carousel was a distinct band. With bg=page-bg the band has no edge; the chrome becomes redundant. Per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — scope-adjacent retirement in same commit as the bg flip. NEW Tech Rule candidate: "Carousel chrome retire as byproduct of bg-page-bg flip" — sub-pattern of dead-code-cleanup-as-byproduct extended to chrome-retire-when-rendering-context-changes. Mirrors session 179 C7 (selected card border retire as byproduct of bg→nav-pill-greenLight flip).
+- **MapCarousel `boxShadow: "0 -2px 6px rgba(42,26,10,0.06)"`** — same reasoning as borderTop. Scope-adjacent retirement in same commit as bg flip.
+
+### Fixed
+
+- **Selected mall PinCallout vertical clipping on /map post-Shape-A-bundle** — callout opens above pin per Mapbox PinCallout placement; with the new shorter bordered window the -20 offset put pin too high relative to top edge, leaving callout's top flush against masthead/chip chrome. MAP_PEEK_OFFSET_Y +60 dial places callout+pin element vertically centered. David's iPhone QA on Vercel preview: *"looks good. Walk clean."*
+- **`feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161** — **14th cumulative firing** (html2canvas-pro parked dep from session 152; `npm install` resolved at C1 commit boundary).
+
+### iPhone QA watch-items
+
+- **/map page chrome-cohesion validation** end-to-end on production v0.180.0: chip bg dissolves into page-bg (warm) · map top flush with chip-bottom (no padding gap) · map bottom flush with carousel-rectangle-top (213px paddingBottom reservation) · carousel bg = page-bg (no visible band) · borderTop + shadow retired (carousel reads invisible against page-bg) · selected mall callout vertically centered in bordered window (MAP_PEEK_OFFSET_Y +60).
+- **Home chip no regression** on `stickyBg` default (chip continues to blend with Home page-bg v2.bg.tabs) + `chevronDirection="down"` default preserved.
+- **Map nav tab + chip-as-back-nav (session 179)** still work end-to-end.
+- **/shelves URL bar redirect** still lands on /map (session-108 disposition restored at session 179).
+- **Mapbox preview-only token** still pending — 27-session carry now (156→180). ~15 min HITL closes permanently.
+
+[v0.180.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.180.0
+
+---
+
 ## [v0.179.0] — 2026-05-17
 
 ### Session 179 — Chip-not-selectable bug root-caused at config-substrate layer via Chrome MCP audit (1 round-trip, 0 speculative patches) + Map nav restored as peer entry path to /map (8th iteration R10 D1) + 10-finding Shape A dial bundle on /map page UX (6 commits sequenced smallest→largest)

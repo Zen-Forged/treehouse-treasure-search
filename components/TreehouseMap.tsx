@@ -212,21 +212,30 @@ function tenMilesInPixels(zoom: number, lat: number): number {
 
 // Session 158 dial C set MAP_PEEK_OFFSET_Y = -60 to push pins 60px above
 // container center so the callout-above-pin had breathing room above the
-// then-narrower bottom carousel. Session 161's shelf wrapper (commit 3 of
-// the structural bundle) widened the bottom chrome obstruction from ~130px
-// to 217px and dropped the carousel closer to the nav — the -60 offset now
-// compounds with that visual shift and pins land too high in the effective
-// visible map area.
+// then-narrower bottom carousel. Session 161's shelf wrapper widened the
+// bottom chrome obstruction. Session 179 dial: -60 → -20.
 //
-// Session 161 dial: -60 → -20 (a third of the original magnitude). Pin
-// lands closer to container center but still slightly above so the callout
-// rendering above the pin has comfortable breath. Empirically the pin and
-// its callout now sit ~vertically-centered in the visible-map portion
-// between strip-bottom and shelf-top.
+// Session 180 — David iPhone QA (F2 of 5 post-Shape-A-bundle): selected
+// mall callout appears "too high and gets cutoff" + ask to "dial this in
+// to be centered horizontally [vertically] between the navbar and the
+// header." Root cause: session 180 C2 retired FRAME_PAD_TOP (14 → 0)
+// AND C3 reserved 213px bottom for the carousel — bordered window is
+// now ~199px shorter than pre-session-180 geometry. Same -20 offset
+// puts the pin proportionally higher relative to the now-shorter
+// container's top edge, leaving the callout's top flush against
+// masthead/chip chrome.
+//
+// New offset +60 puts pin 60px BELOW container vertical center. The
+// callout (renders ABOVE the pin, ~155px tall + tail) extends from
+// (container_center - 95) up to pin. Element CENTER ≈ pin - 62 ≈
+// container center, so the callout+pin element reads visually
+// centered in the bordered-window vertical space. Clearance above
+// callout ≥ 120px on Pro Max / ≥ 43px on iPhone SE (well clear of
+// chip-bottom chrome).
 //
 // Mapbox offset convention: target center lands at
 // (container_center.x + x, container_center.y + y); negative Y = upward.
-const MAP_PEEK_OFFSET_Y = -20;
+const MAP_PEEK_OFFSET_Y = 60;
 
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
