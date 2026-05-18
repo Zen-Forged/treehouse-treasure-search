@@ -4,6 +4,54 @@ const { withSentryConfig } = require("@sentry/nextjs");
 const nextConfig = {
   reactStrictMode: true,
 
+  // Session 183 C3 — Next/Image remotePatterns for BoothHero photos
+  // (F3 round 3 escalation per session 182 C2 commit body pre-scope).
+  //
+  // David's session 182 iPhone QA finding 3 on production v0.182.0:
+  // "Takes about a second sometimes more to load the image, more than
+  // just the flicker experienced on the explore page with the hero
+  // image." C2 (useLayoutEffect + <link rel="preload"> document.head
+  // .appendChild) got the preload into the high-priority slot but
+  // doesn't reduce physical network time for Supabase-hosted images
+  // (~500ms-1s cold fetch). Shape B round 3: Next/Image + Vercel Image
+  // API + edge cache is the canonical fix per
+  // feedback_kill_bug_class_after_3_patches ✅ Promoted (round 1 session
+  // 171 `new Image().src` useEffect; round 2 session 182 useLayoutEffect
+  // + W3C-canonical preload primitive; round 3 here = framework-native
+  // primitive that auto-emits preload AND optimizes the asset itself).
+  //
+  // Vercel Image API at runtime:
+  //   - Fetches origin (Supabase Storage public URL)
+  //   - Re-encodes to AVIF/WebP (typically 50-80% smaller payload)
+  //   - Resizes to device-appropriate width (per `sizes` prop hint)
+  //   - Caches at Vercel edge (subsequent requests served instantly)
+  //   - Emits <link rel="preload" imagesrcset="..."> in head for any
+  //     <Image priority> in React tree (retires session 182 C2's
+  //     manual useLayoutEffect preload primitive as dead code per
+  //     feedback_dead_code_cleanup_as_byproduct ✅ Promoted).
+  //
+  // remotePatterns scope:
+  //   - `*.supabase.co/storage/v1/object/public/**` — production
+  //     vendor hero photos uploaded via /api/vendor-hero, served as
+  //     public Supabase Storage URLs.
+  //   - `picsum.photos/**` — fixture data for /shelf-v2-test +
+  //     /home-hero-test + other smoke routes. Without this, Image
+  //     renders throw runtime errors on smoke routes.
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+        pathname: '/**',
+      },
+    ],
+  },
+
   // /shelves disposition (R10 Arc 4, session 108) — Booths tab retired
   // session 107, cross-mall booth management lives on /admin Vendors tab,
   // /shelves has no callsite. Permanent redirect preserves cached
