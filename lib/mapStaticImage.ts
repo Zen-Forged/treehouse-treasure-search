@@ -19,11 +19,16 @@
 // graceful degradation). Production-PWA QA is the authoritative
 // validation surface until a preview-only token gets provisioned.
 //
-// Style: mapbox/light-v11 (same base as TreehouseMap; the runtime
-// palette overrides in TreehouseMap don't apply here, so static
-// snapshots render at the Mapbox default light-v11 palette — that's
-// acceptable for a small thumbnail; the brand-cream cartographic
-// vocabulary lives on /map proper).
+// Style: kentuckytreehouse/cmpak5jem000x01ry5jwe5t6w (Treehouse Cream v1
+// — custom Studio style baking the v1.basemap.* palette directly into
+// Mapbox style JSON; same style URL TreehouseMap uses for the live map).
+// Session 181 swap reverses the session-169 "static renders at default
+// light-v11" caveat — David's iPhone QA on /find/[id]'s cartographic
+// block surfaced the cool/white static snapshot reading visually
+// disconnected from the warm /map cartography; uploading a custom style
+// closes the gap on both surfaces with a single style ID. Generated via
+// scripts/generate-cream-mapbox-style.ts; re-runs + re-uploads to Studio
+// are the canonical path for future palette tweaks.
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -60,5 +65,5 @@ export function mallSnapshotUrl(
   // a retina-density image so the snapshot stays crisp on iPhone screens.
   const view    = `${lng},${lat},${zoom},0`;
   const dims    = `${Math.round(widthPx)}x${Math.round(heightPx)}@2x`;
-  return `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${marker}/${view}/${dims}?access_token=${MAPBOX_TOKEN}`;
+  return `https://api.mapbox.com/styles/v1/kentuckytreehouse/cmpak5jem000x01ry5jwe5t6w/static/${marker}/${view}/${dims}?access_token=${MAPBOX_TOKEN}`;
 }
