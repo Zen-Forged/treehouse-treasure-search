@@ -67,7 +67,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Pencil, ImagePlus } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import {
   v1,
@@ -401,7 +401,6 @@ export function BoothHero({
 export function BoothTitleBlock({
   displayName,
   onPickerOpen,
-  onEditName,
 }: {
   displayName: string;
   /**
@@ -413,16 +412,18 @@ export function BoothTitleBlock({
    * unchanged.
    */
   onPickerOpen?: () => void;
-  /**
-   * Wave 1 Task 4 (session 91) — vendor self-edit affordance. When supplied,
-   * renders a small Pencil bubble inline at the right of the title block.
-   * Only `/my-shelf` passes this when the actor is the booth's owner (not
-   * admin impersonating); shopper Shelf and admin /shelves omit it.
-   */
-  onEditName?: () => void;
+  // Session 186 — onEditName prop retired. Vendor self-edit moves from
+  // an inline Pencil bubble (Wave 1 Task 4, session 91) to a dedicated
+  // "Edit Booth" CTA button on /my-shelf stacked below "Add a Find" per
+  // David's session-186 ask. The pencil affordance no longer scaled
+  // visually once the EditBoothSheet grew to 7 fields (commit 5 added
+  // Vendor identity section); a CTA-shaped button reads as an explicit
+  // entry point rather than a tiny tap-target adornment. Note: this
+  // diverges from D13 of docs/vendor-profile-enrichment-design.md
+  // which kept `onEditName?: () => void` in the BoothTitleBlock contract;
+  // sub-decision per `feedback_within_session_design_record_reversal`.
 }) {
   const hasPicker = !!onPickerOpen;
-  const hasEdit   = !!onEditName;
   return (
     // Session 128 (refinement design D6): outer wrapper textAlign:"center"
     // + flex row justifyContent:"center" centers the eyebrow, h1, picker
@@ -431,14 +432,13 @@ export function BoothTitleBlock({
     // via this shared primitive.
     // v2 Arc 4.4 — typography + colors migrate. Eyebrow + vendor name +
     // picker chevron all become FONT_CORMORANT (single editorial serif
-    // family per system-level Q1 (a) lock). Edit Pencil bubble adopts
-    // v2 chrome vocabulary (v2.surface.warm + v2.border.light + green
-    // glyph; mirrors HomeFeedTile/StarFavoriteBubble/BookmarkBoothBubble
-    // affordance-bubble shape at the smaller 32×32 self-edit size).
+    // family per system-level Q1 (a) lock).
     // Review Board Finding 4 (session 169) — top padding 36 → 16 (canonical
     // space.s16). David: "Position the a curated booth text higher so it
     // sits closer to the hero image but with some padding." Shared primitive
     // — change inherits across /shelf/[slug] + /my-shelf consumers.
+    // Session 186 — Edit Pencil bubble retired; vendor self-edit moves
+    // to the "Edit Booth" CTA button under "Add a Find" on /my-shelf.
     <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
       <div
         style={{
@@ -468,52 +468,23 @@ export function BoothTitleBlock({
       >
         A curated booth by
       </div>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 10 }}>
-        {hasPicker ? (
-          <button
-            onClick={onPickerOpen}
-            aria-label={`Switch booth — viewing ${displayName}`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              margin: 0,
-              padding: 0,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              textAlign: "center",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <h1
-              style={{
-                fontFamily: FONT_CORMORANT,
-                fontSize: 32,
-                // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
-                fontWeight: 600,
-                color: v2.text.primary,
-                lineHeight: 1.1,
-                letterSpacing: "-0.005em",
-                margin: 0,
-              }}
-            >
-              {displayName}
-            </h1>
-            <span
-              aria-hidden="true"
-              style={{
-                fontFamily: FONT_CORMORANT,
-                fontSize: 20,
-                color: v2.text.secondary,
-                lineHeight: 1,
-                marginTop: 4,
-              }}
-            >
-              ▾
-            </span>
-          </button>
-        ) : (
+      {hasPicker ? (
+        <button
+          onClick={onPickerOpen}
+          aria-label={`Switch booth — viewing ${displayName}`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            margin: 0,
+            padding: 0,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "center",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
           <h1
             style={{
               fontFamily: FONT_CORMORANT,
@@ -528,32 +499,35 @@ export function BoothTitleBlock({
           >
             {displayName}
           </h1>
-        )}
-
-        {hasEdit && (
-          <button
-            onClick={onEditName}
-            aria-label="Edit booth name"
+          <span
+            aria-hidden="true"
             style={{
-              flexShrink: 0,
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              background: v2.surface.warm,
-              border: `1px solid ${v2.border.light}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              padding: 0,
+              fontFamily: FONT_CORMORANT,
+              fontSize: 20,
+              color: v2.text.secondary,
+              lineHeight: 1,
               marginTop: 4,
-              WebkitTapHighlightColor: "transparent",
             }}
           >
-            <Pencil size={13} style={{ color: v2.accent.green }} strokeWidth={1.8} />
-          </button>
-        )}
-      </div>
+            ▾
+          </span>
+        </button>
+      ) : (
+        <h1
+          style={{
+            fontFamily: FONT_CORMORANT,
+            fontSize: 32,
+            // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
+            fontWeight: 600,
+            color: v2.text.primary,
+            lineHeight: 1.1,
+            letterSpacing: "-0.005em",
+            margin: 0,
+          }}
+        >
+          {displayName}
+        </h1>
+      )}
     </div>
   );
 }
