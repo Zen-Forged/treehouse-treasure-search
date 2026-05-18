@@ -206,9 +206,22 @@ export default function MapCarousel({
                     // #E5DED2 disappears into the bg; v2.border.medium #D6CCBC
                     // (already in use elsewhere) reads as a deliberate separation
                     // stroke. Peeked state stays 1.5px v2.accent.green unchanged.
+                    //
+                    // Session 179 — David iPhone QA finding 10: "Add a thin stroke
+                    // on the thumbnails in the carousel." v2.border.medium #D6CCBC
+                    // was rendering as nearly invisible on iPhone — bumped to
+                    // rgba(42,26,10,0.18) matching BottomNav stroke vocabulary
+                    // (BottomNav.tsx C.border line 165 + nav-outer-border line 257)
+                    // since David's finding-7 anchored this dial bundle to nav-bar
+                    // visual continuity. Cross-surface vocabulary match — chrome
+                    // boundaries on /map share the same stroke value as nav-bar
+                    // chrome boundaries. Peeked state may change in C7 (selected
+                    // bg → nav greenLight per finding 7); deferred until that
+                    // commit decides whether to keep green border or match
+                    // non-peeked stroke.
                     border:        isPeeked
                       ? `1.5px solid ${v2.accent.green}`
-                      : `1px solid ${v2.border.medium}`,
+                      : `1px solid rgba(42,26,10,0.18)`,
                     borderRadius:  10,
                     overflow:      "hidden",
                     display:       "flex",
