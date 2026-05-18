@@ -56,7 +56,22 @@ import MallPickerChip from "@/components/MallPickerChip";
 import MapPageBody from "@/components/MapPageBody";
 import MapPageTransition from "@/components/MapPageTransition";
 import MapCarousel from "@/components/MapCarousel";
-import MallSheet from "@/components/MallSheet";
+// Session 179 — MallSheet import retired per David iPhone QA finding 4
+// ("When selecting the thin mall chip it should navigate back to explore").
+// MallSheet picker (session 178 D6 — chip onTap → opens MallSheet scope-
+// picker) no longer has a trigger on /map; scope-changing now happens via
+// pin tap → callout → Explore CTA (commits + routes to /) OR Reset button
+// (clears scope, stays on /map). MallSheet.tsx file kept on disk for
+// parked-component pattern (session 152 precedent); current zero
+// runtime consumers in (tabs)/ flow. BoothPickerSheet.tsx still references
+// MallSheet inheritance pattern in its file-top comment.
+//
+// Bounded reversal of session 178 D6 per
+// feedback_surface_locked_design_reversals ✅ Promoted — D6 specified
+// "tap chip → opens MallSheet scope-picker per Q-A locked in session
+// 178 design pass." Session 179 reverses chip's role from "picker
+// trigger" to "back-to-Explore navigation" (mirror of Home chip's
+// forward-to-/map role); MallSheet picker becomes dormant on /map.
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
@@ -76,7 +91,10 @@ export default function MapPage() {
   const [malls, setMalls] = React.useState<Mall[]>(() => cachedMalls ?? []);
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
   const [resetKey, setResetKey] = React.useState(0);
-  const [sheetOpen, setSheetOpen] = React.useState(false);
+  // Session 179 — sheetOpen state retired alongside MallSheet import per
+  // feedback_dead_code_cleanup_as_byproduct ✅ Promoted (finding 4 +
+  // session 178 D6 reversal). No remaining consumer of bottom-sheet
+  // open/close state on /map.
 
   React.useEffect(() => {
     getActiveMalls().then((next) => {
@@ -126,15 +144,31 @@ export default function MapPage() {
         // viewport; its spacer reserves the page-flow height so the chip
         // pins below it in document flow when scrolled).
         stickyTop={0}
+        // Session 179 — David iPhone QA finding 3: "The carat should be
+        // turned on the Map page to show it's opened." chevron-up on /map
+        // mirrors Home's chevron-down: tap-down = expand to /map,
+        // tap-up = collapse back to /. Pair behavior with finding 4 below.
+        chevronDirection="up"
         onTap={() => {
-          // Arc 2.2 — opens MallSheet scope-picker per D6. Reuses
-          // home_strip_tapped analytics event name from TabsChrome (same
-          // semantic — "user tapped the mall picker chrome to engage
-          // scope wayfinding"); event-key stability avoids R3 schema drift.
-          track("home_strip_tapped", {
-            mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
-          });
-          setSheetOpen(true);
+          // Session 179 — David iPhone QA finding 4: "When selecting the
+          // thin mall chip it should navigate back to explore." Bounded
+          // reversal of session 178 D6 (chip → MallSheet scope-picker) per
+          // feedback_surface_locked_design_reversals ✅ Promoted. Chip's
+          // role on /map becomes navigation back to / (mirror of Home
+          // chip's forward-to-/map role). MallSheet picker retired (state
+          // + JSX + import removed elsewhere in this commit).
+          //
+          // Scope-changing on /map now happens exclusively via pin tap
+          // → callout → Explore CTA (commits + routes to /) OR Reset
+          // (clears scope, stays on /map).
+          //
+          // Analytics: home_strip_tapped intentionally NOT fired on this
+          // path — back-navigation is not picker engagement; semantically
+          // different from Home chip's "tap to expand" event. Operational
+          // drift flagged: if R3 analytics needs explicit back-nav
+          // tracking, add a dedicated event in a follow-up commit (avoid
+          // overloading home_strip_tapped with mismatched semantic).
+          router.push("/");
         }}
       />
 
@@ -206,37 +240,12 @@ export default function MapPage() {
         onCardTap={(id) => setPeekedMallId(id)}
       />
 
-      <MallSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        malls={malls}
-        activeMallId={mallId}
-        // D6 — tap a mall → commits scope + closes sheet (stays on /map,
-        // map flies to new scope via the useEffect inside TreehouseMap
-        // that fires on selectedMallId change). All-Kentucky row at top
-        // of the sheet maps to (mallId === null) → setMallId(null).
-        // Auto-peek the newly committed scope so PinCallout surfaces
-        // immediately with Directions/Explore CTAs visible — matches
-        // /map's mount-time auto-peek behavior; consistent affordance
-        // across both code-path entries to a scope.
-        onSelect={(id) => {
-          setMallId(id);
-          setPeekedMallId(id);
-          setSheetOpen(false);
-          const picked = id ? malls.find((m) => m.id === id) : null;
-          track("filter_applied", {
-            filter_type:  "mall",
-            filter_value: picked?.slug ?? (id ?? "all"),
-            page:         "/map",
-            source:       "map_page_sheet",
-          });
-        }}
-        // findCounts intentionally omitted — /map's scope picker is a
-        // "switch what slice of Kentucky you're looking at" affordance,
-        // not a "see find inventory per location" affordance (the
-        // MapCarousel + the map pins themselves surface inventory cues).
-        // Skipping findCounts also avoids an extra fetch on /map mount.
-      />
+      {/* Session 179 — MallSheet JSX retired per finding 4 + session 178
+          D6 reversal (chip-as-back-to-Explore replaces chip-as-picker-
+          trigger). map_page_sheet analytics path also retires here;
+          map_page_pin (Explore CTA on PinCallout) + map_page_reset
+          (Reset button) preserved as the surviving scope-management
+          analytics paths. */}
     </>
   );
 }

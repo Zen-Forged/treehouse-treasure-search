@@ -125,7 +125,20 @@ export default function MapCarousel({
           }}
           style={{
             position:      "fixed",
-            bottom:        "max(87px, calc(env(safe-area-inset-bottom, 0px) + 87px))",
+            // Session 179 — David iPhone QA finding 5: "Reduce padding of
+            // carousel between the navbar." Session 161 math: nav-top sits
+            // at 75 from screen bottom (max(22px, safe-area+22px) + nav
+            // height ~53). Wrapper-bottom 87 left a 12px gap shelf↔nav,
+            // and the shelf's internal padding-bottom 12 added another
+            // 12px between cards-bottom and shelf-bottom = ~24px perceived
+            // padding between cards and nav. Halving: wrapper-bottom
+            // 87 → 81 (6px gap shelf↔nav) AND shelf padding-bottom 12 → 6
+            // (cards-bottom now 12px above nav-top vs 24px). Coupled
+            // change since both contribute to the same perceived padding;
+            // splitting would leave intermediate state with mismatched
+            // internal-vs-external gaps. Safe-area math preserved
+            // verbatim (notched iPhones still get safe-area + 81).
+            bottom:        "max(81px, calc(env(safe-area-inset-bottom, 0px) + 81px))",
             left:          0,
             right:         0,
             zIndex:        35,
@@ -148,9 +161,18 @@ export default function MapCarousel({
               // headroom (translateY −12 + scale 1.12 lifts the card edge
               // up to ~16px above its normal slot; 22px top padding keeps
               // the rise visible without clipping at the scroll container's
-              // implicit overflow-y boundary). Bottom 12 + horizontal 12
-              // preserved.
-              padding:                 "22px 12px 12px",
+              // implicit overflow-y boundary).
+              //
+              // Session 179 — David iPhone QA finding 5: padding-bottom
+              // 12 → 6 (coupled with wrapper-bottom 87 → 81 above) to
+              // halve perceived cards-to-nav padding from ~24px to ~12px.
+              //
+              // Session 179 C6 — David iPhone QA finding 6: selected scale
+              // 1.12 → 1.03 + translateY −12 → 0 (subtle distinction; no
+              // peek-up) means the 22px top headroom is no longer needed.
+              // Top padding 22 → 12 (matches the new subtle-emphasis
+              // peeked state's geometry).
+              padding:                 "12px 12px 6px",
               maxWidth:                430,
               margin:                  "0 auto",
               pointerEvents:           "auto",
@@ -197,7 +219,21 @@ export default function MapCarousel({
                     // a visual change — aligns carousel cards to the same
                     // surface tier as form inputs + nav bar so future v2.input
                     // value flips cascade here automatically.
-                    background:    v2.surface.input,
+                    //
+                    // Session 179 C7 — David iPhone QA finding 7: "Change the
+                    // selected carousel thumbnail to the highlighted selected
+                    // state we use on the nav bar." Selected bg →
+                    // rgba(30,77,43,0.10) matching BottomNav.tsx C.greenLight
+                    // (line 168). Replaces the geometric-distinction-only
+                    // emphasis from session 165 R2 (which C6 dialed back) with
+                    // chromatic distinction mirroring the active-nav-tab pill
+                    // vocabulary. Non-peeked keeps v2.surface.input as before
+                    // — only the swap-on-selection is new. Cross-surface
+                    // visual continuity: selected nav tab + selected carousel
+                    // card both read with the same green-tint highlight.
+                    background:    isPeeked
+                      ? "rgba(30,77,43,0.10)"
+                      : v2.surface.input,
                     // Session 161 — non-peeked border tier light → medium per David's
                     // "Add thin stroke around the mall cards so they have some separation
                     // from the bg, it can be a lighter grey color or something we've
@@ -206,9 +242,27 @@ export default function MapCarousel({
                     // #E5DED2 disappears into the bg; v2.border.medium #D6CCBC
                     // (already in use elsewhere) reads as a deliberate separation
                     // stroke. Peeked state stays 1.5px v2.accent.green unchanged.
-                    border:        isPeeked
-                      ? `1.5px solid ${v2.accent.green}`
-                      : `1px solid ${v2.border.medium}`,
+                    //
+                    // Session 179 — David iPhone QA finding 10: "Add a thin stroke
+                    // on the thumbnails in the carousel." v2.border.medium #D6CCBC
+                    // was rendering as nearly invisible on iPhone — bumped to
+                    // rgba(42,26,10,0.18) matching BottomNav stroke vocabulary
+                    // (BottomNav.tsx C.border line 165 + nav-outer-border line 257)
+                    // since David's finding-7 anchored this dial bundle to nav-bar
+                    // visual continuity.
+                    //
+                    // Session 179 C7 — peeked border unified with non-peeked per
+                    // feedback_dead_code_cleanup_as_byproduct ✅ Promoted. With
+                    // C6 scale-down (1.12 → 1.03) + C7 green-tint bg, the bright
+                    // 1.5px v2.accent.green border (session 161) becomes a
+                    // redundant 3rd emphasis cue stacked atop bg + scale. Nav-pill
+                    // vocabulary uses bg-only distinction (no border on active tab);
+                    // mirroring that here: bg carries the "selected" signal, all
+                    // cards share the same thin stroke for card-identity
+                    // continuity. Single coupled commit with the bg flip since
+                    // both contribute to the same "match nav-pill vocabulary"
+                    // dial.
+                    border:        `1px solid rgba(42,26,10,0.18)`,
                     borderRadius:  10,
                     overflow:      "hidden",
                     display:       "flex",
@@ -221,29 +275,31 @@ export default function MapCarousel({
                     // Round 2: "Selected mall card is a bit larger, I think,
                     // but still not very noticable. Possibly make larger and
                     // allow it to peak outside of the container." Shape A
-                    // dial: scale 1.05 → 1.12 + translateY −3 → −12. The
-                    // ~16px upward visual rise fits within the shelf's
-                    // newly bumped 22px top padding so the card "peeks up"
-                    // visibly within the shelf bg without escaping it.
+                    // dial: scale 1.05 → 1.12 + translateY −3 → −12.
                     //
-                    // True peek-OUTSIDE-shelf-wrapper (Shape B) requires
-                    // restructuring the scroll container to render the
-                    // selected card as a sibling overlay outside the
-                    // overflow-x:auto bounds — Shape A first per iPhone QA
-                    // post-walk; Shape B follow-on if "still not enough."
-                    transform:     isPeeked ? "translateY(-12px) scale(1.12)" : "translateY(0) scale(1)",
+                    // Session 179 C6 — David iPhone QA finding 6: "Keep
+                    // the selected thumbnail roughly the same size as the
+                    // others, only slightly larger as right now they collide
+                    // visually when selected." Reverses session-165 R2's
+                    // pronounced lift (scale 1.12 + translateY −12) within
+                    // bounded scope per feedback_surface_locked_design_reversals
+                    // ✅ Promoted. Scale 1.03 + translateY 0 = subtle "in
+                    // focus" cue via geometry alone; bg-color distinction
+                    // in C7 carries the rest of the emphasis. Neighbors no
+                    // longer collide laterally (1.03 vs 1.0 ~= 4px lateral
+                    // expansion total, fits within 8px shelf gap between
+                    // cards) and no vertical peek-up to clip neighbors.
+                    transform:     isPeeked ? "translateY(0) scale(1.03)" : "translateY(0) scale(1)",
                     transformOrigin: "center center",
                     transition:    "transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease",
-                    // Box shadow swaps by peek state — non-peeked uses the
-                    // baseline session-161 subtle resting shadow; peeked
-                    // gets a more pronounced lift shadow that combined with
-                    // the scale + translateY reads clearly as "this is in
-                    // focus" not just "this has a green border." Shadow
-                    // alpha tier 0.18/0.10 mirrors v1.shadow.callout for
-                    // vocabulary consistency with the PinCallout above.
-                    boxShadow:     isPeeked
-                      ? "0 6px 14px rgba(42,26,10,0.18), 0 2px 4px rgba(42,26,10,0.10)"
-                      : "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
+                    // Session 179 C6 — Box shadow dialed back alongside
+                    // the scale-down. Pronounced 0 6px 14px lift shadow
+                    // (session 165 R2) over-amplified the new subtle 1.03
+                    // scale; peeked shadow now matches non-peeked baseline.
+                    // Bg-color emphasis in C7 carries the "in focus" weight
+                    // (nav-pill greenLight vocabulary) rather than
+                    // elevation-shadow distinction.
+                    boxShadow:     "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
                     textAlign:     "left",
                     WebkitTapHighlightColor: "transparent",
                   }}

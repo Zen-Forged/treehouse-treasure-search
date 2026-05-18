@@ -28,7 +28,7 @@
 "use client";
 
 import * as React from "react";
-import { PiMapPinFill, PiCaretDown } from "react-icons/pi";
+import { PiMapPinFill, PiCaretDown, PiCaretUp } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT } from "@/lib/tokens";
 import { HERO_BOTTOM_EDGE } from "@/components/HomeHero";
 
@@ -51,6 +51,23 @@ interface MallPickerChipProps {
    * default preserves all current consumers verbatim.
    */
   stickyTop?: string | number;
+  /**
+   * Session 179 — David iPhone QA finding 3: "The carat should be turned
+   * on the Map page to show it's opened." When the chip is in an "open"
+   * context (i.e., user is already on /map = inside the picker context),
+   * carat points UP indicating "tap to collapse / exit back to Explore."
+   * Default "down" preserves Home consumer's "tap to expand" mental model.
+   *
+   * Mirror relationship with finding-4's chip-as-back behavior on /map:
+   *   Home (chevronDirection="down"): chevron points down = "tap to
+   *     expand to map" (chip routes forward to /map).
+   *   /map (chevronDirection="up"):  chevron points up = "tap to collapse
+   *     to explore" (chip routes back to /).
+   *
+   * Additive prop per feedback_schema_forced_deviation_not_design_reversal
+   * ✅ Promoted (6th cumulative firing post-promotion at session 141).
+   */
+  chevronDirection?: "down" | "up";
 }
 
 // Session 166 dial 6 (post-dial-3 iPhone QA round 3) — TOP_PADDING 22 → 12,
@@ -60,9 +77,21 @@ interface MallPickerChipProps {
 // feedback_within_session_design_record_reversal ✅ Promoted-via-memory.
 // Tightens the chip strip from 62px tall to 48px (-14px), giving the feed
 // more vertical real estate when chip is sticky-pinned.
-const TOP_PADDING       = 12;
+//
+// Session 179 — David iPhone QA finding 8 on /map: "reduce height of the
+// thin mall-chip selector to get it more vertically centered between the
+// map and the masthead." Asymmetric 12/6 padding biased the chip's content
+// upward within its row (less breathing room below button than above).
+// Symmetric 8/8 padding (equal top + bottom) centers the button visually
+// within the chip row while shrinking total chip-row height from 46px to
+// 44px. Second bounded refinement of session-164 D11 within the same
+// magnitude band per feedback_within_session_design_record_reversal
+// ✅ Promoted-via-memory (3 firings of D11 dial: 22/10 → 12/6 → 8/8).
+// Applied universally (chip on Home + chip on /map both get symmetric
+// padding; the centering ask is geometric not surface-specific).
+const TOP_PADDING       = 8;
 const HORIZ_PADDING     = 18;
-const BOTTOM_PADDING    = 6;
+const BOTTOM_PADDING    = 8;
 const PIN_SIZE          = 22;
 const NAME_FONT_SIZE    = 22;
 const CHEVRON_SIZE      = 18;
@@ -87,7 +116,9 @@ export default function MallPickerChip({
   mallName,
   onTap,
   stickyTop = HERO_BOTTOM_EDGE,
+  chevronDirection = "down",
 }: MallPickerChipProps) {
+  const ChevronGlyph = chevronDirection === "up" ? PiCaretUp : PiCaretDown;
   return (
     <div
       style={{
@@ -115,7 +146,11 @@ export default function MallPickerChip({
       <button
         type="button"
         onClick={onTap}
-        aria-label={`Change location — current: ${mallName}`}
+        aria-label={
+          chevronDirection === "up"
+            ? `Back to Explore — current location: ${mallName}`
+            : `Change location — current: ${mallName}`
+        }
         style={{
           display:        "inline-flex",
           alignItems:     "center",
@@ -149,7 +184,7 @@ export default function MallPickerChip({
         >
           {mallName}
         </span>
-        <PiCaretDown
+        <ChevronGlyph
           size={CHEVRON_SIZE}
           color={v2.text.secondary}
           aria-hidden="true"

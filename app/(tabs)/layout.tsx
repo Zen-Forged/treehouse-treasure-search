@@ -52,8 +52,30 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   // mall-filter version needed.
   const bookmarkCount = saves.ids.size;
 
-  const activeNav: "home" | "flagged" =
-    pathname === "/flagged" ? "flagged" : "home";
+  // Session 179 — Map tab restored at position 3 (BottomNav.tsx). Active
+  // prop now branches on pathname === "/map" so the Map nav slot highlights
+  // when user is on /map. Coupled with BottomNav.tsx tabs[] extension in
+  // same commit per feedback_single_coupled_commit_when_must_move_together
+  // ✅ Promoted — adding the tab without wiring active prop would render
+  // the Map slot permanently un-highlighted mid-commit.
+  const activeNav: "home" | "flagged" | "map" =
+    pathname === "/flagged" ? "flagged" :
+    pathname === "/map"     ? "map" :
+    "home";
+
+  // Session 179 — David iPhone QA finding 1: "change BG to match the
+  // masthead BG" on /map. The /map page's StickyMasthead uses
+  // bg={v2.surface.warm} (#FBF6EA) per session 178 QA dial 1; David wants
+  // page bg to unify with the masthead so the chrome reads as a
+  // continuous surface tier on the /map back-context. Scope-bounded
+  // override: pathname === "/map" → v2.surface.warm; Home + Saved stay
+  // on v2.bg.tabs (#E6DECF) per session 166 dial 8 chrome-tier extraction.
+  //
+  // Coupled with the chip-as-back behavior + carat-up visual (C8) — all
+  // three reshape /map's chrome to signal "you are inside the map
+  // context, chip exits back to Explore" rather than "you are picking
+  // a scope, chip opens the picker sheet."
+  const isMap = pathname === "/map";
 
   return (
     <div
@@ -64,7 +86,9 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
         // slightly warmer cream) per David's iPhone QA round 4 finding.
         // (tabs)/-scoped tier extraction; non-(tabs)/ surfaces remain on
         // v2.bg.main (~37 consumers across post-flow, auth, admin, etc.).
-        background:     v2.bg.tabs,
+        // Session 179 — /map bg overrides to v2.surface.warm to match the
+        // /map page's StickyMasthead bg (finding 1).
+        background:     isMap ? v2.surface.warm : v2.bg.tabs,
         maxWidth:       430,
         margin:         "0 auto",
         position:       "relative",

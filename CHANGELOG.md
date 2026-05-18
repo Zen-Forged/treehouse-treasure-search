@@ -8,6 +8,58 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.179.0] — 2026-05-17
+
+### Session 179 — Chip-not-selectable bug root-caused at config-substrate layer via Chrome MCP audit (1 round-trip, 0 speculative patches) + Map nav restored as peer entry path to /map (8th iteration R10 D1) + 10-finding Shape A dial bundle on /map page UX (6 commits sequenced smallest→largest)
+
+8 runtime commits + 1 close. David opened with `/session-open`; standup recommended iPhone QA on production v0.178.0 paired with the 25-session-deep Mapbox preview-only token + 7-session-deep launch-gaps strategic session. David: *"yes."* While David stepped to do Mapbox HITL, iPhone QA on production surfaced two findings: *"the mall chip is not selectable and there is no map icon in the nav bar."* The session inverted from "QA-on-clean-ship" into a discipline-stack-test at scale — chip-bug-investigation + Map-nav-design-reversal + 10-finding /map UX dial bundle, all in single ~3-hour session, all running through the operating-system rules without re-scoping mid-flight. **Canonical operational form of `feedback_surface_locked_design_reversals` ✅ Promoted at the SUBSTRATE LAYER** (config files, not visual chrome) — session 178's design reversal of session 155's /map retirement didn't reverse the next.config.js `/map → /` permanent redirect, which silently intercepted every `router.push("/map")` from chip onClick → 308 → bounce to / → URL stayed /. **`feedback_visibility_tools_first` ✅ Promoted + `feedback_cap_speculative_patching_at_3_rounds` ✅ Promoted at round 0** — Chrome MCP `javascript_tool` JS eval against production React tree localized the bug in 1 round-trip (0 speculative patches).
+
+### Added
+
+- **Map nav tab restored at slot 3 in BottomNav** — 8th iteration of R10 D1 BottomNav history; 4th cumulative iteration adding/removing Map tab from nav across project history (107→110→121→155→178→179). Per David's "Interp 2 + keep both as peer entry paths. Map position should be after saved icon." Guest/shopper/admin: `Explore · Saved · Map` (3-tab); Vendor: `Explore · Saved · Map · Booth` (4-tab; rightmost-role-specialty rule preserved). Icon: `PiMapPinBold` (Phosphor outlined, matches `PiLeafBold` + `PiStorefrontBold` family; reserves `PiMapPinFill` for primary-glyph identity contexts like the chip per session 178 paired-glyph vocabulary). 3 explicit reversals surfaced in commit body per `feedback_surface_locked_design_reversals` ✅ Promoted.
+- **`chevronDirection: "down" | "up"` additive prop on `<MallPickerChip>`** with `aria-label` adaptation ("Back to Explore — current location: {mallName}" when `chevronDirection="up"`). Conditional `PiCaretDown` / `PiCaretUp` render. Default "down" preserves Home consumer verbatim. Additive prop per `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted (**7th cumulative firing post-promotion**). /map passes `chevronDirection="up"` — mirror of Home's chevron-down: Home = "tap to expand to map"; /map = "tap to collapse to explore."
+- **`(tabs)/layout.tsx` pathname-based bg branch** — /map page bg overrides to `v2.surface.warm` (#FBF6EA) matching the /map page's StickyMasthead bg per finding 1. Scope-bounded: Home + Saved stay on `v2.bg.tabs` (#E6DECF) per session 166 dial 8 chrome-tier extraction.
+- **Carousel selected card chromatic emphasis** — bg `v2.surface.input` → `rgba(30,77,43,0.10)` matching `BottomNav.tsx C.greenLight` (line 168). Cross-surface visual continuity with active-nav-tab pill vocabulary.
+- **Cross-surface BottomNav stroke vocabulary as standard `rgba(42,26,10,0.18)`** for chrome boundaries on /map (Reset button + carousel cards both). Anchored to David's finding-7 nav-bar visual continuity ask.
+
+### Changed
+
+- **Carousel ↔ navbar perceived padding halved (~24px → ~12px)** — wrapper-bottom `87` → `81` (gap shelf↔nav: 12px → 6px) AND inner shelf padding-bottom `12` → `6` (cards-bottom inside shelf: 12px → 6px). Coupled per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — both contribute to same perceived padding; splitting leaves mismatched internal-vs-external gaps.
+- **MallPickerChip padding `12/6` → `8/8` symmetric** — vertical centering on /map between masthead + bordered window. **3rd iteration of session-164 D11 dial chain** within bounded magnitude per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128 (D11 dial chain: session 164 22/10 → session 166 dial 6 12/6 → session 179 8/8). Applied universally (Home + /map both).
+- **Carousel selected card scale `1.12` → `1.03` + translateY `−12` → `0`** — subtle "in focus" cue; neighbors no longer collide laterally (1.03 = ~4px lateral expansion total fits within 8px shelf gap). Reverses session-165 R2's pronounced peek-up lift per `feedback_surface_locked_design_reversals` ✅ Promoted. Carousel shelf top padding `22` → `12` (peek-up headroom no longer needed). Selected card boxShadow pronounced lift → matches non-peeked baseline (bg-color carries selection now, not elevation).
+- **Carousel selected card border `1.5px solid v2.accent.green` → `1px rgba(42,26,10,0.18)`** — unified with non-peeked + Reset chrome-boundary vocabulary. Per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — bright green border becomes redundant 3rd emphasis cue stacked atop bg + scale; nav-pill vocabulary uses bg-only distinction.
+- **Reset button border `v2.border.light #E5DED2` → `rgba(42,26,10,0.18)`** + carousel card non-peeked border `v2.border.medium #D6CCBC` → `rgba(42,26,10,0.18)` (BottomNav stroke vocabulary cross-surface match).
+- **/map chip onTap** changes from `setSheetOpen(true)` → `router.push("/")` — chip role on /map becomes back-to-Explore navigation (mirror of Home chip's forward-to-/map role). **Bounded reversal of session 178 D6** per `feedback_surface_locked_design_reversals` ✅ Promoted. Scope-changing on /map now happens exclusively via pin tap → callout → Explore CTA (commits + routes to /) OR Reset button (clears scope, stays on /map).
+- **`next.config.js` /shelves redirect destination** restored from `/` → `/map` (session-108 original disposition; session 155 had retargeted to `/` because /map was retiring same session — constraint now gone with session 178 + 179).
+
+### Removed
+
+- **`next.config.js` `/map` + `/map/:path*` permanent redirects** — were session 155 substrate that survived into session 178's /map page revival as silent config-substrate contradiction. Every `router.push("/map")` from chip onClick hit 308 → bounced to / → URL stayed /. **NEW Tech Rule candidate** surfaced in commit body: "Cross-session feature restoration must retire prior-session retirement redirects in same commit as feature ship — grep `next.config` + `middleware` before declaring an R-session implementation arc complete." Sub-pattern of `feedback_surface_locked_design_reversals` ✅ Promoted extended to config-substrate layer.
+- **MallSheet import + `sheetOpen` state + `<MallSheet>` JSX from `app/(tabs)/map/page.tsx`** per finding 4 + session 178 D6 reversal. MallSheet.tsx file kept on disk for parked-component pattern (session 152 precedent; BoothPickerSheet.tsx still references MallSheet inheritance in file-top comment).
+- **Carousel peeked-state geometric peek-up** (translateY −12px + scale 1.12 + heavy lift shadow + 22px shelf top padding) — replaced by chromatic bg-tint emphasis matching nav-pill vocabulary.
+- **`map_page_sheet` R3 analytics path** — no remaining trigger after MallSheet retires from /map. `map_page_pin` (Explore CTA) + `map_page_reset` preserved as surviving scope-management paths.
+
+### Fixed
+
+- **Chip on Home — "chip not selectable" (`router.push("/map")` silently no-op'd).** Root cause: `next.config.js:23` permanent redirect `/map → /` from session 155 surviving into session 178's /map page revival. Localized in 1 round-trip via Chrome MCP per `feedback_visibility_tools_first` ✅ Promoted + `feedback_cap_speculative_patching_at_3_rounds` ✅ Promoted at round 0 (zero speculative patches). Chrome MCP `javascript_tool` JS eval verified React onClick handler IS attached + executes without error AND URL doesn't change — escalated diagnosis from "is the handler firing?" directly to "what's intercepting the navigation?" without speculative patches.
+- **`feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161** — **13th cumulative firing** (html2canvas-pro `npm install` at C1 commit boundary).
+
+### Deprecated
+
+- **`home_strip_tapped` analytics event on /map chip back-nav path** — intentionally not fired post-session-179; semantically different from Home chip's "tap to expand to map." Operational drift flagged in C8 commit body: if R3 analytics needs explicit back-nav tracking, add dedicated event (e.g., `map_back_to_explore`) in follow-up commit + update `lib/clientEvents.ts` ClientEventType union. Non-blocking.
+
+### iPhone QA watch-items
+
+- **/map page Shape A 10-dial validation** end-to-end on production v0.179.0: page bg unifies with masthead bg (v2.surface.warm) · carat shows up · chip tap → routes back to `/` (no bottom sheet) · carousel shelf bg unchanged · carousel-to-nav padding ~12px (was ~24px) · selected card subtle (1.03 scale, no neighbor collision) · selected card bg = nav-pill greenLight · chip vertically centered between masthead + window · Reset visible stroke · carousel cards visible strokes.
+- **Home chip no regression** on `chevronDirection="down"` default (PiCaretDown still renders + tap routes forward to /map).
+- **Map nav tab** taps land on /map with active highlight (green pill); muscle-memory path alongside chip; vendor rightmost-Booth rule preserved.
+- **/shelves URL bar** redirects to /map (session-108 original disposition restored).
+- **Mapbox preview-only token** still pending — 26-session carry now (156→179). ~15 min HITL closes permanently.
+
+[v0.179.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.179.0
+
+---
+
 ## [v0.178.0] — 2026-05-17
 
 ### Session 178 — F2 Map page extraction implementation Arcs 1-4 end-to-end (8 commits against locked design record, 0 re-scoping) + 3 QA dial commits (/map masthead bg + v1.iconBubble solid + /find/[id] paired-glyph swap)

@@ -187,7 +187,16 @@ function MapControlPill({ onReset }: { onReset: () => void }) {
         borderRadius:            999,
         background:              v2.bg.main,
         color:                   v2.text.secondary,
-        border:                  `1px solid ${v2.border.light}`,
+        // Session 179 — David iPhone QA finding 9: "Add a thin stroke
+        // around the reset button." v2.border.light (#E5DED2) was too
+        // faint to read against the v2.bg.main #F7F3EB pill bg. Bumped to
+        // rgba(42,26,10,0.18) matching BottomNav stroke vocabulary
+        // (BottomNav.tsx C.border line 165 + nav-outer-border line 257)
+        // since David's finding-7 anchored this dial bundle to nav-bar
+        // visual continuity. Inline rgba (not v2.border.medium #D6CCBC)
+        // for cross-surface vocabulary match — chrome boundaries on
+        // /map share the same stroke value as nav-bar chrome boundaries.
+        border:                  `1px solid rgba(42,26,10,0.18)`,
         cursor:                  "pointer",
         fontFamily:              FONT_SYS,
         fontSize:                13,
