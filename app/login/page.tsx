@@ -936,14 +936,14 @@ function LoginInner() {
                 fontFamily: FONT_INTER,
                 fontStyle: "italic",
                 fontSize: 11,
-                color: v2.text.muted,
+                color: v2.text.secondary,
                 textDecoration: "underline",
                 textDecorationStyle: "dotted",
-                textDecorationColor: v2.text.muted,
+                textDecorationColor: v2.text.secondary,
                 textUnderlineOffset: 3,
               }}
             >
-              New here? Request a digital booth &rarr;
+              Are you a vendor? Request your digital booth
             </Link>
           </div>
         )}
