@@ -130,7 +130,25 @@ export default function MapPageBody({
         // flex:1 so this primitive fills whatever vertical space the page
         // gives it between MallStrip-top and MapCarousel-bottom (D13).
         flex:    1,
-        padding: `${FRAME_PAD_TOP}px ${FRAME_PAD_X}px 0`,
+        // Session 180 — David iPhone QA finding 3 of 5: "Anchor the bottom
+        // of the map to the top of the mall carousel (no padding)."
+        // Bottom padding reserves the carousel's vertical extent so the
+        // bordered window's bottom edge sits at the carousel-rectangle-top
+        // (= visual top of cards once C3's bg flip dissolves the carousel
+        // shelf into page-bg).
+        //
+        // 213px = 81px (carousel bottom offset, unchanged) + 132px
+        // (carousel content vertical extent: 12 top padding + 114 card
+        // height + 6 bottom padding; borderTop=1px retired in this
+        // commit so total = 132 not 133). Safe-area-aware to match the
+        // carousel's own bottom math on notched iPhones.
+        //
+        // Coupled with MapCarousel chrome retire + bg flip in same
+        // commit per feedback_single_coupled_commit_when_must_move_
+        // together ✅ Promoted — without this reservation the bordered
+        // window extends behind the (now-invisible page-bg) carousel
+        // shelf and map peeks through behind the cards.
+        padding: `${FRAME_PAD_TOP}px ${FRAME_PAD_X}px max(213px, calc(env(safe-area-inset-bottom, 0px) + 213px))`,
         minHeight: 0,
         display: "flex",
         flexDirection: "column",

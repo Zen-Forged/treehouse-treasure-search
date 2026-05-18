@@ -128,24 +128,44 @@ export default function MapCarousel({
             // Session 179 — David iPhone QA finding 5: "Reduce padding of
             // carousel between the navbar." Session 161 math: nav-top sits
             // at 75 from screen bottom (max(22px, safe-area+22px) + nav
-            // height ~53). Wrapper-bottom 87 left a 12px gap shelf↔nav,
-            // and the shelf's internal padding-bottom 12 added another
-            // 12px between cards-bottom and shelf-bottom = ~24px perceived
-            // padding between cards and nav. Halving: wrapper-bottom
-            // 87 → 81 (6px gap shelf↔nav) AND shelf padding-bottom 12 → 6
-            // (cards-bottom now 12px above nav-top vs 24px). Coupled
-            // change since both contribute to the same perceived padding;
-            // splitting would leave intermediate state with mismatched
-            // internal-vs-external gaps. Safe-area math preserved
-            // verbatim (notched iPhones still get safe-area + 81).
+            // height ~53). Wrapper-bottom 81 puts shelf-bottom 6px above
+            // nav-top; shelf padding-bottom 6 puts cards-bottom 12px above
+            // nav-top. Safe-area-aware on notched iPhones.
             bottom:        "max(81px, calc(env(safe-area-inset-bottom, 0px) + 81px))",
             left:          0,
             right:         0,
             zIndex:        35,
             pointerEvents: "none",
-            background:    v2.bg.main,
-            borderTop:     `1px solid ${v2.border.medium}`,
-            boxShadow:     "0 -2px 6px rgba(42,26,10,0.06)",
+            // Session 180 — David iPhone QA findings 4 + 5 of 5:
+            //   "Extend the bg of the carousel to the bottom of the page.
+            //    Change the BG color of the carousel to match the rest of
+            //    the page."
+            // Carousel shelf bg flips v2.bg.main (#F7F3EB) → v2.surface.warm
+            // (#FBF6EA) to match /map's page-bg per (tabs)/layout pathname
+            // branch (session 179). With bg=page-bg the shelf is visually
+            // continuous with the page surface above the carousel (where
+            // bordered-window-bottom now sits per coupled MapPageBody
+            // padding) AND below the carousel (where page-bg shows
+            // through behind BottomNav's floating-overlay chrome). David's
+            // "extend bg to bottom of page" reads as the visual continuity
+            // achieved by the bg match — page-bg flows uninterrupted from
+            // carousel top all the way down through BottomNav's gap.
+            //
+            // borderTop + boxShadow retired as scope-adjacent dead-code
+            // per feedback_dead_code_cleanup_as_byproduct ✅ Promoted —
+            // both were session-161 substrate defining the shelf edge
+            // against the map above when carousel was a distinct band.
+            // With bg=page-bg the band has no edge; the chrome becomes
+            // redundant.
+            //
+            // Coupled commit with MapPageBody outer wrapper bottom padding
+            // per feedback_single_coupled_commit_when_must_move_together
+            // ✅ Promoted — bg flip + chrome retire + map-bottom
+            // reservation all interlock to ship the visual flush;
+            // splitting would leave intermediate states with either
+            // (a) map peeking behind invisible cards or (b) distinct
+            // carousel band sitting on top of an unchanged map.
+            background:    v2.surface.warm,
           }}
         >
           <div
