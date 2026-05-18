@@ -8,6 +8,86 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.185.0] — 2026-05-18
+
+### Session 185 — Vendor profile enrichment design pass Shape B continues: Frame C avatar lockup + 15 frozen decisions D1–D15 + V1 mockup + HITL migration 022 paste + iPhone QA round 1 PASS on production v0.184.0
+
+1 docs commit + 1 close. Pure design-to-Ready ship per recent project cadence (session 117 R17 design-to-Ready → session 118 Arc 1; session 131 Requests tab → session 136 implementation arcs). David opened with `/session-open`; recommended sequence was (a) HITL migration 022 paste → (b) iPhone QA round 1 on production v0.184.0 → (c) vendor profile enrichment design pass Shape B continues. David picked the recommended sequence. All 3 primary deliverables closed cleanly.
+
+### Added
+
+- **`docs/vendor-profile-enrichment-design.md`** — design record with 15 frozen decisions D1–D15 + Frame C avatar lockup pick + V1 mockup reference + 6-row risk register + 8 Tier B headroom items + 3-arc implementation sequencing for sessions 186-187. Per Design Agent rule (`feedback_commit_design_records_in_same_session`, session 56), design record + V1 mockup commit together. Skipped design-reviewer subagent dispatch (scope well-bounded, no audit substrate drift risk); David can `/design-review` later if wanted.
+- **`docs/mockups/vendor-profile-enrichment-v1.html`** — 4 frames spanning the avatar placement axis (Frame A 84px above BoothHero / Frame B 56px in vendor section / Frame C 40px inline with display_name lockup / Frame D 56px in cartographic group) per `feedback_mockup_options_span_structural_axes` ✅ Promoted. All 3 prose-locked axes (Edit surface + Social icons + Bio/directions split) held constant across frames so only placement varies. 6-axis trade-off matrix at bottom (identity prominence / WHO vs WHAT separation / clash risk / vertical cost / fallback composition / editorial parallel).
+
+### Verified
+
+- **iPhone QA round 1 PASS on production v0.184.0** — 4 surfaces walked clean: (1) `/me` display ⭐ load-bearing — avatar renders, NO `@handle` h1, scouting-since eyebrow + private 3-stat row balanced spacing; (2) Fresh-email sign-in flow — magic link → `/login?confirmed=1` polls → `/welcome` → "Just exploring" → `/me` with ~200ms silent auto-claim window then populated state with derived initials; (3) Existing-shopper sign-in — direct route to `/me`, no auto-claim flash; (4) `/flagged` sync footer migration — guest saves migrate to DB on sign-in. Handle retirement flow validated end-to-end. **Session 184→185 QA carry retires.**
+- **HITL migration 022 pasted** — David pasted into both Supabase dashboards (prod + staging); 2-row verify query returned `instagram_url` + `directions_text` on both projects. Session 186 Arc 1 implementation is unblocked.
+
+### Design pass — 4 prose axes + 4 fill-refinement axes locked
+
+**Audit-first** per `feedback_visibility_tools_first` ✅ Promoted: parallel reads of `app/shelf/[slug]/page.tsx` + `components/EditBoothSheet.tsx` + `types/treehouse.ts` Vendor interface + grep for current rendering → localized architecture in 1 round-trip BEFORE drafting any prose Qs. Findings sharpened the design surface: `Vendor` type already extended at session 184 (instagram_url + directions_text); EditBoothSheet vendor mode shows only display_name + hero photo today (lots of room); /shelf/[slug] layout is StickyMasthead → BoothHero → BoothTitleBlock → MallBlock → Bookmark Booth → WindowView → BoothCloser → BottomNav; NO LocationActions on /shelf (retired session 157 Review Board #1).
+
+**4 prose axes batched** via single `AskUserQuestion` per `feedback_v2_options_before_drafting` ✅ Promoted (4-question batched form is the canonical session 184 pattern):
+
+- **Axis 1 — Edit surface** ✅ Extend EditBoothSheet vendor mode (Recommended pick) — 2 visual sections (Booth identity + Vendor identity) inside existing sheet; one pencil entry point.
+- **Axis 2 — Avatar placement** → "Show design options" (V1 mockup needed for genuinely visual axis); skip prose lock.
+- **Axis 3 — Social icons** ✅ Phosphor PiFacebookLogo + PiInstagramLogo as 36×36 bubbles below bio (Recommended pick).
+- **Axis 4 — Bio + directions placement** ✅ Split — bio in vendor section, directions inline in cartographic block (Recommended pick).
+
+**V1 mockup** spans Axis 2 only — 4 frames covering structural placement options on /shelf/[slug]. David picked **Frame C** with explicit reasoning quoted in design record: *"This to me is the most logical spot as it becomes part of the lockup for the Booth name and identity."* Vendor identity becomes a compound visual element with existing booth identity (eyebrow + h1) rather than competing for visual hierarchy. The BoothHero photo retains its role as primary content beat.
+
+**4 fill-refinement axes batched** via second `AskUserQuestion`:
+
+- **Axis 5 — Avatar lockup orientation** ✅ Left of text stack (Recommended pick).
+- **Axis 6 — Avatar fallback when null** → **DEVIATION from Recommended** → Hide avatar entirely when null (David picked the more conservative option vs initials-with-vendorHueBg). Restated explicitly: vendors who upload an avatar get the compound lockup; vendors who don't get the existing centered BoothTitleBlock layout. Avoids "vendor identity is just initials, doesn't feel curated" weak-signal reading.
+- **Axis 7 — Bio character limit** ✅ 280 chars (Recommended pick).
+- **Axis 8 — Section break style** ✅ Hairline divider only (Recommended pick).
+
+### 15 frozen decisions D1–D15
+
+Edit surface + section break style + avatar placement + fallback + upload UX + endpoint contract + bio UX + URL fields + social icons + directions display + about-section conditional render + 4 NEW R3 analytics events (`vendor_profile_enriched` + `vendor_avatar_uploaded` + `vendor_avatar_removed` + `vendor_social_tapped`) + 3 component contracts (BoothTitleBlock extension + AboutBoothSection NEW + MallBlock extension) + EditBoothSheet vendor mode field order + admin/vendor parity (session 148 substrate composes).
+
+### 3 implementation arcs sequenced smallest→largest per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88
+
+- **Arc 1 (session 186, ~5 commits)** — Edit surface — `/api/vendor-avatar` endpoint + `/api/vendor/profile` PATCH extension + EditBoothSheet section break + 5 new field renderers + ClientEventType + EventType + CLIENT_EVENT_TYPES whitelist extensions (avoid session 137 silent-400 drift). Ships independently — vendors can fill out fields; nothing renders on /shelf yet.
+- **Arc 2 (session 187, ~4 commits)** — Display surface — BoothTitleBlock conditional compound lockup + AboutBoothSection NEW primitive + MallBlock directions extension + /shelf composition. Ships independently — vendors who filled Arc 1 fields see them; vendors who didn't see no change.
+- **Arc 3 (session 187 continuation)** — iPhone QA dials + R19 (`Vendor profile enrichment`) promotion call deferred to post-Arc-2 ship when storefront-identity thesis is visible on production.
+
+### Memory firings cumulative through session 185
+
+- `feedback_visibility_tools_first` ✅ Promoted — parallel reads in 1 round-trip BEFORE drafting prose Qs
+- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132 — Shape B continues from session 184 (~60+ cumulative)
+- `feedback_v2_options_before_drafting` ✅ Promoted — 2 batched AskUserQuestion rounds (4-axis prose + 4-axis fill) before drafting V1 mockup
+- `feedback_mockup_options_span_structural_axes` ✅ Promoted — 4 frames span PLACEMENT axis (structural), not style variants within one placement
+- `feedback_pre_mockup_prose_model_first` ✅ Promoted at session 143 — prose IS the design for 3 of 4 axes; V1 mockup only for Axis 2 (genuinely visual)
+- `feedback_user_clarification_restate_interpretation` ✅ Promoted — restated Frame C implications + Axis 2 deviation from recommended before drafting record (~54+ cumulative)
+- `feedback_commit_design_records_in_same_session` (Design Agent rule from session 56) — design record + V1 mockup committed together at `80b8f3b`
+- `project_vendor_value_first_prioritization` ✅ Promoted at session 171 — **3rd cumulative firing post-promotion** validates the rule continues firing load-bearingly when vendor-value design work is in scope (Shape B continues from session 184's 2nd firing)
+- `feedback_treehouse_no_coauthored_footer` honored on commit + this close
+- `feedback_session_close_auto_merges_pr` honored on this close
+
+### NEW Tech Rule candidate patterns surfaced (single firings each, all promote on 2nd firing per `feedback_tech_rule_promotion_destination` ✅ Promoted)
+
+1. **"User-articulated 'becomes part of X lockup' reasoning locks compound primitive extension"** — when user picks a frame with reasoning like "this becomes part of the lockup for Y," that's a compound-primitive-extension decision with different implications than "X stands alone." Sub-pattern of `feedback_user_clarification_restate_interpretation` extended to design-reasoning capture. Frame C lockup framing this session.
+2. **"Deviation from RECOMMENDED on fallback-state axes signals deliberate product call"** — David picked "hide avatar when null" (NOT recommended initials-with-hue). Deviation on a fallback-state axis indicates a deliberate product call about "what does this look like for users who haven't engaged" — worth surfacing explicitly in design records with the deviation reasoning preserved.
+3. **"Conditional primitive layout via prop presence (not enum variant)"** — BoothTitleBlock conditionally renders compound vs centered based on `avatarUrl` being non-null. Cleaner than passing an explicit `variant: "compound" | "centered"` prop because the layout shape IS the meaning. Sub-pattern of `feedback_dead_code_cleanup_as_byproduct` extended to "let the data shape determine the rendering shape."
+4. **"Design pass with 4 prose axes + 1 V1 mockup axis (out of 4) is the prose-model-first compromise shape"** — when 3 of 4 axes are prose-resolvable but the 4th is genuinely visual, do prose axes first (locks 75% of decisions) then V1 mockup only for the visual axis (compresses V1 to single-axis-frames spanning placement options). 4× narrower than full V1 spanning all axes. Sub-pattern of `feedback_pre_mockup_prose_model_first` extended.
+
+### Roadmap delta
+
+**18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level — session 185 is design-to-Ready ship for vendor profile enrichment (candidate R19); promotion call deferred to post-Arc-2 ship when storefront-identity thesis is visible on production.
+
+**Substrate added this session:** `docs/vendor-profile-enrichment-design.md` (15 frozen decisions + 3 arcs + 6 risks + 8 Tier B) · `docs/mockups/vendor-profile-enrichment-v1.html` (4 frames + 6-axis trade-off matrix).
+
+**Substrate retired:** none (pure additive design-to-Ready ship).
+
+**Net runtime change:** 0 LOC (docs-only session). **+969 / −0 LOC** across 2 new docs files.
+
+[v0.185.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.185.0
+
+---
+
 ## [v0.184.0] — 2026-05-18
 
 ### Session 184 — Vendor profile enrichment design pass kickoff (Shape B) + Arc 0 ship: migration 022 schema additions + handle retirement single coupled commit (-203 LOC net)
