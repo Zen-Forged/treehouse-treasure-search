@@ -98,6 +98,22 @@ export default function RootLayout({
     <html lang="en" className={`${lora.variable} ${dancingScript.variable} ${cormorant.variable} ${inter.variable}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
+        {/* Session 182 — preload home-hero.png at highest priority so the
+            browser starts the fetch during HTML parse, before any JS runs.
+            Kills the HomeHero flicker bug class David flagged at session
+            182: HomeHero (components/HomeHero.tsx) paints via CSS
+            `backgroundImage: url('/home-hero.png')`, and CSS background
+            images are fetched lazily AFTER stylesheet cascade resolves.
+            First paint shows the cream-fade gradient over nothing, then
+            the photo pops in. The preload link inverts that ordering at
+            the HTML-parse layer — by the time React mounts HomeHero, the
+            image is in cache and the CSS rule paints with it already
+            present. Pair with C2 (BoothHero dynamic preload) ships both
+            surfaces' flicker fixes together per
+            feedback_kill_bug_class_after_3_patches ✅ Promoted (W3C
+            canonical primitive `<link rel="preload">` replaces session
+            171's `new Image().src` patch shape). */}
+        <link rel="preload" as="image" href="/home-hero.png" fetchPriority="high" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
