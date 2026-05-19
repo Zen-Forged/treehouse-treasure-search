@@ -545,15 +545,22 @@ export function MallBlock({
   mallName,
   mallCity,
   address,
+  directionsText,
 }: {
   mallName: string;
   mallCity?: string;
   address?: string | null;
+  // Session 187 — vendor profile enrichment Arc 2.3 per D10. Renders inline
+  // below the dotted-underline address when set (non-empty trimmed string).
+  // NULL/empty = no custom directions; the address + mapsUrl deep-link carry
+  // alone (existing behavior preserved for vendors who haven't enriched).
+  directionsText?: string | null;
 }) {
   const mapQuery = address
     ? address
     : [mallName, mallCity].filter(Boolean).join(", ");
   const href = mapsUrl(mapQuery);
+  const trimmedDirections = directionsText?.trim() || null;
 
   return (
     // Session 128 (refinement design D6): grid layout retired in favor of
@@ -624,6 +631,33 @@ export function MallBlock({
           >
             {address}
           </a>
+        </div>
+      )}
+      {trimmedDirections && (
+        // Session 187 — vendor profile enrichment Arc 2.3 per D10. Cormorant
+        // italic 13px on v2.text.secondary; lineHeight 1.4; marginTop 6px
+        // below address (or below mall name when address absent).
+        // white-space: pre-wrap preserves multiline directions vendors paste
+        // (e.g., "back-left corner past the antique clocks\nnext to the
+        // green lamp"). Server enforces 500-char cap (Arc 1.3 commit 1726d4a).
+        // max-width 320px centered keeps long directions from running too
+        // wide on tablet viewports; auto-margins re-center against the
+        // textAlign:center parent.
+        <div
+          style={{
+            fontFamily: FONT_CORMORANT,
+            fontStyle: "italic",
+            fontSize: 13,
+            color: v2.text.secondary,
+            lineHeight: 1.4,
+            marginTop: 6,
+            maxWidth: 320,
+            marginLeft: "auto",
+            marginRight: "auto",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {trimmedDirections}
         </div>
       )}
     </div>
