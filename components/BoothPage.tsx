@@ -455,149 +455,159 @@ export function BoothTitleBlock({
   // Session 186 — Edit Pencil bubble retired; vendor self-edit moves
   // to the "Edit Booth" CTA button under "Add a Find" on /my-shelf.
   //
-  // Session 187 — vendor profile enrichment Arc 2.1 per D3+D4. Text-stack
-  // (eyebrow + h1/button-with-chevron) is the same content in both
-  // layouts; outer wrapper changes:
-  //   - hasAvatar=false → existing textAlign:center wrapper (verbatim
-  //     preserved; current booths see no change per D4).
-  //   - hasAvatar=true  → flex row (justify-content:center,
-  //     align-items:center, gap:12) with 40px circular avatar inline left
-  //     of left-aligned text stack. Compound lockup centered on page;
-  //     text reads left-internally so avatar right-edge + text left-edge
-  //     form clean vertical seam.
-  const titleStack = (
-    <>
-      <div
+  // Session 187 — vendor profile enrichment Arc 2.1 per D3+D4. Eyebrow
+  // ("A curated booth by") + name (h1 or button-with-chevron) render
+  // separately so the avatar-present branch can compose the eyebrow
+  // ABOVE a [avatar | name] lockup row, while the avatar-absent branch
+  // stacks them centered on the same wrapper.
+  //
+  // Session 187 QA-driven C6 — within-session reshape of the C2 compound
+  // layout per feedback_within_session_design_record_reversal ✅
+  // Promoted-via-memory at session 128. C2 shipped the compound as
+  // [avatar | text-stack-with-eyebrow-inside], text-stack left-aligned;
+  // David's iPhone QA F1+F2: "Lets keep the 'A curated booth by' text
+  // centered. Position the profile icon vertically centered with the
+  // booth name (this becomes the lockup) that the 'A curated booth by'
+  // text centers with." Reshape: eyebrow on own centered line + the
+  // [avatar | name] row is the lockup, centered as a group, avatar
+  // vertically aligned to the name itself (not the text-stack).
+  const eyebrow = (
+    <div
+      style={{
+        fontFamily: FONT_CORMORANT,
+        fontStyle: "italic",
+        fontSize: 16,
+        // Session 171 iPhone QA dial #5 immediate fix — David: "Use a
+        // darker color from the palette for the 'A curated booth by' this
+        // continues to be hard to read." Italic Cormorant at 16px loses
+        // stroke contrast faster than upright (curved letterforms have
+        // thinner mid-strokes); v2.text.secondary on v2.surface.warm
+        // failed the 40-65 demographic on production iPhone QA. Bumping
+        // one tier darker to v2.text.primary.
+        //
+        // Companion launch-blocking work: full contrast + legibility
+        // audit at docs/contrast-audit.md (session 171 Audit B) — the
+        // same pattern (≤14px / 15-16px italic / muted-secondary on
+        // warm-cream) recurs on other surfaces (login, /me, etc.) and
+        // gets a structured sweep in a follow-on session driven by that
+        // audit doc. This fix lands the specific BoothPage eyebrow
+        // referenced in the QA; the broader sweep ships per audit
+        // recommendations.
+        color: v2.text.primary,
+        lineHeight: 1.3,
+        margin: "0 0 4px",
+        textAlign: "center",
+      }}
+    >
+      A curated booth by
+    </div>
+  );
+
+  const nameBlock = hasPicker ? (
+    <button
+      onClick={onPickerOpen}
+      aria-label={`Switch booth — viewing ${displayName}`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 10,
+        margin: 0,
+        padding: 0,
+        background: "transparent",
+        border: "none",
+        cursor: "pointer",
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      <h1
         style={{
           fontFamily: FONT_CORMORANT,
-          fontStyle: "italic",
-          fontSize: 16,
-          // Session 171 iPhone QA dial #5 immediate fix — David: "Use a
-          // darker color from the palette for the 'A curated booth by' this
-          // continues to be hard to read." Italic Cormorant at 16px loses
-          // stroke contrast faster than upright (curved letterforms have
-          // thinner mid-strokes); v2.text.secondary on v2.surface.warm
-          // failed the 40-65 demographic on production iPhone QA. Bumping
-          // one tier darker to v2.text.primary.
-          //
-          // Companion launch-blocking work: full contrast + legibility
-          // audit at docs/contrast-audit.md (session 171 Audit B) — the
-          // same pattern (≤14px / 15-16px italic / muted-secondary on
-          // warm-cream) recurs on other surfaces (login, /me, etc.) and
-          // gets a structured sweep in a follow-on session driven by that
-          // audit doc. This fix lands the specific BoothPage eyebrow
-          // referenced in the QA; the broader sweep ships per audit
-          // recommendations.
+          fontSize: 32,
+          // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
+          fontWeight: 600,
           color: v2.text.primary,
-          lineHeight: 1.3,
-          margin: "0 0 4px",
+          lineHeight: 1.1,
+          letterSpacing: "-0.005em",
+          margin: 0,
         }}
       >
-        A curated booth by
-      </div>
-      {hasPicker ? (
-        <button
-          onClick={onPickerOpen}
-          aria-label={`Switch booth — viewing ${displayName}`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            margin: 0,
-            padding: 0,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            textAlign: "inherit",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          <h1
-            style={{
-              fontFamily: FONT_CORMORANT,
-              fontSize: 32,
-              // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
-              fontWeight: 600,
-              color: v2.text.primary,
-              lineHeight: 1.1,
-              letterSpacing: "-0.005em",
-              margin: 0,
-            }}
-          >
-            {displayName}
-          </h1>
-          <span
-            aria-hidden="true"
-            style={{
-              fontFamily: FONT_CORMORANT,
-              fontSize: 20,
-              color: v2.text.secondary,
-              lineHeight: 1,
-              marginTop: 4,
-            }}
-          >
-            ▾
-          </span>
-        </button>
-      ) : (
-        <h1
-          style={{
-            fontFamily: FONT_CORMORANT,
-            fontSize: 32,
-            // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
-            fontWeight: 600,
-            color: v2.text.primary,
-            lineHeight: 1.1,
-            letterSpacing: "-0.005em",
-            margin: 0,
-          }}
-        >
-          {displayName}
-        </h1>
-      )}
-    </>
+        {displayName}
+      </h1>
+      <span
+        aria-hidden="true"
+        style={{
+          fontFamily: FONT_CORMORANT,
+          fontSize: 20,
+          color: v2.text.secondary,
+          lineHeight: 1,
+          marginTop: 4,
+        }}
+      >
+        ▾
+      </span>
+    </button>
+  ) : (
+    <h1
+      style={{
+        fontFamily: FONT_CORMORANT,
+        fontSize: 32,
+        // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
+        fontWeight: 600,
+        color: v2.text.primary,
+        lineHeight: 1.1,
+        letterSpacing: "-0.005em",
+        margin: 0,
+      }}
+    >
+      {displayName}
+    </h1>
   );
 
   if (hasAvatar) {
     return (
-      // Compound left-aligned lockup per D3. Flex row centers the
-      // composition on the page; text-stack is text-align:left so the
-      // avatar right-edge + text left-edge form a clean vertical seam.
-      // 40px avatar + 12px gap + text stack fits comfortably on iPhone SE
-      // (375px) with the existing 22px horizontal padding (R5 from
-      // risk register: tested in implementation).
-      <div
-        style={{
-          padding: "16px 22px 4px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 12,
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={avatarUrl as string}
-          alt=""
+      // Session 187 QA-driven C6 reshape per David's iPhone QA F1+F2:
+      // eyebrow stays centered on its own line (full width via the
+      // textAlign:center on the eyebrow div); the [avatar | nameBlock]
+      // row is the lockup — flex row centered as a group, avatar
+      // align-items:center against the name h1 itself (not the
+      // text-stack with eyebrow inside). Outer wrapper textAlign:center
+      // also re-centers the lockup row across the page width.
+      // 40px avatar + 12px gap + name fits comfortably on iPhone SE
+      // (375px) with the existing 22px horizontal padding.
+      <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
+        {eyebrow}
+        <div
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            objectFit: "cover",
-            flexShrink: 0,
-            // D3 — 2px v2.surface.warm border + subtle box-shadow for
-            // lift off the page bg (also v2.surface.warm). The border
-            // creates a quiet halo around the avatar that reads as a
-            // photographic "matted" element, not a flat-painted glyph.
-            border: `2px solid ${v2.surface.warm}`,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.10)",
-            // Fallback bg so broken-image src doesn't paint a hard
-            // transparent square; matches the matte color so the
-            // halo reads consistently while the image loads.
-            background: v2.surface.warm,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
           }}
-        />
-        <div style={{ textAlign: "left", minWidth: 0 }}>{titleStack}</div>
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarUrl as string}
+            alt=""
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              objectFit: "cover",
+              flexShrink: 0,
+              // D3 — 2px v2.surface.warm border + subtle box-shadow for
+              // lift off the page bg (also v2.surface.warm). The border
+              // creates a quiet halo around the avatar that reads as a
+              // photographic "matted" element, not a flat-painted glyph.
+              border: `2px solid ${v2.surface.warm}`,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.10)",
+              // Fallback bg so broken-image src doesn't paint a hard
+              // transparent square; matches the matte color so the
+              // halo reads consistently while the image loads.
+              background: v2.surface.warm,
+            }}
+          />
+          {nameBlock}
+        </div>
       </div>
     );
   }
@@ -606,7 +616,8 @@ export function BoothTitleBlock({
   // Vendors who haven't uploaded an avatar see no change from prior page.
   return (
     <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
-      {titleStack}
+      {eyebrow}
+      {nameBlock}
     </div>
   );
 }
