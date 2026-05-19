@@ -8,6 +8,118 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.186.0] — 2026-05-18
+
+### Session 186 — Vendor profile enrichment Arc 1 (Edit surface) end-to-end + mid-session URL UX refinement + EditBoothSheet keyboard + Edit Booth CTA promotion — 9 runtime commits + 1 close
+
+9 runtime commits + 1 close. Pure execution pass against the 15-decision design record locked at session 185 — load-bearing operating mode validated at the **30th cumulative firing of `feedback_design_record_as_execution_spec`** ✅ Promoted across 30 different features, crossing the threshold where the rule is now demonstrably "the standard way design-pass → implementation runs in this project." Cost-shape triage compounded mid-session per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132 — main Arc 1 ship (5 commits) + David's mid-session URL UX refinement (2 commits) + David's EditBoothSheet keyboard + Edit Booth CTA refinement (2 commits) all sequenced cleanly without re-scoping the design record. Build green at every commit boundary; tsc + `npm run build` clean across all 48 routes throughout.
+
+### Added
+
+- **`/api/vendor-avatar` endpoint** — POST + DELETE mirroring `/api/vendor-hero` pattern verbatim per D6. requireAuth + ownership-or-admin gate; service-role for storage + DB writes; storage path `vendor-avatars/{vendorId}.jpg`. Fires `vendor_avatar_uploaded` on POST + `vendor_avatar_removed` on DELETE (vendor-hero only fires on DELETE — for vendor-avatar, knowing when a vendor first uploaded an identity photo is the load-bearing analytics signal per D12). Both events include `by_admin: true` payload when admin acts on behalf (matches session 92 `vendor_hero_removed` audit pattern).
+- **`lib/socialUrls.ts`** — 2 normalizer helpers (`normalizeInstagramUrl` + `normalizeFacebookUrl`) returning `string | null`. Vendors paste any shape (bare handle / `@handle` / host+path / full URL with or without www / share/profile URLs / mobile/short variants) and the system stores ONE canonical shape (`https://instagram.com/<path>` and `https://facebook.com/<path>[?query]` — no www, no trailing slash, query string preserved for FB `profile.php?id=` + `share/X`). Heuristic: input "looks like URL" if it has a slash OR a `.com|.net|.org|.am|.co|.io|.me|.us` TLD-like suffix; else treat as bare handle (so dotted IG handles like `treehouse.finds` parse correctly). Host allowlist accepts `instagram.com` + `instagr.am` for IG; `facebook.com` + `fb.com` + `fb.me` + `m.facebook.com` for FB.
+- **EditBoothSheet — Vendor identity section (vendor mode only)** per D2+D5+D7+D8+D10+D14. New 5-field block between commit 4's hairline divider and Save button:
+  - **Profile photo (avatar)** — 96×96 circular preview matching the 40px /shelf compound-lockup render (Arc 2); Replace + Remove buttons mirroring hero photo pattern; `compressImage(maxWidth=256, quality=0.85)` per D5; atomic save via `/api/vendor-avatar` (NOT batched into form Save)
+  - **Bio** — `<textarea>` with FONT_LORA italic 15px placeholder matching the literary-serif voice the bio will render in on /shelf (Arc 2); live char counter turns red at 270+ (BIO_WARN_LEN); 280-char server-mirrored cap
+  - **Facebook URL** — text input with normalizer-driven validation; amber border on invalid input surfaces live; placeholder `facebook.com/yourbooth` signals shape-flexibility
+  - **Instagram URL** — same shape as Facebook; placeholder `@yourbooth or instagram.com/yourbooth` signals both shapes accepted
+  - **In-mall directions** — `<textarea>`, multiline, 500-char server cap (no UI counter; directions are short by nature)
+- **"Edit Booth" CTA button on /my-shelf** — stacked under "Add a Find" per David's session-186 ask. Same chrome family as Add a Find (10px radius, 11px Inter 600 0.12em uppercase, 8px gap before glyph) with color reversal per session 157 engagement-tier pattern: Add a Find = primary filled greenMid; Edit Booth = secondary cream-bg + 1px greenMid border + greenMid text. Lucide Pencil glyph (size 13, strokeWidth 1.8) preserves affordance continuity with the retired pencil bubble. Wires to the existing `setShowEditSheet(true)` handler — zero behavior change on the sheet itself.
+
+### Changed
+
+- **`/api/vendor/profile` PATCH** — extended to accept `bio` + `facebook_url` + `instagram_url` + `directions_text` (all optional + independently nullable; PATCH is now a partial-update endpoint per D7+D8+D10). Existing `display_name` path preserved verbatim. URL fields routed through `lib/socialUrls` normalizers — any shape vendor pastes gets canonicalized server-side too (defensive against admin tools / direct API hits). `vendor_profile_enriched` fires server-side per D12 when one or more of the 4 enrichment fields flip NULL → non-empty for the FIRST time; payload carries `fields_filled: string[]`. Existing-row snapshot fetched as part of the ownership round-trip (zero extra query — single SELECT covers ownership gate + change-detection).
+- **3-layer analytics whitelist extension** per D12 — `lib/events.ts` EventType (server) gets all 4 new events; `lib/clientEvents.ts` ClientEventType + `app/api/events/route.ts` CLIENT_EVENT_TYPES gain `vendor_social_tapped` (only Arc 1 event that fires client-side; the other three fire server-side via recordEvent). Defensive 3-layer coverage avoids session 137 silent-400 drift.
+- **EditBoothSheet validation + Save payload** — `isValidHttpUrl` regex retired; replaced with `normalizeFacebookUrl` + `normalizeInstagramUrl` calls. `facebookCanonical` + `instagramCanonical` computed once per render against trimmed input; both `fbInputInvalid` + `igInputInvalid` surface the amber border on invalid input; `urlsValid` gates `canSave`. handleSave's vendor-mode payload sends canonical URLs (not raw input).
+- **EditBoothSheet placeholder copy** — FB now reads `facebook.com/yourbooth`; IG reads `@yourbooth or instagram.com/yourbooth` (signals both shapes are accepted).
+- **EditBoothSheet hairline divider per D2** — quiet 1px `v2.border.light` divider between Booth identity (hero photo + booth name / admin BoothFormFields) and Vendor identity section. Margin 10px above + 18px below.
+
+### Removed
+
+- **Inline Pencil bubble on BoothTitleBlock** — `onEditName` prop + `hasEdit` derivation + Pencil branch + `Pencil` Lucide import + flex wrapper around h1+chevron all retired per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted. Diverges from D13 of `docs/vendor-profile-enrichment-design.md` which kept `onEditName?: () => void` in BoothTitleBlock contract — sub-decision per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128 (the pencil affordance no longer scaled visually once EditBoothSheet grew to 7 fields; CTA-shaped button reads as explicit entry point rather than tiny adornment).
+- **`autoFocus` on EditBoothSheet booth name input** — structural fix per `feedback_kill_bug_class_after_3_patches` ✅ Promoted. Session 175 commit `5fa118f` patched the keyboard-cover symptom via `onFocus` + setTimeout(300) + scrollIntoView; that patch only mitigated AFTER autoFocus had already triggered the keyboard. Removing autoFocus removes the bug class at its source. The onFocus scrollIntoView retained (still load-bearing when user manually taps the input). David: *"keyboard shouldn't auto-pop up as it covers most of the text. Keyboard should only pop-up on click inside the menu input."*
+
+### Fixed
+
+- **Pre-existing local-env `html2canvas-pro` miss at C1 commit boundary** — 19th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161; `npm install` resolved in 1 round-trip. Parked dep from session 152's Share My Shelf parked feature.
+
+### Implementation sequencing — 9 commits sequenced smallest→largest per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88
+
+| # | SHA | Scope | LOC |
+|---|---|---|---|
+| 1 | `37c3ada` | Analytics whitelist (4 events × 3 layers) | +26 / −2 |
+| 2 | `11898a0` | `/api/vendor-avatar` endpoint (POST + DELETE) | +191 / 0 |
+| 3 | `1726d4a` | `/api/vendor/profile` PATCH extension (4 fields + `vendor_profile_enriched` detection) | +161 / −26 |
+| 4 | `1668653` | EditBoothSheet hairline divider per D2 | +10 / 0 |
+| 5 | `2a4f6ff` | EditBoothSheet 5 new field renderers (avatar + bio + 2 URLs + directions) | +507 / −18 |
+| 6 | `5f628f2` | `lib/socialUrls.ts` helper in isolation | +131 / 0 |
+| 7 | `6a0a996` | Wire normalizer into client + server (coupled) | +63 / −35 |
+| 8 | `b39d669` | Drop autoFocus on EditBoothSheet booth name input | +21 / −8 |
+| 9 | `a1a6bd2` | Pencil bubble → "Edit Booth" CTA under "Add a Find" | +107 / −93 |
+
+### Sub-decisions inside locked design axes (surfaced explicitly per `feedback_schema_forced_deviation_not_design_reversal`)
+
+1. **Commit ordering reorder (1.5 → 1.1)** — design record sequenced analytics whitelist as 1.5 (last); promoted to commit 1 because commit 2's `/api/vendor-avatar` fires `recordEvent("vendor_avatar_uploaded", ...)` which needs the EventType union extension to type-check.
+2. **Admin mode enrichment scope** — design record D15 said "both modes get all 5 fields"; Arc 1 scoped to vendor mode only. Admin retains access to enrichment via the existing impersonation flow (`/my-shelf?vendor=<id>` Pencil → vendor mode of this sheet, session 148 admin-vendor parity). Avoids dual-PATCH complexity in admin mode without losing functional reach.
+
+### Memory firings cumulative through session 186
+
+- `feedback_design_record_as_execution_spec` ✅ Promoted — **30th cumulative firing** across 30+ different features (load-bearing operating mode threshold)
+- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — 9 firings (~543+ cumulative)
+- `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted-via-memory at session 141 — 2 firings (commit ordering + admin scope)
+- `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128 — 1 firing (D13 BoothTitleBlock `onEditName` retired)
+- `feedback_kill_bug_class_after_3_patches` ✅ Promoted — autoFocus removed at source (vs session 175's scrollIntoView patch)
+- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — Pencil import + `hasEdit` + flex wrapper + `onEditName` prop all retired in same commit as feature change
+- `feedback_user_clarification_restate_interpretation` ✅ Promoted — URL normalization spec restated; preview-behavior axis batched
+- `feedback_v2_options_before_drafting` ✅ Promoted — preview-behavior `AskUserQuestion` before drafting code (silent / live preview / on-blur update)
+- `feedback_synthesize_existing_row_to_reuse_flow_infra` ✅ Promoted — `/api/vendor-avatar` mirrors `/api/vendor-hero` shape verbatim; `vendor_profile_enriched` detection synthesized inside existing PATCH ownership round-trip (zero extra query)
+- `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — client + server normalizer commit 7 (contract pair on same input vocabulary)
+- `feedback_visibility_tools_first` ✅ Promoted — parallel reads of design record + 6 contracts in 1 round-trip BEFORE drafting any code
+- `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 — **19th cumulative firing** (html2canvas-pro at C1 boundary)
+- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132 — 3 cost-shape triages (URL normalization location + preview visibility + ship vs design pass for EditBoothSheet revisit)
+- `project_vendor_value_first_prioritization` ✅ Promoted at session 171 — **4th cumulative firing post-promotion** validates the vendor-value gate continues firing load-bearingly
+- `feedback_treehouse_no_coauthored_footer` honored on all 9 runtime commits + this close
+- `feedback_session_close_auto_merges_pr` honored on this close
+
+### NEW Tech Rule candidate patterns surfaced (single firings each, all promote on 2nd firing per `feedback_tech_rule_promotion_destination` ✅ Promoted)
+
+1. **"Server-side null→non-null detection synthesized inside ownership round-trip (zero extra query)"** — `/api/vendor/profile` PATCH's existing SELECT for ownership gate also returns existing enrichment field values; null→non-empty comparison drives `vendor_profile_enriched` detection without a second SELECT. Generalizes to any future "fire-once-per-first-fill" analytics where ownership check already fetches the row.
+2. **"URL normalizer in shared `lib/` for both client + server validation"** — single source of truth eliminates client/server drift on input vocabulary; defensive 2-layer normalization (client pre-PATCH + server defensive) covers all callers without per-caller maintenance. Sub-pattern of `feedback_single_coupled_commit_when_must_move_together` extended to "contract pairs live in shared helper, both consumers call the same function."
+3. **"Lenient TLD-hint heuristic for distinguishing 'looks like URL' vs 'looks like handle'"** — `TLD_HINT_RE` pattern catches common social/business TLDs (.com .net .org .am .co .io .me .us) without enumerating every TLD; bare handles with dots (e.g., `treehouse.finds`) parse correctly because their dot isn't followed by a TLD-like suffix. Reusable for any future handle-vs-URL discriminator.
+4. **"Preserve query string in URL normalization for share/profile semantic-bearing URLs"** — Facebook `profile.php?id=...` and `share/X` paths carry semantic meaning in the query string; canonical normalization MUST preserve `url.search` or the URL becomes useless. Generalizes to any third-party URL canonicalization where the query string carries identity.
+5. **"Auto-trigger retired when surface scope grows past single-target threshold"** — `autoFocus` on the booth name input was right when the sheet had 1 editable field (Wave 1 Task 4 vendor self-edit); wrong when the sheet has 7 editable fields (vendor profile enrichment). The auto-trigger assumed a canonical "primary edit target" that no longer exists. Generalizes to any auto-focus/auto-select/auto-open primitive: revisit on scope expansion.
+6. **"Inline affordance bubble → dedicated CTA button as scope-shift signal"** — when the action behind a small inline affordance (32×32 pencil bubble) expands to span an entire identity-editing surface (7-field EditBoothSheet), the bubble adornment reads as visually inadequate to the new scope. Promote to a CTA-shaped button stacked with peer actions. Generalizes to any future "the thing this opens grew significantly" UX evolution.
+
+### Roadmap delta
+
+**18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured.** Unchanged at row level — Arc 1 ships the data + edit layer for vendor profile enrichment; nothing user-visible on /shelf until Arc 2 ships display surface (session 187). R19 (`Vendor profile enrichment`) candidate promotion still deferred to post-Arc-2 ship when storefront-identity thesis is visible on production.
+
+**Substrate added:** `/api/vendor-avatar` endpoint · `lib/socialUrls.ts` (normalizeInstagramUrl + normalizeFacebookUrl helpers) · `/api/vendor/profile` PATCH 4-field extension + first-fill detection · 4 new R3 events across 3 layers · EditBoothSheet 5-field Vendor identity section (vendor mode) · "Edit Booth" CTA on /my-shelf.
+
+**Substrate retired:** Inline Pencil bubble on BoothTitleBlock + `onEditName` prop + `hasEdit` derivation + Pencil Lucide import + flex wrapper around h1+chevron · `autoFocus` on booth name input · `isValidHttpUrl` regex in `/api/vendor/profile` (replaced by normalizer calls) · `isValidHttpUrl` local function in EditBoothSheet (replaced by `fbInputInvalid` + `igInputInvalid` derivation).
+
+**Net runtime change:** **+1,173 / −138 LOC** across 9 files (codebase nets +1,035 lines — substantial because Arc 1 adds 7-field UI + 2 endpoints + 1 helper module + 4 events across 3 layers).
+
+### iPhone QA watch-items
+
+1. Avatar upload flow — Replace + Remove from EditBoothSheet → confirm 96×96 circular preview updates immediately + `/api/vendor-avatar` 200s + `vendor.avatar_url` written; remove button hides when avatar_url is null.
+2. Bio textarea — verify FONT_LORA italic 15px renders correctly on iPhone; char counter turns red at 270+ chars; resize:vertical works as expected.
+3. URL normalization — paste each David-spec input shape (bare handle / `@handle` / host+path / full URL with www / FB share/X / fb.me / m.facebook.com / instagr.am) → confirm normalized canonical URL writes to DB; re-open sheet → input shows canonical.
+4. Invalid URL — type `not a url` or `twitter.com/x` → amber border + Save button gates (no silent acceptance).
+5. Directions textarea — paste multi-line text → confirm newlines preserved (Arc 2 will validate `white-space: pre-wrap` on /shelf render).
+6. Keyboard interaction — open EditBoothSheet on /my-shelf → confirm keyboard does NOT pop up automatically; tap any input → keyboard appears + scrollIntoView lands input above keyboard.
+7. Edit Booth CTA — verify stacked layout under Add a Find on /my-shelf; tap → opens EditBoothSheet in vendor mode (same behavior as old Pencil bubble).
+8. Admin impersonation parity — sign in as admin, visit `/my-shelf?vendor=<id>` → confirm Edit Booth CTA renders + opens vendor-mode sheet → enrichment fields visible + saveable on behalf of vendor.
+9. Build artifacts — `/my-shelf` bundle 6.80 → 7.14 kB (+340 bytes from field renderers); no other bundle regressions.
+
+### Action item logged for post-Arc-2 follow-up
+
+**Q-016** added to `docs/queued-sessions.md` — EditBoothSheet UI design + layout revisit (holistic design pass on the sheet AS A WHOLE once Arc 2 ships + iPhone QA against real-content seeding lands). Triggered by David at session-186 close: *"Lets add an action item to revisit the UI design and layout of this edit menu after we go through the full implementation."* The sheet grew organically from 2 fields → 7 fields across Arc 1; deserves a re-evaluation of visual hierarchy + grouping + breathing room + density + Save button placement + admin parity decision once the dust settles. Cost-shape triage in the Q-016 opener.
+
+[v0.186.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.186.0
+
+---
+
 ## [v0.185.0] — 2026-05-18
 
 ### Session 185 — Vendor profile enrichment design pass Shape B continues: Frame C avatar lockup + 15 frozen decisions D1–D15 + V1 mockup + HITL migration 022 paste + iPhone QA round 1 PASS on production v0.184.0
