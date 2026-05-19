@@ -57,6 +57,7 @@ import StickyMasthead from "@/components/StickyMasthead";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import ShareSheet from "@/components/ShareSheet";
 import EmptyState from "@/components/EmptyState";
+import AboutBoothSection from "@/components/AboutBoothSection";
 // LocationActions retired from /shelf in session 157 Review Board Booth #1
 // (Take Trip CTA replaced by Bookmark Booth toggle). Component still
 // shipped + consumed by /map's PinCallout — import line retires only here.
@@ -480,8 +481,34 @@ export default function PublicShelfPage() {
                 to page-bottom above BoothCloser. Footer placement frames the
                 'now I want to visit' moment, not 'scoping the booth.' */}
 
-            <BoothTitleBlock displayName={displayName} />
-            <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
+            {/* Session 187 — vendor profile enrichment Arc 2.4 per
+                docs/vendor-profile-enrichment-design.md D3+D4+D9+D10+D11.
+                BoothTitleBlock gains avatarUrl prop (compound left-aligned
+                lockup when set; centered fallback when null per D4).
+                AboutBoothSection slots between BoothTitleBlock + MallBlock
+                when any of (bio, facebook_url, instagram_url) is non-null
+                (returns null otherwise per D11). MallBlock gains
+                directionsText prop for the vendor's free-text in-mall
+                directions (renders Cormorant italic 13px below address
+                per D10; renders nothing when null/empty). */}
+            <BoothTitleBlock
+              displayName={displayName}
+              avatarUrl={vendor?.avatar_url ?? null}
+            />
+            {vendor && (
+              <AboutBoothSection
+                bio={vendor.bio}
+                facebookUrl={vendor.facebook_url}
+                instagramUrl={vendor.instagram_url}
+                vendorSlug={vendor.slug}
+              />
+            )}
+            <MallBlock
+              mallName={mallName}
+              mallCity={mallCity}
+              address={address}
+              directionsText={vendor?.directions_text ?? null}
+            />
 
             {/* Review Board Finding 3 (session 169) — Bookmark Booth
                 button relocated from below WindowView (session-157

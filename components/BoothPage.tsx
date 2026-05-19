@@ -84,7 +84,6 @@ import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import ShareBubble from "@/components/ShareBubble";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
-import PinGlyph from "@/components/PinGlyph";
 import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
@@ -400,9 +399,24 @@ export function BoothHero({
 
 export function BoothTitleBlock({
   displayName,
+  avatarUrl,
   onPickerOpen,
 }: {
   displayName: string;
+  /**
+   * Session 187 — vendor profile enrichment Arc 2.1 per D3+D4 (Frame C
+   * picked). When set, the BoothTitleBlock renders as a compound
+   * left-aligned lockup: 40px circular avatar + text stack (eyebrow +
+   * display_name h1) right of it. When null/undefined, renders the
+   * existing centered layout — vendors who haven't uploaded an avatar
+   * see no change from the current page (D4 avatar fallback).
+   *
+   * Why Frame C wins: avatar becomes a compound visual element with the
+   * existing booth identity, not a separate beat. Vendor identity
+   * inlines with booth identity rather than competing for visual
+   * hierarchy.
+   */
+  avatarUrl?: string | null;
   /**
    * Q-002 (session 57) — when the consumer is `/my-shelf` for a vendor with
    * more than one claimed booth, passing this callback turns the 32px
@@ -424,110 +438,186 @@ export function BoothTitleBlock({
   // sub-decision per `feedback_within_session_design_record_reversal`.
 }) {
   const hasPicker = !!onPickerOpen;
-  return (
-    // Session 128 (refinement design D6): outer wrapper textAlign:"center"
-    // + flex row justifyContent:"center" centers the eyebrow, h1, picker
-    // chevron, and edit pencil as a group. Was left-aligned in prod; David
-    // flagged during V1 review. Affects both /shelf/[slug] and /my-shelf
-    // via this shared primitive.
-    // v2 Arc 4.4 — typography + colors migrate. Eyebrow + vendor name +
-    // picker chevron all become FONT_CORMORANT (single editorial serif
-    // family per system-level Q1 (a) lock).
-    // Review Board Finding 4 (session 169) — top padding 36 → 16 (canonical
-    // space.s16). David: "Position the a curated booth text higher so it
-    // sits closer to the hero image but with some padding." Shared primitive
-    // — change inherits across /shelf/[slug] + /my-shelf consumers.
-    // Session 186 — Edit Pencil bubble retired; vendor self-edit moves
-    // to the "Edit Booth" CTA button under "Add a Find" on /my-shelf.
-    <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
-      <div
+  const hasAvatar = !!avatarUrl;
+
+  // Session 128 (refinement design D6): outer wrapper textAlign:"center"
+  // + flex row justifyContent:"center" centers the eyebrow, h1, picker
+  // chevron, and edit pencil as a group. Was left-aligned in prod; David
+  // flagged during V1 review. Affects both /shelf/[slug] and /my-shelf
+  // via this shared primitive.
+  // v2 Arc 4.4 — typography + colors migrate. Eyebrow + vendor name +
+  // picker chevron all become FONT_CORMORANT (single editorial serif
+  // family per system-level Q1 (a) lock).
+  // Review Board Finding 4 (session 169) — top padding 36 → 16 (canonical
+  // space.s16). David: "Position the a curated booth text higher so it
+  // sits closer to the hero image but with some padding." Shared primitive
+  // — change inherits across /shelf/[slug] + /my-shelf consumers.
+  // Session 186 — Edit Pencil bubble retired; vendor self-edit moves
+  // to the "Edit Booth" CTA button under "Add a Find" on /my-shelf.
+  //
+  // Session 187 — vendor profile enrichment Arc 2.1 per D3+D4. Eyebrow
+  // ("A curated booth by") + name (h1 or button-with-chevron) render
+  // separately so the avatar-present branch can compose the eyebrow
+  // ABOVE a [avatar | name] lockup row, while the avatar-absent branch
+  // stacks them centered on the same wrapper.
+  //
+  // Session 187 QA-driven C6 — within-session reshape of the C2 compound
+  // layout per feedback_within_session_design_record_reversal ✅
+  // Promoted-via-memory at session 128. C2 shipped the compound as
+  // [avatar | text-stack-with-eyebrow-inside], text-stack left-aligned;
+  // David's iPhone QA F1+F2: "Lets keep the 'A curated booth by' text
+  // centered. Position the profile icon vertically centered with the
+  // booth name (this becomes the lockup) that the 'A curated booth by'
+  // text centers with." Reshape: eyebrow on own centered line + the
+  // [avatar | name] row is the lockup, centered as a group, avatar
+  // vertically aligned to the name itself (not the text-stack).
+  const eyebrow = (
+    <div
+      style={{
+        fontFamily: FONT_CORMORANT,
+        fontStyle: "italic",
+        fontSize: 16,
+        // Session 171 iPhone QA dial #5 immediate fix — David: "Use a
+        // darker color from the palette for the 'A curated booth by' this
+        // continues to be hard to read." Italic Cormorant at 16px loses
+        // stroke contrast faster than upright (curved letterforms have
+        // thinner mid-strokes); v2.text.secondary on v2.surface.warm
+        // failed the 40-65 demographic on production iPhone QA. Bumping
+        // one tier darker to v2.text.primary.
+        //
+        // Companion launch-blocking work: full contrast + legibility
+        // audit at docs/contrast-audit.md (session 171 Audit B) — the
+        // same pattern (≤14px / 15-16px italic / muted-secondary on
+        // warm-cream) recurs on other surfaces (login, /me, etc.) and
+        // gets a structured sweep in a follow-on session driven by that
+        // audit doc. This fix lands the specific BoothPage eyebrow
+        // referenced in the QA; the broader sweep ships per audit
+        // recommendations.
+        color: v2.text.primary,
+        lineHeight: 1.3,
+        margin: "0 0 4px",
+        textAlign: "center",
+      }}
+    >
+      A curated booth by
+    </div>
+  );
+
+  const nameBlock = hasPicker ? (
+    <button
+      onClick={onPickerOpen}
+      aria-label={`Switch booth — viewing ${displayName}`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 10,
+        margin: 0,
+        padding: 0,
+        background: "transparent",
+        border: "none",
+        cursor: "pointer",
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      <h1
         style={{
           fontFamily: FONT_CORMORANT,
-          fontStyle: "italic",
-          fontSize: 16,
-          // Session 171 iPhone QA dial #5 immediate fix — David: "Use a
-          // darker color from the palette for the 'A curated booth by' this
-          // continues to be hard to read." Italic Cormorant at 16px loses
-          // stroke contrast faster than upright (curved letterforms have
-          // thinner mid-strokes); v2.text.secondary on v2.surface.warm
-          // failed the 40-65 demographic on production iPhone QA. Bumping
-          // one tier darker to v2.text.primary.
-          //
-          // Companion launch-blocking work: full contrast + legibility
-          // audit at docs/contrast-audit.md (session 171 Audit B) — the
-          // same pattern (≤14px / 15-16px italic / muted-secondary on
-          // warm-cream) recurs on other surfaces (login, /me, etc.) and
-          // gets a structured sweep in a follow-on session driven by that
-          // audit doc. This fix lands the specific BoothPage eyebrow
-          // referenced in the QA; the broader sweep ships per audit
-          // recommendations.
+          fontSize: 32,
+          // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
+          fontWeight: 600,
           color: v2.text.primary,
-          lineHeight: 1.3,
-          margin: "0 0 4px",
+          lineHeight: 1.1,
+          letterSpacing: "-0.005em",
+          margin: 0,
         }}
       >
-        A curated booth by
-      </div>
-      {hasPicker ? (
-        <button
-          onClick={onPickerOpen}
-          aria-label={`Switch booth — viewing ${displayName}`}
+        {displayName}
+      </h1>
+      <span
+        aria-hidden="true"
+        style={{
+          fontFamily: FONT_CORMORANT,
+          fontSize: 20,
+          color: v2.text.secondary,
+          lineHeight: 1,
+          marginTop: 4,
+        }}
+      >
+        ▾
+      </span>
+    </button>
+  ) : (
+    <h1
+      style={{
+        fontFamily: FONT_CORMORANT,
+        fontSize: 32,
+        // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
+        fontWeight: 600,
+        color: v2.text.primary,
+        lineHeight: 1.1,
+        letterSpacing: "-0.005em",
+        margin: 0,
+      }}
+    >
+      {displayName}
+    </h1>
+  );
+
+  if (hasAvatar) {
+    return (
+      // Session 187 QA-driven C6 reshape per David's iPhone QA F1+F2:
+      // eyebrow stays centered on its own line (full width via the
+      // textAlign:center on the eyebrow div); the [avatar | nameBlock]
+      // row is the lockup — flex row centered as a group, avatar
+      // align-items:center against the name h1 itself (not the
+      // text-stack with eyebrow inside). Outer wrapper textAlign:center
+      // also re-centers the lockup row across the page width.
+      // 40px avatar + 12px gap + name fits comfortably on iPhone SE
+      // (375px) with the existing 22px horizontal padding.
+      <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
+        {eyebrow}
+        <div
           style={{
-            display: "inline-flex",
+            display: "flex",
             alignItems: "center",
-            gap: 10,
-            margin: 0,
-            padding: 0,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            textAlign: "center",
-            WebkitTapHighlightColor: "transparent",
+            justifyContent: "center",
+            gap: 12,
           }}
         >
-          <h1
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarUrl as string}
+            alt=""
             style={{
-              fontFamily: FONT_CORMORANT,
-              fontSize: 32,
-              // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
-              fontWeight: 600,
-              color: v2.text.primary,
-              lineHeight: 1.1,
-              letterSpacing: "-0.005em",
-              margin: 0,
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              objectFit: "cover",
+              flexShrink: 0,
+              // D3 — 2px v2.surface.warm border + subtle box-shadow for
+              // lift off the page bg (also v2.surface.warm). The border
+              // creates a quiet halo around the avatar that reads as a
+              // photographic "matted" element, not a flat-painted glyph.
+              border: `2px solid ${v2.surface.warm}`,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.10)",
+              // Fallback bg so broken-image src doesn't paint a hard
+              // transparent square; matches the matte color so the
+              // halo reads consistently while the image loads.
+              background: v2.surface.warm,
             }}
-          >
-            {displayName}
-          </h1>
-          <span
-            aria-hidden="true"
-            style={{
-              fontFamily: FONT_CORMORANT,
-              fontSize: 20,
-              color: v2.text.secondary,
-              lineHeight: 1,
-              marginTop: 4,
-            }}
-          >
-            ▾
-          </span>
-        </button>
-      ) : (
-        <h1
-          style={{
-            fontFamily: FONT_CORMORANT,
-            fontSize: 32,
-            // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
-            fontWeight: 600,
-            color: v2.text.primary,
-            lineHeight: 1.1,
-            letterSpacing: "-0.005em",
-            margin: 0,
-          }}
-        >
-          {displayName}
-        </h1>
-      )}
+          />
+          {nameBlock}
+        </div>
+      </div>
+    );
+  }
+
+  // D4 fallback — existing centered layout (avatar absent OR null).
+  // Vendors who haven't uploaded an avatar see no change from prior page.
+  return (
+    <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
+      {eyebrow}
+      {nameBlock}
     </div>
   );
 }
@@ -536,33 +626,45 @@ export function BoothTitleBlock({
 // Mall block — small pin + mall name + dotted-underline address
 // ─────────────────────────────────────────────────────────────────────────────
 
-// PinGlyph extracted to components/PinGlyph.tsx at session 157 on its 2nd
-// consumer surface (MallStrip eyebrow). See PinGlyph.tsx for the extraction
-// rationale and the optional color prop that MallStrip uses to render in
-// the strip's muted v2.text.secondary tone.
+// Session 187 — PinGlyph retired from MallBlock per David's iPhone QA on
+// Arc 2 ship (F3 finding). PinGlyph remains exported from
+// components/PinGlyph.tsx and consumed by MallMatchChip (session 165 dual-
+// slot search-mall-match wiring); only this consumer site retires.
+// Bounded reversal of session 128 refinement D6 "PinGlyph renders inline
+// before mall name" — surface-locked-design-reversal per
+// feedback_surface_locked_design_reversals ✅ Promoted. Reason: with the
+// avatar lockup landing on the surface above (Arc 2.1 compound), the
+// MallBlock pin became visual noise competing with the avatar for "place
+// identity" attention; the mall name + dotted-underline address read
+// cleanly as the spatial anchor on their own.
 
 export function MallBlock({
   mallName,
   mallCity,
   address,
+  directionsText,
 }: {
   mallName: string;
   mallCity?: string;
   address?: string | null;
+  // Session 187 — vendor profile enrichment Arc 2.3 per D10. Renders inline
+  // below the dotted-underline address when set (non-empty trimmed string).
+  // NULL/empty = no custom directions; the address + mapsUrl deep-link carry
+  // alone (existing behavior preserved for vendors who haven't enriched).
+  directionsText?: string | null;
 }) {
   const mapQuery = address
     ? address
     : [mallName, mallCity].filter(Boolean).join(", ");
   const href = mapsUrl(mapQuery);
+  const trimmedDirections = directionsText?.trim() || null;
 
   return (
     // Session 128 (refinement design D6): grid layout retired in favor of
-    // centered composition. PinGlyph renders inline before mall name (size
-    // 16 to match Lora 18 baseline). Address centers below as separate
+    // centered composition. Address centers below mall name as separate
     // block. Affects both /shelf/[slug] and /my-shelf via shared primitive.
-    // Implementation-time call: kept PinGlyph inline-before-name (vs retire)
-    // to preserve place-marker semantic; flip to retire if iPhone QA reads
-    // cluttered.
+    // Session 187 — PinGlyph retired (David's iPhone QA F3 on Arc 2 ship);
+    // see file-section comment above the function for reasoning.
     // v2 Arc 4.3 — typography + colors migrate per Q1 (a) "stay centered
     // text shape, token-swap only" (NOT SavedMallCardV2 chrome adoption):
     //   FONT_LORA name → FONT_CORMORANT (matches BoothTitleBlock 4.4 voice)
@@ -573,11 +675,16 @@ export function MallBlock({
     // Review Board Finding 10A (session 153) — wrapper padding bottom
     // 4 → 0 so the mall + address read as one lockup. Tightening
     // continues on the address marginTop below (4 → 0).
+    // Session 187 — mall name fontWeight 400 (default) → 600 per David's
+    // iPhone QA F4 on Arc 2 ship. Matches BoothTitleBlock h1 weight
+    // (Review Board Finding 8A pattern from session 153) so the two
+    // Cormorant 18+ identity beats read at the same visual weight.
     <div style={{ padding: "8px 22px 0", textAlign: "center" }}>
       <div
         style={{
           fontFamily: FONT_CORMORANT,
           fontSize: 18,
+          fontWeight: 600,
           color: v2.text.primary,
           // Session 171 dial — lineHeight 1.3 → 1.15 to tighten the gap to
           // the address line below. Single-line text (not clamped) so
@@ -589,14 +696,9 @@ export function MallBlock({
           // 4→0 — to the previously-unaddressed half-leading gap).
           lineHeight: 1.15,
           letterSpacing: "-0.005em",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
         }}
       >
-        <PinGlyph size={16} />
-        <span>{mallName}</span>
+        {mallName}
       </div>
       {address && (
         // Review Board Finding 10A (session 153) — marginTop 4 → 0 so
@@ -624,6 +726,33 @@ export function MallBlock({
           >
             {address}
           </a>
+        </div>
+      )}
+      {trimmedDirections && (
+        // Session 187 — vendor profile enrichment Arc 2.3 per D10. Cormorant
+        // italic 13px on v2.text.secondary; lineHeight 1.4; marginTop 6px
+        // below address (or below mall name when address absent).
+        // white-space: pre-wrap preserves multiline directions vendors paste
+        // (e.g., "back-left corner past the antique clocks\nnext to the
+        // green lamp"). Server enforces 500-char cap (Arc 1.3 commit 1726d4a).
+        // max-width 320px centered keeps long directions from running too
+        // wide on tablet viewports; auto-margins re-center against the
+        // textAlign:center parent.
+        <div
+          style={{
+            fontFamily: FONT_CORMORANT,
+            fontStyle: "italic",
+            fontSize: 13,
+            color: v2.text.secondary,
+            lineHeight: 1.4,
+            marginTop: 6,
+            maxWidth: 320,
+            marginLeft: "auto",
+            marginRight: "auto",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {trimmedDirections}
         </div>
       )}
     </div>

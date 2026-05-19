@@ -8,6 +8,89 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.187.0] — 2026-05-18
+
+### Session 187 — Vendor profile enrichment Arc 2 (Display surface) end-to-end + iPhone-QA-driven dial round 1 (compound lockup reshape + MallBlock dial) — 6 runtime commits + 1 close
+
+6 runtime commits + 1 close. Pure execution pass against the 15-decision design record locked at session 185 + 30-firings-deep `feedback_design_record_as_execution_spec` — load-bearing operating mode crosses its **31st cumulative firing** across 31+ different features. Arc 2 main ship (4 commits sequenced smallest→largest: MallBlock directionsText + BoothTitleBlock avatarUrl compound lockup + AboutBoothSection NEW primitive in isolation + single coupled page composition on /shelf/[slug] AND /my-shelf). David walked Vercel preview + surfaced 4 dial findings; iPhone-QA-driven dial round 1 ships in 2 more commits sequenced smallest→largest (C5 MallBlock cosmetic dial: PinGlyph retire + fontWeight bump; C6 BoothTitleBlock structural reshape: eyebrow above lockup, [avatar | name] row as the actual lockup). 2nd iPhone QA walk: clean. **5th cumulative firing post-promotion of `project_vendor_value_first_prioritization`** validates the vendor-value gate continues firing load-bearingly across 4 consecutive sessions of vendor-value execution (184 + 185 + 186 + 187). The storefront-identity thesis is now visible on production — vendors who filled Arc 1 fields (avatar + bio + Facebook URL + Instagram URL + in-mall directions) see them on `/shelf/[slug]` as the compound identity lockup + bio paragraph + social bubbles + directions below address. Vendors who haven't enriched see no change (D4 + D11 fallbacks). Build green at every commit boundary; tsc + `npm run build` clean across all 48 routes throughout.
+
+### Added
+
+- **`<AboutBoothSection>` NEW primitive** at `components/AboutBoothSection.tsx` (149 LOC) per D9+D11+D13 verbatim contract. Props: `{ bio, facebookUrl, instagramUrl, vendorSlug }`. Returns null per D11 when all 3 nullable inputs are null/empty (no extra padding for unenriched booths). Bio rendered in Cormorant italic 15px (`v2.text.primary`, lineHeight 1.5, max-width 320px centered, white-space: pre-wrap preserves vendor's intentional newlines from EditBoothSheet textarea). Social bubbles per D9: 36×36 circular bubbles with bg `v2.surface.warm` + 1px `v2.border.light` border + Phosphor `PiFacebookLogo` / `PiInstagramLogo` at size 20 in `v2.accent.green`. Individual bubbles hide when their URL is null. Tap: `window.open(url, '_blank', 'noopener,noreferrer')` + fires `vendor_social_tapped` R3 event with `{ vendor_slug, platform: "facebook" | "instagram" }` payload.
+- **`<BoothTitleBlock>` `avatarUrl?: string | null` prop** per D3+D4. Conditional layout: when null, existing centered fallback layout preserved verbatim (vendors who haven't uploaded an avatar see no change per D4); when set, compound lockup — eyebrow ("A curated booth by") on its own centered line + [avatar | name] flex row below, centered as a group, avatar align-items:center against the name h1 itself (post-C6 QA reshape per F1+F2; not the C2-shipped text-stack-with-eyebrow-inside layout). 40px circular avatar with `objectFit: cover`, 2px `v2.surface.warm` border + `box-shadow: 0 1px 3px rgba(0,0,0,0.10)` for matte lift off page bg.
+- **`<MallBlock>` `directionsText?: string | null` prop** per D10. Renders inline Cormorant italic 13px on `v2.text.secondary` (lineHeight 1.4, marginTop 6px, max-width 320px centered, white-space: pre-wrap for multiline) when set to a non-empty trimmed string. Empty/whitespace-only/null → renders nothing (existing booths see no change).
+- **3-anchor page composition on /shelf/[slug] AND /my-shelf** — single coupled commit per `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted threads `vendor.avatar_url` → BoothTitleBlock + `vendor.directions_text` → MallBlock + renders `<AboutBoothSection>` between them. /my-shelf inclusion is the feature-parity default per `feedback_make_same_change_to_sibling_surface` — vendor self-preview surface matches shopper view at /shelf/[slug] so vendors edit and review against the same canonical shape.
+
+### Changed
+
+- **MallBlock mall name fontWeight 400 (default) → 600** per David's iPhone QA F4. Matches BoothTitleBlock h1 weight (Review Board Finding 8A pattern from session 153). The two Cormorant 18+ identity beats (vendor name h1 32px + mall name 18px) now read at the same visual weight, reinforcing identity-then-place reading order.
+- **BoothTitleBlock compound layout reshape (within-session QA-driven reversal of C2)** — C2 shipped the compound as `[avatar | text-stack]` where text-stack contained eyebrow+name with text-align:left. C6 reshape per David's F1+F2: eyebrow renders on its own centered line (full page width via textAlign:center) + the [avatar | nameBlock] row sits below as the actual lockup (avatar align-items:center against the name h1 itself, not the text-stack). Within-session reshape surfaced explicitly per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128.
+
+### Removed
+
+- **`<PinGlyph>` from MallBlock** per David's iPhone QA F3. Import drops from top of `components/BoothPage.tsx`; render + flex/gap wrapper around mall name retire as scope-adjacent dead code per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted. PinGlyph still exported from `components/PinGlyph.tsx` and consumed by `<MallMatchChip>` (session 165 dual-slot search-mall-match wiring); only the BoothPage consumer site retires. Bounded reversal of session 128 refinement D6 ("PinGlyph renders inline before mall name") surfaced explicitly per `feedback_surface_locked_design_reversals` ✅ Promoted — reason: with the avatar lockup landing on the surface above (Arc 2.1 compound), the MallBlock pin became visual noise competing with the avatar for "place identity" attention.
+
+### Fixed
+
+- **Pre-existing local-env `html2canvas-pro` miss at C1 commit boundary** — **20th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate`** ✅ Promoted at session 161; `npm install` resolved in 1 round-trip. Parked dep from session 152's Share My Shelf parked feature.
+
+### Implementation sequencing — 6 commits sequenced smallest→largest per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88
+
+| # | SHA | Scope | LOC |
+|---|---|---|---|
+| 1 | `e858200` | Arc 2.3 — MallBlock directionsText prop + render below address (D10) | +36 / −2 + package-lock |
+| 2 | `c4e6385` | Arc 2.1 — BoothTitleBlock avatarUrl prop + compound lockup (D3+D4) | +97 / −17 |
+| 3 | `d1f7bcb` | Arc 2.2 — `<AboutBoothSection>` NEW primitive in isolation (D9+D11+D13) | +149 / 0 |
+| 4 | `2c2ed83` | Arc 2.4 — page composition on /shelf/[slug] + /my-shelf (coupled) | +59 / −3 |
+| 5 | `c61309a` | QA-driven C5 — MallBlock retire PinGlyph + bump mall name to 600 | +20 / −16 |
+| 6 | `5202f5d` | QA-driven C6 — BoothTitleBlock compound reshape (F1 + F2) | +144 / −133 |
+
+### Sub-decisions inside locked design axes (surfaced explicitly per `feedback_schema_forced_deviation_not_design_reversal`)
+
+1. **Feature-parity on /my-shelf (D11 + D3/D4/D10 surface scope)** — design record Arc 2 sequencing only lists /shelf/[slug] composition (sub-arc 2.4) but D11 component contract for AboutBoothSection is surface-agnostic. /my-shelf inclusion is the natural feature-parity default since BoothTitleBlock + MallBlock are already shared primitives between both surfaces; omitting AboutBoothSection on /my-shelf while extending the other two would create inconsistent vendor self-preview. Vendors edit + review against the same canonical shape shoppers see.
+2. **No SELECT extension needed** — both `getVendorBySlug` (used by /shelf) and `getVendorsByUserId` (used by /my-shelf) already use `select *` which returns all 5 enrichment columns. Verified via grep at session-187 audit-first pass; saved a commit that would have been pure type/SELECT extension.
+3. **Avatar `alt=""` (empty)** — avatar is decorative; the vendor name is already adjacent in the h1 + screen readers shouldn't read the name twice. Avoids "Avatar of {name}" duplication noise.
+
+### Memory firings cumulative through session 187
+
+- `feedback_design_record_as_execution_spec` ✅ Promoted — **31st cumulative firing** across 31+ different features (load-bearing operating mode crossing past the threshold validated at session 186)
+- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — 6 firings (~549+ cumulative)
+- `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted-via-memory at session 141 — 1 firing (/my-shelf feature-parity surfaced in C4 commit body)
+- `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128 — 1 firing (C6 reshapes C2 same-session)
+- `feedback_surface_locked_design_reversals` ✅ Promoted — 1 bounded reversal (session 128 D6 PinGlyph placement)
+- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — PinGlyph import + render + flex wrapper retire in C5 same as feature change
+- `feedback_user_clarification_restate_interpretation` ✅ Promoted — restated all 4 iPhone QA findings explicitly before drafting code
+- `feedback_user_provided_verbatim_values_ship_as_is` ✅ Promoted — David's spec (centered eyebrow / vertically aligned avatar / retire pin / bump weight) shipped verbatim with explicit framing of the bounded reversals
+- `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — C4 ships /shelf + /my-shelf together to keep visual presentation consistent at same commit boundary
+- `feedback_visibility_tools_first` ✅ Promoted — parallel reads of design record + BoothPage primitives + lib/posts.ts + types + analytics layers + migration 022 in audit-first pass before drafting any commits
+- `feedback_verify_primitive_contract_via_grep` ✅ Promoted — grep'd Phosphor exports + analytics whitelist verification + getVendorBySlug SELECT shape BEFORE drafting code; saved a SELECT-extension commit by confirming `select *` already covered new columns
+- `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 — **20th cumulative firing** (html2canvas-pro at C1 boundary)
+- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132 — 1 firing (Shape A 2-commit sequence for QA dial bundle)
+- `project_vendor_value_first_prioritization` ✅ Promoted at session 171 — **5th cumulative firing post-promotion** validates the vendor-value gate as load-bearing operating mode across 4 consecutive sessions of vendor-value execution (184 + 185 + 186 + 187)
+
+### NEW Tech Rule candidate patterns surfaced (single firings each, all promote on 2nd firing per `feedback_tech_rule_promotion_destination` ✅ Promoted)
+
+1. **"`select *` substring-aware audit before drafting SELECT-extension commit"** — when adding new columns that need to render at consumer surfaces, grep existing SELECT shapes BEFORE drafting any SELECT-extension commit. If consumers already use `select *`, the new columns are returned automatically — no commit needed. Saved 1 commit + reduced surface area for this session. Sub-pattern of `feedback_verify_primitive_contract_via_grep` extended to data-layer SELECT contracts.
+2. **"Within-Frame internal reshape during iPhone QA — NOT a Frame reversal"** — David's iPhone QA F1+F2 reshaped the BoothTitleBlock compound from `[avatar | text-stack]` to `[eyebrow centered above | [avatar | name] row below]`. Both layouts are still "Frame C" (40px avatar inline with display_name lockup); the reshape is internal to Frame C, not a Frame reversal back to Frame A/B/D.
+3. **"Splitting `titleStack` into `eyebrow` + `nameBlock` JSX variables for cross-layout reuse"** — when a primitive's render needs different compositions per prop case (compound lockup vs centered fallback), extract the shared-content JSX into named variables (`eyebrow`, `nameBlock`) that both branches reference. Cleaner than duplicating the inner content or chaining ternaries inside JSX.
+4. **"Stacking 4 iPhone QA findings into 2 smartly-coupled commits"** — David surfaced 4 findings in single message; 2 cluster on MallBlock cosmetic dials (F3+F4); 2 cluster on BoothTitleBlock structural reshape (F1+F2). C5 ships cosmetic dials; C6 ships structural reshape. Per-primitive coupling reads cleaner than per-finding splitting (4 commits) or single-commit-multi-primitive (cross-cuts revertability).
+5. **"Bounded reversal of own-just-shipped code is the cleanest within-session firing"** — C2 shipped the [avatar | text-stack] compound layout in this session; C6 reshapes it same session. Distinguishes from cross-session reversals (where prior reasoning was locked in a different session). Within-session reversal commits carry both shipping commits' SHAs in the commit body so the reasoning chain is fully traceable in `git log`.
+6. **"Feature-parity default for /shelf/[slug] vs /my-shelf consumer pair"** — when a primitive extension lands on /shelf/[slug] (shopper view), default to wiring the same primitive on /my-shelf (vendor self-preview) unless there's an explicit reason for divergence. Sub-pattern of `feedback_make_same_change_to_sibling_surface`.
+
+### iPhone QA watch-items
+
+iPhone QA round 1 walked Vercel preview on 6-commit ship (C1-C6); David verbatim: **"QA walk clean. push to prod"**. All 4 dial findings shipped via C5+C6 and re-walked clean.
+
+Open production watch-items for session 188:
+- **iPhone QA on production v0.187.0** (~5-10 min) — after PR squash-merge + tag, walk production-PWA to confirm Vercel preview ↔ production parity. Surfaces any URL-allowlist-bound regressions (vendor-avatar storage, Mapbox token) that Vercel preview can't catch.
+- **Q-016 EditBoothSheet UI revisit** — captured in `docs/queued-sessions.md` §Q-016. Holistic design pass on the 7-field sheet post-Arc-2 ship + iPhone QA against real-content seeding.
+- **R19 (`Vendor profile enrichment`) candidate promotion call** — design record §9 deferred to post-Arc-2 ship. With Arc 2 live on production, the storefront-identity thesis becomes measurable via vendor-side engagement (vendors uploading + iterating their profile) + shopper-side engagement (social taps + return visits to enriched booths). Promotion to R19 ✅ Shipped lands when both signals fire on production analytics.
+- **Real-content seeding** — Arc 1 + Arc 2 both ship the enrichment substrate; David needs to fill 1-2 vendor profiles with actual avatars + bios + social URLs + directions on production to validate the full flow end-to-end + surface any UX dials that V1 mockup with placeholder data couldn't catch.
+
+[v0.187.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.187.0
+
+---
+
 ## [v0.186.0] — 2026-05-18
 
 ### Session 186 — Vendor profile enrichment Arc 1 (Edit surface) end-to-end + mid-session URL UX refinement + EditBoothSheet keyboard + Edit Booth CTA promotion — 9 runtime commits + 1 close
