@@ -84,7 +84,6 @@ import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import ShareBubble from "@/components/ShareBubble";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
-import PinGlyph from "@/components/PinGlyph";
 import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
@@ -616,10 +615,17 @@ export function BoothTitleBlock({
 // Mall block — small pin + mall name + dotted-underline address
 // ─────────────────────────────────────────────────────────────────────────────
 
-// PinGlyph extracted to components/PinGlyph.tsx at session 157 on its 2nd
-// consumer surface (MallStrip eyebrow). See PinGlyph.tsx for the extraction
-// rationale and the optional color prop that MallStrip uses to render in
-// the strip's muted v2.text.secondary tone.
+// Session 187 — PinGlyph retired from MallBlock per David's iPhone QA on
+// Arc 2 ship (F3 finding). PinGlyph remains exported from
+// components/PinGlyph.tsx and consumed by MallMatchChip (session 165 dual-
+// slot search-mall-match wiring); only this consumer site retires.
+// Bounded reversal of session 128 refinement D6 "PinGlyph renders inline
+// before mall name" — surface-locked-design-reversal per
+// feedback_surface_locked_design_reversals ✅ Promoted. Reason: with the
+// avatar lockup landing on the surface above (Arc 2.1 compound), the
+// MallBlock pin became visual noise competing with the avatar for "place
+// identity" attention; the mall name + dotted-underline address read
+// cleanly as the spatial anchor on their own.
 
 export function MallBlock({
   mallName,
@@ -644,12 +650,10 @@ export function MallBlock({
 
   return (
     // Session 128 (refinement design D6): grid layout retired in favor of
-    // centered composition. PinGlyph renders inline before mall name (size
-    // 16 to match Lora 18 baseline). Address centers below as separate
+    // centered composition. Address centers below mall name as separate
     // block. Affects both /shelf/[slug] and /my-shelf via shared primitive.
-    // Implementation-time call: kept PinGlyph inline-before-name (vs retire)
-    // to preserve place-marker semantic; flip to retire if iPhone QA reads
-    // cluttered.
+    // Session 187 — PinGlyph retired (David's iPhone QA F3 on Arc 2 ship);
+    // see file-section comment above the function for reasoning.
     // v2 Arc 4.3 — typography + colors migrate per Q1 (a) "stay centered
     // text shape, token-swap only" (NOT SavedMallCardV2 chrome adoption):
     //   FONT_LORA name → FONT_CORMORANT (matches BoothTitleBlock 4.4 voice)
@@ -660,11 +664,16 @@ export function MallBlock({
     // Review Board Finding 10A (session 153) — wrapper padding bottom
     // 4 → 0 so the mall + address read as one lockup. Tightening
     // continues on the address marginTop below (4 → 0).
+    // Session 187 — mall name fontWeight 400 (default) → 600 per David's
+    // iPhone QA F4 on Arc 2 ship. Matches BoothTitleBlock h1 weight
+    // (Review Board Finding 8A pattern from session 153) so the two
+    // Cormorant 18+ identity beats read at the same visual weight.
     <div style={{ padding: "8px 22px 0", textAlign: "center" }}>
       <div
         style={{
           fontFamily: FONT_CORMORANT,
           fontSize: 18,
+          fontWeight: 600,
           color: v2.text.primary,
           // Session 171 dial — lineHeight 1.3 → 1.15 to tighten the gap to
           // the address line below. Single-line text (not clamped) so
@@ -676,14 +685,9 @@ export function MallBlock({
           // 4→0 — to the previously-unaddressed half-leading gap).
           lineHeight: 1.15,
           letterSpacing: "-0.005em",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
         }}
       >
-        <PinGlyph size={16} />
-        <span>{mallName}</span>
+        {mallName}
       </div>
       {address && (
         // Review Board Finding 10A (session 153) — marginTop 4 → 0 so
