@@ -358,6 +358,51 @@ CURRENT ISSUE: Q-015 — /admin Vendors tab single-pane-of-glass. Add a 6th tab 
 
 ---
 
+## Q-016 🟡 EditBoothSheet UI design + layout revisit — post Vendor profile enrichment full ship
+
+**Status:** 🟡 Ready but waiting on dependency. Triggered at session 186 close — David at session-186 close: *"Lets add an action item to revisit the UI design and layout of this edit menu after we go through the full implementation."* The dependency is **Arc 2 of vendor profile enrichment ship + iPhone QA against real-content seeding** (likely session 187 or 188). Run AFTER Arc 2 lands + vendors have filled enrichment fields against production seed data.
+
+### Why parked (not running now)
+
+The EditBoothSheet grew organically across session 186 Arc 1 from 2 fields (display_name + hero photo) to 7 fields (booth name + hero photo + avatar + bio + 2 URLs + directions). Each new field followed the established label + input + helper pattern from BoothFormFields / hero-photo blocks. The composition is functional + matches every existing design discipline (D2 hairline divider + D7 bio counter + D8 URL validation + D14 field order). What it has NOT had is a holistic design pass that re-evaluates the sheet AS A WHOLE — when a single sheet absorbs both Booth identity AND Vendor identity sections, the visual hierarchy + grouping + breathing room + density should be evaluated against the new total scope, not iteratively additive against the prior 2-field shape.
+
+This is the canonical pattern of "an interface grew under shipping cadence; revisit holistically once the dust settles" — applies to /find/[id] session 170 + /shelf/[slug] session 128 + /me session 111. Each ran a dedicated design pass once the surface had accumulated 3+ rounds of additive scope.
+
+### What
+
+- Audit-first per `feedback_visibility_tools_first`: read EditBoothSheet + screenshot iPhone state with all 7 fields populated + read /shelf/[slug] post-Arc-2 to see how the data renders consumer-side
+- Cost-shape triage per `feedback_triage_cost_shape_before_design_pass`: surface 3+ shapes (Shape A surgical typography/spacing dials, Shape B mid-scope reorganization e.g. tabs or accordion, Shape C structural primitive extraction e.g. extract VendorIdentitySheet as separate sheet)
+- V1 mockup per `feedback_mockup_options_span_structural_axes` if Shape B or C picked — frames span structural decisions, not style variants
+- Implementation arc(s) sequenced smallest→largest
+
+### Specific items worth re-evaluating
+
+- **Header sizing** — title "Edit booth name" (20px Cormorant) was sized for vendor mode's 1-field context; might want to re-read as "Edit booth" or "Booth settings" with the 7-field surface
+- **Booth identity section density** — Booth photo + Booth name take ~200px combined; might compress if Vendor identity needs more breathing room
+- **Vendor identity section flow** — currently 5 fields in linear stack with hairline-only separators; might benefit from sub-sections (Profile / Social / Directions) or visual grouping
+- **Avatar field affordance** — 96×96 circular preview + Replace/Remove buttons currently uses the same 84×84 hero-photo block shape adapted; might want a more identity-forward treatment (e.g., bigger preview, in-place crop adjustment)
+- **Bio textarea height** — 96px min-height (4 rows) at FONT_LORA italic 15px reads tall when collapsed sheet at 85vh; might compress to 3 rows by default
+- **Save button placement** — currently sticks at bottom of scrollable sheet body; with 7 fields the user might scroll past it on first open. Sticky-on-scroll Save bar candidate.
+- **iOS keyboard interaction** — session 186 commit 8 dropped autoFocus + retained onFocus scrollIntoView; revisit whether the scrollIntoView still feels right with the new field density
+- **Admin mode parity** — session 186 Arc 1 scoped admin mode (on /shelves) to keep current single-PATCH path against /api/admin/vendors; admin uses impersonation flow (/my-shelf?vendor=<id>) for enrichment fields. Decide post-Arc-2 whether to extend /shelves admin sheet with the enrichment section (dual-PATCH dance) or leave the impersonation-only path.
+
+### Effort
+
+~60–90 min (~Shape B mid-scope reorganization). Shape A (surgical dials only) would be ~30 min and might land as an iPhone QA dial bundle directly after Arc 2 ships rather than a separate Q-016 session. Shape C (structural primitive extraction) would be ~2 hours and would itself be sequenced as a multi-commit Arc 1 + Arc 2.
+
+### Session opener (when picked up — after Arc 2 + iPhone QA)
+
+```
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Sentry · Vercel · Mapbox GL JS
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, docs/queued-sessions.md §Q-016, and docs/vendor-profile-enrichment-design.md. Then run the session opening standup from MASTER_PROMPT.md.
+
+CURRENT ISSUE: Q-016 — EditBoothSheet UI design + layout revisit. Vendor profile enrichment Arc 1 (session 186) + Arc 2 (session 187) have shipped, vendors have filled real enrichment fields, iPhone QA has covered the new shopper-side surfaces. The EditBoothSheet now holds 7 fields (booth name + hero photo + avatar + bio + 2 URLs + directions). Run an audit-first holistic design pass on the sheet AS A WHOLE — visual hierarchy + grouping + breathing room + density + Save button placement + admin parity decision. Cost-shape triage: Shape A surgical dials (~30 min) vs Shape B mid-scope reorganization (~60-90 min) vs Shape C structural primitive extraction (~2 hours). V1 mockup if Shape B or C picked.
+```
+
+---
+
 ## ⏸️ Q-002 — Picker affordance placement revision — SHIPPED session 57
 
 **Retirement reason:** Shipped session 57 (2026-04-24) exactly per the approved direction. `Masthead` center column reverted to the "Treehouse Finds" brand lockup (session-40 right-slot share airplane preserved). `<BoothTitleBlock>` gained an optional `onPickerOpen` prop that turns the 32px IM Fell booth name into a tap target with an inline `▾` chevron when `/my-shelf` detects `vendorList.length > 1` (i.e. `showPicker`). Public Shelf + single-booth consumers omit the prop; the affordance is invisible in those contexts. Mockup `docs/mockups/my-shelf-multi-booth-v1.html` Frames 2 + 3 updated in the same commit to keep the mockup as the source of truth per the session-28 mockup-wins rule.

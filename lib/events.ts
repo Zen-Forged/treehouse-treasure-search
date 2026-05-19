@@ -95,7 +95,17 @@ export type EventType =
   // semantics as home_strip_tapped — never recorded server-side directly; the
   // union exists so the /api/events ingest cast type-checks.
   | "map_carousel_card_tapped"
-  | "map_callout_neighbor_stepped";
+  | "map_callout_neighbor_stepped"
+  // Session 186 — Vendor profile enrichment Arc 1 (D12 in
+  // docs/vendor-profile-enrichment-design.md). Server-side events fire inline
+  // from /api/vendor-avatar (POST + DELETE) + /api/vendor/profile PATCH when
+  // newly-filled enrichment fields are detected. vendor_social_tapped fires
+  // client-side from <AboutBoothSection> in Arc 2; included here defensively
+  // so the /api/events ingest cast type-checks once Arc 2 wires it.
+  | "vendor_profile_enriched"
+  | "vendor_avatar_uploaded"
+  | "vendor_avatar_removed"
+  | "vendor_social_tapped";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

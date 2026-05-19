@@ -63,6 +63,13 @@ const CLIENT_EVENT_TYPES = [
   // Carousel card tap + flanking-arrow neighbor-stepping on PinCallout.
   "map_carousel_card_tapped",
   "map_callout_neighbor_stepped",
+  // Session 186 — Vendor profile enrichment Arc 1 (D12 in
+  // docs/vendor-profile-enrichment-design.md). vendor_social_tapped fires
+  // client-side from <AboutBoothSection> in Arc 2 when a shopper taps a
+  // Facebook or Instagram bubble. The other three enrichment events
+  // (vendor_profile_enriched + vendor_avatar_*) fire server-side and don't
+  // ride this whitelist.
+  "vendor_social_tapped",
 ] as const;
 type ClientEventType = (typeof CLIENT_EVENT_TYPES)[number];
 

@@ -64,7 +64,7 @@ import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { PiLeafBold } from "react-icons/pi";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { getVendorsByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { isReviewMode } from "@/lib/reviewMode";
@@ -846,15 +846,12 @@ function MyBoothInner() {
             <BoothTitleBlock
               displayName={displayName}
               onPickerOpen={showPicker ? () => setPickerOpen(true) : undefined}
-              // Wave 1 Task 4 — vendor self-edit affordance. Arc 7.4.5
-              // (session 148) extends to admin impersonation for vendor-
-              // parity: admin viewing /my-shelf?vendor=<id> sees the same
-              // Pencil and uses the same vendor-mode EditBoothSheet (display
-              // _name only). /api/vendor/profile PATCH allows admin bypass
-              // on ownership check + records acting_as_admin in audit event.
-              // /shelves EditBoothSheet remains the canonical 3-field admin
-              // edit surface (mall + booth_number + display_name).
-              onEditName={() => setShowEditSheet(true)}
+              // Session 186 — onEditName retired from BoothTitleBlock; vendor
+              // self-edit moves to the "Edit Booth" CTA button stacked under
+              // "Add a Find" below MallBlock. Admin impersonation still works
+              // — /my-shelf?vendor=<id> Pencil → vendor mode of EditBoothSheet
+              // via the new CTA button (Arc 7.4.5 admin-vendor parity at
+              // session 148 preserved unchanged).
             />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
 
@@ -878,7 +875,22 @@ function MyBoothInner() {
                 primitive retires from this surface (still exported from
                 BoothPage.tsx; no other consumer remaining after this
                 commit — opportunistic dead-code follow-up). */}
-            <div style={{ padding: "22px 22px 12px" }}>
+            {/* Session 186 — Edit Booth promoted from inline Pencil bubble
+                (Wave 1 Task 4, session 91) to a stacked secondary CTA
+                under Add a Find. The pencil affordance no longer scaled
+                visually once EditBoothSheet grew to 7 fields (commit 5
+                Vendor identity section); a CTA-shaped button reads as an
+                explicit entry point rather than a tiny adornment.
+                Vocabulary: Add a Find = primary (filled greenMid);
+                Edit Booth = secondary (cream-bg + 1px greenMid border +
+                greenMid text). Same shape + same chrome family for
+                visual continuity; color reversal differentiates primary
+                vs secondary action per session 157 engagement-tier
+                color-reversal pattern. Diverges from D13 of
+                docs/vendor-profile-enrichment-design.md which kept the
+                inline pencil — sub-decision per
+                `feedback_within_session_design_record_reversal`. */}
+            <div style={{ padding: "22px 22px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
               <button
                 type="button"
                 onClick={openAddSheet}
@@ -906,6 +918,34 @@ function MyBoothInner() {
               >
                 <PiCamera size={14} aria-hidden />
                 Add a Find
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEditSheet(true)}
+                aria-label="Edit Booth"
+                style={{
+                  width:          "100%",
+                  background:     v2.surface.card,
+                  color:          v2.accent.greenMid,
+                  border:         `1px solid ${v2.accent.greenMid}`,
+                  borderRadius:   10,
+                  padding:        9,
+                  fontFamily:     FONT_INTER,
+                  fontSize:       11,
+                  fontWeight:     600,
+                  letterSpacing:  "0.12em",
+                  textTransform:  "uppercase",
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  gap:            8,
+                  cursor:         "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  transition:     "background 0.15s ease",
+                }}
+              >
+                <Pencil size={13} strokeWidth={1.8} aria-hidden />
+                Edit Booth
               </button>
             </div>
 

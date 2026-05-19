@@ -81,7 +81,14 @@ export type ClientEventType =
   // map_callout_neighbor_stepped fires when the flanking chevron bubbles on
   // PinCallout step the peeked mall to the prev/next in carousel sort order.
   | "map_carousel_card_tapped"
-  | "map_callout_neighbor_stepped";
+  | "map_callout_neighbor_stepped"
+  // ── Session 186 — Vendor profile enrichment Arc 1 (D12 in
+  // docs/vendor-profile-enrichment-design.md). Only vendor_social_tapped fires
+  // client-side (from <AboutBoothSection> in Arc 2 — when shopper taps a
+  // Facebook or Instagram icon bubble). The other three enrichment events
+  // (vendor_profile_enriched + vendor_avatar_uploaded + vendor_avatar_removed)
+  // fire server-side via recordEvent and don't ride this path.
+  | "vendor_social_tapped";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
