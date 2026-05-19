@@ -400,9 +400,24 @@ export function BoothHero({
 
 export function BoothTitleBlock({
   displayName,
+  avatarUrl,
   onPickerOpen,
 }: {
   displayName: string;
+  /**
+   * Session 187 — vendor profile enrichment Arc 2.1 per D3+D4 (Frame C
+   * picked). When set, the BoothTitleBlock renders as a compound
+   * left-aligned lockup: 40px circular avatar + text stack (eyebrow +
+   * display_name h1) right of it. When null/undefined, renders the
+   * existing centered layout — vendors who haven't uploaded an avatar
+   * see no change from the current page (D4 avatar fallback).
+   *
+   * Why Frame C wins: avatar becomes a compound visual element with the
+   * existing booth identity, not a separate beat. Vendor identity
+   * inlines with booth identity rather than competing for visual
+   * hierarchy.
+   */
+  avatarUrl?: string | null;
   /**
    * Q-002 (session 57) — when the consumer is `/my-shelf` for a vendor with
    * more than one claimed booth, passing this callback turns the 32px
@@ -424,22 +439,35 @@ export function BoothTitleBlock({
   // sub-decision per `feedback_within_session_design_record_reversal`.
 }) {
   const hasPicker = !!onPickerOpen;
-  return (
-    // Session 128 (refinement design D6): outer wrapper textAlign:"center"
-    // + flex row justifyContent:"center" centers the eyebrow, h1, picker
-    // chevron, and edit pencil as a group. Was left-aligned in prod; David
-    // flagged during V1 review. Affects both /shelf/[slug] and /my-shelf
-    // via this shared primitive.
-    // v2 Arc 4.4 — typography + colors migrate. Eyebrow + vendor name +
-    // picker chevron all become FONT_CORMORANT (single editorial serif
-    // family per system-level Q1 (a) lock).
-    // Review Board Finding 4 (session 169) — top padding 36 → 16 (canonical
-    // space.s16). David: "Position the a curated booth text higher so it
-    // sits closer to the hero image but with some padding." Shared primitive
-    // — change inherits across /shelf/[slug] + /my-shelf consumers.
-    // Session 186 — Edit Pencil bubble retired; vendor self-edit moves
-    // to the "Edit Booth" CTA button under "Add a Find" on /my-shelf.
-    <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
+  const hasAvatar = !!avatarUrl;
+
+  // Session 128 (refinement design D6): outer wrapper textAlign:"center"
+  // + flex row justifyContent:"center" centers the eyebrow, h1, picker
+  // chevron, and edit pencil as a group. Was left-aligned in prod; David
+  // flagged during V1 review. Affects both /shelf/[slug] and /my-shelf
+  // via this shared primitive.
+  // v2 Arc 4.4 — typography + colors migrate. Eyebrow + vendor name +
+  // picker chevron all become FONT_CORMORANT (single editorial serif
+  // family per system-level Q1 (a) lock).
+  // Review Board Finding 4 (session 169) — top padding 36 → 16 (canonical
+  // space.s16). David: "Position the a curated booth text higher so it
+  // sits closer to the hero image but with some padding." Shared primitive
+  // — change inherits across /shelf/[slug] + /my-shelf consumers.
+  // Session 186 — Edit Pencil bubble retired; vendor self-edit moves
+  // to the "Edit Booth" CTA button under "Add a Find" on /my-shelf.
+  //
+  // Session 187 — vendor profile enrichment Arc 2.1 per D3+D4. Text-stack
+  // (eyebrow + h1/button-with-chevron) is the same content in both
+  // layouts; outer wrapper changes:
+  //   - hasAvatar=false → existing textAlign:center wrapper (verbatim
+  //     preserved; current booths see no change per D4).
+  //   - hasAvatar=true  → flex row (justify-content:center,
+  //     align-items:center, gap:12) with 40px circular avatar inline left
+  //     of left-aligned text stack. Compound lockup centered on page;
+  //     text reads left-internally so avatar right-edge + text left-edge
+  //     form clean vertical seam.
+  const titleStack = (
+    <>
       <div
         style={{
           fontFamily: FONT_CORMORANT,
@@ -481,7 +509,7 @@ export function BoothTitleBlock({
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            textAlign: "center",
+            textAlign: "inherit",
             WebkitTapHighlightColor: "transparent",
           }}
         >
@@ -528,6 +556,58 @@ export function BoothTitleBlock({
           {displayName}
         </h1>
       )}
+    </>
+  );
+
+  if (hasAvatar) {
+    return (
+      // Compound left-aligned lockup per D3. Flex row centers the
+      // composition on the page; text-stack is text-align:left so the
+      // avatar right-edge + text left-edge form a clean vertical seam.
+      // 40px avatar + 12px gap + text stack fits comfortably on iPhone SE
+      // (375px) with the existing 22px horizontal padding (R5 from
+      // risk register: tested in implementation).
+      <div
+        style={{
+          padding: "16px 22px 4px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={avatarUrl as string}
+          alt=""
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            objectFit: "cover",
+            flexShrink: 0,
+            // D3 — 2px v2.surface.warm border + subtle box-shadow for
+            // lift off the page bg (also v2.surface.warm). The border
+            // creates a quiet halo around the avatar that reads as a
+            // photographic "matted" element, not a flat-painted glyph.
+            border: `2px solid ${v2.surface.warm}`,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.10)",
+            // Fallback bg so broken-image src doesn't paint a hard
+            // transparent square; matches the matte color so the
+            // halo reads consistently while the image loads.
+            background: v2.surface.warm,
+          }}
+        />
+        <div style={{ textAlign: "left", minWidth: 0 }}>{titleStack}</div>
+      </div>
+    );
+  }
+
+  // D4 fallback — existing centered layout (avatar absent OR null).
+  // Vendors who haven't uploaded an avatar see no change from prior page.
+  return (
+    <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
+      {titleStack}
     </div>
   );
 }
