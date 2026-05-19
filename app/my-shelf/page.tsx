@@ -86,6 +86,7 @@ import AddFindSheet from "@/components/AddFindSheet";
 import BoothPickerSheet from "@/components/BoothPickerSheet";
 import ShareSheet from "@/components/ShareSheet";
 import EditBoothSheet from "@/components/EditBoothSheet";
+import AboutBoothSection from "@/components/AboutBoothSection";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -843,8 +844,23 @@ function MyBoothInner() {
               onShare={canShare ? () => setShareOpen(true) : undefined}
             />
 
+            {/* Session 187 — vendor profile enrichment Arc 2.4 per
+                docs/vendor-profile-enrichment-design.md D3+D4+D9+D10+D11.
+                Feature-parity wiring with /shelf/[slug]: vendors see
+                their own avatar lockup + about section + directions on
+                their self-preview surface (/my-shelf) so they edit and
+                review against the same canonical shape shoppers see.
+                Sub-decision per
+                feedback_schema_forced_deviation_not_design_reversal ✅
+                Promoted at session 141 — Arc 2 sequencing in design
+                record only lists /shelf/[slug] composition (2.4) but
+                D11 component contract is surface-agnostic; /my-shelf
+                inclusion is the natural feature-parity default since
+                BoothTitleBlock + MallBlock are already shared primitives
+                between both surfaces. */}
             <BoothTitleBlock
               displayName={displayName}
+              avatarUrl={activeVendor?.avatar_url ?? null}
               onPickerOpen={showPicker ? () => setPickerOpen(true) : undefined}
               // Session 186 — onEditName retired from BoothTitleBlock; vendor
               // self-edit moves to the "Edit Booth" CTA button stacked under
@@ -853,7 +869,20 @@ function MyBoothInner() {
               // via the new CTA button (Arc 7.4.5 admin-vendor parity at
               // session 148 preserved unchanged).
             />
-            <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
+            {activeVendor && (
+              <AboutBoothSection
+                bio={activeVendor.bio}
+                facebookUrl={activeVendor.facebook_url}
+                instagramUrl={activeVendor.instagram_url}
+                vendorSlug={activeVendor.slug}
+              />
+            )}
+            <MallBlock
+              mallName={mallName}
+              mallCity={mallCity}
+              address={address}
+              directionsText={activeVendor?.directions_text ?? null}
+            />
 
             {/* Session 169 round 3 — Review Board Finding 1: "Add a Find"
                 primary CTA promotes from the dashed-tile slot in WindowView
