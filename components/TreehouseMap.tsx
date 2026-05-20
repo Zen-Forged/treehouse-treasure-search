@@ -386,6 +386,21 @@ export default function TreehouseMap({
   React.useEffect(() => { onPinTapRef.current = onPinTap; }, [onPinTap]);
   React.useEffect(() => { onMapTapRef.current = onMapTap; }, [onMapTap]);
 
+  // Read peekedMallId via ref inside scope-driven flyTo so the offset
+  // application doesn't add peekedMallId to that effect's deps (which
+  // would re-fire the long 800ms flyTo on every carousel/pin tap —
+  // wrong, since in-page peek changes are handled by the peek-state
+  // easeTo at line ~613). Race-fix for /map mount with pre-selected
+  // scope: auto-peek effect (page.tsx:133) sets peekedMallId = mallId
+  // synchronously after mount; both the scope-driven flyTo (800ms, no
+  // offset) and peek-state easeTo (320ms, with MAP_PEEK_OFFSET_Y) fire
+  // on first mount; the longer flyTo lands last and overrides the
+  // easeTo, putting the pin at viewport center where the callout
+  // obscures it. Applying the offset to flyTo when peeked === selected
+  // makes both animations land at the same target — race is no-op.
+  const peekedMallIdRef = React.useRef<string | null>(peekedMallId);
+  peekedMallIdRef.current = peekedMallId;
+
   // ── Map init ──────────────────────────────────────────────────────────
   React.useEffect(() => {
     if (!containerRef.current) return;
@@ -691,10 +706,19 @@ export default function TreehouseMap({
       }
       const mall = malls.find((m) => m.id === selectedMallId);
       if (!mall || mall.latitude == null || mall.longitude == null) return;
+      // Conditional offset: when the auto-peek scenario is active
+      // (peekedMallIdRef matches selectedMallId on mount), apply
+      // MAP_PEEK_OFFSET_Y so the pin lands lower in viewport with room
+      // for the callout above — matches the in-page peek behavior
+      // (carousel/pin/arrow tap) shape. When scope changes without an
+      // active peek for the same mall, keep centering behavior unchanged.
+      const offset: [number, number] =
+        peekedMallIdRef.current === selectedMallId ? [0, MAP_PEEK_OFFSET_Y] : [0, 0];
       map.flyTo({
         center:   [Number(mall.longitude), Number(mall.latitude)],
         zoom:     12.5,
         duration: 800,
+        offset,
       });
     };
 
