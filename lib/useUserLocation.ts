@@ -113,7 +113,28 @@ function cachedToState(cached: CachedLocation): UserLocation {
   };
 }
 
-export function useUserLocation(): UserLocation {
+export interface UseUserLocationOptions {
+  /**
+   * Whether this consumer should TRIGGER the geolocation prompt if no
+   * cached fix exists. Defaults to true (backwards-compat — every prior
+   * call site auto-prompts on first mount).
+   *
+   * Session 190 — David iPhone QA F3 on Vercel preview: "Don't request
+   * map access when saved is selected. Allow it to silently fail, with
+   * the understanding that distance will not be displayed." Pass false
+   * from Saved-context surfaces (/flagged) so the page mounts in
+   * subscribe-only mode — hook still receives cross-instance broadcasts
+   * (if user granted on /map elsewhere, distance shows on Saved from
+   * cache), but never triggers a fresh getCurrentPosition call from
+   * this consumer. When status stays "idle" → milesFromUser returns
+   * null → DistancePill renders nothing per its null-miles fallback +
+   * the per-mall distance sort falls back to save-recency desc.
+   */
+  requestPermission?: boolean;
+}
+
+export function useUserLocation(options?: UseUserLocationOptions): UserLocation {
+  const requestPermission = options?.requestPermission ?? true;
   const [state, setState] = useState<UserLocation>(INITIAL);
 
   // Review Board (session 150) — fixture-substitute. Hydrate "granted"
@@ -156,12 +177,14 @@ export function useUserLocation(): UserLocation {
     window.addEventListener(LOCATION_EVENT, onLocationEvent);
     window.addEventListener("storage", onStorage);
 
-    // (3) If cache is stale or missing AND no other instance is currently
-    // prompting, fire the geolocation request. Module-scope `inFlight`
-    // coalesces concurrent first-mounts.
+    // (3) If cache is stale or missing AND this consumer opted into
+    // prompting AND no other instance is currently prompting, fire the
+    // geolocation request. Module-scope `inFlight` coalesces concurrent
+    // first-mounts; the requestPermission gate lets Saved-context
+    // surfaces subscribe without triggering a fresh prompt.
     const needsPrompt = !cached || !isFresh(cached);
 
-    if (needsPrompt && !inFlight) {
+    if (needsPrompt && requestPermission && !inFlight) {
       if (typeof navigator === "undefined" || !navigator.geolocation) {
         const next: UserLocation = {
           status: "unavailable", lat: null, lng: null, capturedAt: Date.now(),

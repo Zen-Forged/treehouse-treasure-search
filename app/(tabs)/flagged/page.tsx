@@ -171,7 +171,17 @@ export default function FlaggedPage() {
   const shopperAuth                            = useShopperAuth();
   const saves                                  = useShopperSaves();
   const findsFound                             = useShopperFindsFound();
-  const userLoc                                = useUserLocation();
+  // Session 190 — David iPhone QA F3 on Vercel preview: "Don't request
+  // map access when saved is selected. Allow it to silently fail, with
+  // the understanding that distance will not be displayed." Pass
+  // requestPermission: false so Saved page mounts in subscribe-only
+  // mode. If user granted permission earlier on /map (or any other
+  // requesting surface), cached state propagates via storage + custom
+  // event broadcasts and distance shows on Saved per-mall cards as
+  // before. If no prior grant, userLoc stays idle → milesFromUser
+  // returns null → DistancePill renders nothing → sort below falls
+  // back to save-recency desc.
+  const userLoc                                = useUserLocation({ requestPermission: false });
   const router                                 = useRouter();
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
