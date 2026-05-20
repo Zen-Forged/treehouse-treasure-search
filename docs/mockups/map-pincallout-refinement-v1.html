@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Map PinCallout refinement — V1 (Frame B vertical-stacked symmetric · thumb-size + density axis)</title>
+<style>
+  :root {
+    /* v2 palette */
+    --bg-main:        #E6DECF;
+    --surface-warm:   #FBF6EA;
+    --surface-card:   #FFFCF5;
+    --text-primary:   #2A1A0A;
+    --text-secondary: #5C5246;
+    --text-muted:     #8B7E66;
+    --accent-green:   #285C3C;
+    --green-soft:     rgba(31, 74, 49, 0.10);
+    --border-light:   rgba(42, 26, 10, 0.10);
+    --border-medium:  rgba(42, 26, 10, 0.18);
+    --postit:         #fbf3df;
+    --basemap-cream:  #F4EEDC;
+    --basemap-land:   #ECE3CC;
+    --basemap-water:  #DDD3B8;
+    --pin-green:      #285C3C;
+
+    /* Distance pill colors (matches session 158 DistancePill primitive) */
+    --pill-bg:        rgba(46,86,57,0.10);
+    --pill-ink:       var(--accent-green);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-main);
+    color: var(--text-primary);
+    padding: 40px 16px;
+    min-height: 100vh;
+  }
+  .doc-header {
+    max-width: 1700px;
+    margin: 0 auto 32px;
+    padding: 24px;
+    background: var(--surface-warm);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .doc-header h1 {
+    font-family: 'Cormorant Garamond', 'Lora', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 26px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  .doc-header .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .doc-header .locks {
+    background: var(--postit);
+    border-left: 3px solid var(--accent-green);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .doc-header .locks strong { color: var(--text-primary); font-weight: 600; }
+
+  .frames-row {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 1700px;
+    margin: 0 auto;
+  }
+  .frame {
+    background: var(--surface-warm);
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+    overflow: hidden;
+    width: 390px;
+    flex-shrink: 0;
+  }
+  .frame-label {
+    padding: 14px 18px;
+    background: var(--surface-warm);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .frame-label .greek {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--accent-green);
+    margin-bottom: 4px;
+  }
+  .frame-label .desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  /* Map stage — emulates Mapbox cream cartography under the callout. */
+  .map-stage {
+    position: relative;
+    height: 520px;
+    background:
+      radial-gradient(circle at 60% 35%, var(--basemap-water) 0%, var(--basemap-water) 6%, transparent 7%),
+      linear-gradient(180deg, var(--basemap-cream) 0%, var(--basemap-land) 100%);
+    overflow: hidden;
+  }
+  /* Decorative road lines */
+  .map-stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(95deg, transparent 30%, rgba(42,26,10,0.06) 30.4%, transparent 30.6%),
+      linear-gradient(170deg, transparent 60%, rgba(42,26,10,0.05) 60.3%, transparent 60.5%);
+    pointer-events: none;
+  }
+  .leaf-pin {
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    border: 2px solid var(--surface-card);
+    box-shadow: 0 2px 6px rgba(42,26,10,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+  .leaf-pin svg { width: 20px; height: 20px; color: var(--surface-card); }
+
+  /* Callout container — flanking arrows + card body. */
+  .callout-wrap {
+    position: absolute;
+    left: 50%;
+    bottom: 60px;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .arrow-bubble {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 4px 12px rgba(42,26,10,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .arrow-bubble svg { width: 14px; height: 14px; }
+  .arrow-bubble.disabled { opacity: 0.35; }
+
+  .callout-card {
+    position: relative;
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(42,26,10,0.20);
+    text-align: center;
+  }
+  .callout-card::after {
+    /* Tail pointing down at pin */
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -7px;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 8px solid var(--surface-card);
+    filter: drop-shadow(0 1px 1px rgba(42,26,10,0.18));
+  }
+
+  .thumb {
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--bg-main);
+    border: 1.5px solid var(--surface-card);
+    box-shadow: 0 2px 6px rgba(42,26,10,0.15);
+    margin: 0 auto;
+    background-image: url('https://images.unsplash.com/photo-1567361808960-dec9cb578182?w=200&h=200&fit=crop');
+    background-size: cover;
+    background-position: center;
+  }
+  .distance-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    background: var(--pill-bg);
+    border-radius: 999px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--pill-ink);
+  }
+  .mall-name {
+    font-family: 'Cormorant Garamond', 'Lora', Georgia, serif;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .fresh-finds {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-weight: 600;
+    color: var(--accent-green);
+    letter-spacing: 0.01em;
+  }
+  .fresh-finds svg { color: var(--accent-green); }
+
+  .cta-row {
+    display: flex;
+    gap: 6px;
+  }
+  .cta-btn {
+    flex: 1;
+    height: 28px;
+    border-radius: 6px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px solid var(--accent-green);
+  }
+  .cta-directions {
+    background: transparent;
+    color: var(--accent-green);
+  }
+  .cta-explore {
+    background: var(--accent-green);
+    color: var(--surface-card);
+  }
+
+  /* ─── FRAME α — Compact ─────────────────────────────────── */
+  .frame-a .callout-card { min-width: 200px; padding: 10px 14px 12px; }
+  .frame-a .thumb { width: 40px; height: 40px; }
+  .frame-a .stack { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-top: 8px; }
+  .frame-a .mall-name { font-size: 17px; }
+  .frame-a .fresh-finds { font-size: 13px; }
+  .frame-a .fresh-finds svg { width: 14px; height: 14px; }
+  .frame-a .cta-row { margin-top: 10px; }
+
+  /* ─── FRAME β — Balanced ────────────────────────────────── */
+  .frame-b .callout-card { min-width: 230px; padding: 14px 18px 14px; }
+  .frame-b .thumb { width: 56px; height: 56px; }
+  .frame-b .stack { display: flex; flex-direction: column; align-items: center; gap: 7px; margin-top: 10px; }
+  .frame-b .mall-name { font-size: 20px; }
+  .frame-b .fresh-finds { font-size: 14px; }
+  .frame-b .fresh-finds svg { width: 15px; height: 15px; }
+  .frame-b .cta-row { margin-top: 12px; }
+
+  /* ─── FRAME γ — Hero thumb ──────────────────────────────── */
+  .frame-c .callout-card { min-width: 250px; padding: 18px 22px 16px; }
+  .frame-c .thumb { width: 76px; height: 76px; }
+  .frame-c .stack { display: flex; flex-direction: column; align-items: center; gap: 9px; margin-top: 12px; }
+  .frame-c .mall-name { font-size: 22px; }
+  .frame-c .fresh-finds { font-size: 15px; }
+  .frame-c .fresh-finds svg { width: 16px; height: 16px; }
+  .frame-c .cta-row { margin-top: 14px; }
+
+  /* ─── REFERENCE — current production shape ──────────────── */
+  .frame-current .callout-card {
+    min-width: 240px;
+    padding: 8px 10px 10px;
+    text-align: left;
+  }
+  .frame-current .top-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .frame-current .thumb-rect {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    background-image: url('https://images.unsplash.com/photo-1567361808960-dec9cb578182?w=200&h=200&fit=crop');
+    background-size: cover;
+    background-position: center;
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-light);
+  }
+  .frame-current .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+  .frame-current .mall-name-h {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .frame-current .stat-line {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent-green);
+  }
+  .frame-current .stat-line .num {
+    font-family: 'Times New Roman', serif;
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  /* Trade-off matrix */
+  .matrix {
+    max-width: 1700px;
+    margin: 32px auto 0;
+    background: var(--surface-warm);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .matrix h2 {
+    padding: 18px 22px;
+    background: var(--surface-warm);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 20px;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-light);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead { background: var(--postit); }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: top;
+  }
+  th { font-weight: 600; color: var(--text-primary); }
+  td { color: var(--text-secondary); line-height: 1.5; }
+  td:first-child { font-weight: 600; color: var(--text-primary); width: 180px; }
+
+  .note {
+    max-width: 1700px;
+    margin: 24px auto 0;
+    padding: 16px 22px;
+    background: var(--postit);
+    border-left: 3px solid var(--accent-green);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .note strong { color: var(--text-primary); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>Map PinCallout refinement — V1 (Frame B vertical-stacked symmetric)</h1>
+  <p class="subtitle">
+    Iterating on the selected-pin floating callout per session-188 6-finding bundle.
+    Frame B picked at scope: restructure from horizontal (thumb-left + text-right)
+    to vertical-stacked symmetric with all components centered. V1 spans the
+    thumb-size + spacing-density axis within that locked composition.
+  </p>
+  <div class="locks">
+    <strong>Locked at scope:</strong>
+    Composition top→bottom = circle thumb · distance pill · mall name · PiLeaf + "X fresh finds" · CTA row ·
+    everything horizontally centered ·
+    fresh-finds count scoped to a 30-day window (server-side filter on posts.published_at) ·
+    "X fresh finds" line uses sans-serif (FONT_INTER) at a larger size than the current Cormorant 14 italic ·
+    PiLeaf glyph (outline weight, matches session 153 + system canonical) sits left of the count number ·
+    DistancePill primitive retained verbatim (cream-bg pill matches /find/[id], /shelf/[slug], /flagged) ·
+    flanking neighbor-step arrows + tail pointing at pin preserved from current shape.
+    <br><br>
+    <strong>Open axes V1 spans:</strong> thumb size (40 / 56 / 76 px) · density (tight / balanced / breathy)
+    — these covary because thumb size sets the visual weight that density rhythm has to balance.
+  </div>
+</div>
+
+<div class="frames-row">
+
+  <!-- FRAME α -->
+  <div class="frame frame-a">
+    <div class="frame-label">
+      <div class="greek">Frame α — Compact</div>
+      <div class="desc">40 px thumb · tight 5/8/10 px spacing rhythm · 17 px name · 13 px fresh-finds. Smallest visual footprint; reads as a tight informational badge.</div>
+    </div>
+    <div class="map-stage">
+      <div class="leaf-pin" style="left: calc(50% - 19px); bottom: 24px;">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+      </div>
+      <div class="callout-wrap">
+        <div class="arrow-bubble">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="callout-card">
+          <div class="thumb"></div>
+          <div class="stack">
+            <span class="distance-pill">2.7 mi</span>
+            <div class="mall-name">America's Antique Mall</div>
+            <span class="fresh-finds">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+              18 fresh finds
+            </span>
+          </div>
+          <div class="cta-row">
+            <div class="cta-btn cta-directions">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              Directions
+            </div>
+            <div class="cta-btn cta-explore">Explore</div>
+          </div>
+        </div>
+        <div class="arrow-bubble">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME β -->
+  <div class="frame frame-b">
+    <div class="frame-label">
+      <div class="greek">Frame β — Balanced (Recommended)</div>
+      <div class="desc">56 px thumb · 7/10/12 px spacing · 20 px name · 14 px fresh-finds. Thumb has enough presence to read as identity not decoration; name + count balance below.</div>
+    </div>
+    <div class="map-stage">
+      <div class="leaf-pin" style="left: calc(50% - 19px); bottom: 24px;">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+      </div>
+      <div class="callout-wrap">
+        <div class="arrow-bubble">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="callout-card">
+          <div class="thumb"></div>
+          <div class="stack">
+            <span class="distance-pill">2.7 mi</span>
+            <div class="mall-name">America's Antique Mall</div>
+            <span class="fresh-finds">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+              18 fresh finds
+            </span>
+          </div>
+          <div class="cta-row">
+            <div class="cta-btn cta-directions">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              Directions
+            </div>
+            <div class="cta-btn cta-explore">Explore</div>
+          </div>
+        </div>
+        <div class="arrow-bubble">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME γ -->
+  <div class="frame frame-c">
+    <div class="frame-label">
+      <div class="greek">Frame γ — Hero thumb</div>
+      <div class="desc">76 px thumb · 9/12/14 px spacing · 22 px name · 15 px fresh-finds. Thumb dominates and signals "this is a place"; reads as a postcard floating on the pin.</div>
+    </div>
+    <div class="map-stage">
+      <div class="leaf-pin" style="left: calc(50% - 19px); bottom: 24px;">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+      </div>
+      <div class="callout-wrap">
+        <div class="arrow-bubble">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="callout-card">
+          <div class="thumb"></div>
+          <div class="stack">
+            <span class="distance-pill">2.7 mi</span>
+            <div class="mall-name">America's Antique Mall</div>
+            <span class="fresh-finds">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+              18 fresh finds
+            </span>
+          </div>
+          <div class="cta-row">
+            <div class="cta-btn cta-directions">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              Directions
+            </div>
+            <div class="cta-btn cta-explore">Explore</div>
+          </div>
+        </div>
+        <div class="arrow-bubble">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REFERENCE — current production -->
+  <div class="frame frame-current">
+    <div class="frame-label">
+      <div class="greek" style="color: var(--text-muted);">Reference — current (Frame A horizontal)</div>
+      <div class="desc">For comparison. 36 px rect-rounded thumb on LEFT · vertical text-stack on right · DistancePill inline with name · "18 fresh finds" italic Cormorant 14 green.</div>
+    </div>
+    <div class="map-stage">
+      <div class="leaf-pin" style="left: calc(50% - 19px); bottom: 24px;">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+      </div>
+      <div class="callout-wrap">
+        <div class="arrow-bubble">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="callout-card">
+          <div class="top-row">
+            <div class="thumb-rect"></div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+              <div class="header-row">
+                <div class="mall-name-h">America's Antique Mall</div>
+                <span class="distance-pill">2.7 mi</span>
+              </div>
+              <div class="stat-line">
+                <span class="num">18</span> fresh finds
+              </div>
+            </div>
+          </div>
+          <div class="cta-row">
+            <div class="cta-btn cta-directions">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              Directions
+            </div>
+            <div class="cta-btn cta-explore">Explore</div>
+          </div>
+        </div>
+        <div class="arrow-bubble">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="matrix">
+  <h2>Trade-off matrix — α vs β vs γ</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Axis</th>
+        <th>Frame α — Compact</th>
+        <th>Frame β — Balanced (Rec)</th>
+        <th>Frame γ — Hero thumb</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Thumb diameter</td>
+        <td>40 px</td>
+        <td>56 px</td>
+        <td>76 px</td>
+      </tr>
+      <tr>
+        <td>Callout min-width</td>
+        <td>200 px</td>
+        <td>230 px</td>
+        <td>250 px</td>
+      </tr>
+      <tr>
+        <td>Mall name size</td>
+        <td>17 px Cormorant 600</td>
+        <td>20 px Cormorant 600</td>
+        <td>22 px Cormorant 600</td>
+      </tr>
+      <tr>
+        <td>Fresh-finds size</td>
+        <td>13 px Inter 600</td>
+        <td>14 px Inter 600</td>
+        <td>15 px Inter 600</td>
+      </tr>
+      <tr>
+        <td>Spacing rhythm</td>
+        <td>Tight (5 / 8 / 10 px)</td>
+        <td>Balanced (7 / 10 / 12 px)</td>
+        <td>Breathy (9 / 12 / 14 px)</td>
+      </tr>
+      <tr>
+        <td>Visual weight feel</td>
+        <td>Informational badge — reads as quick context for the pin</td>
+        <td>Identity card — thumb has enough presence to read as "this is a place"</td>
+        <td>Postcard floating on the pin — thumb dominates, place-as-identity</td>
+      </tr>
+      <tr>
+        <td>Map real estate consumed</td>
+        <td>Smallest — least content occluded</td>
+        <td>Medium — comfortable on iPhone 12+ portrait</td>
+        <td>Largest — tight on iPhone SE / SE2 (375 px wide)</td>
+      </tr>
+      <tr>
+        <td>Risk on tight devices</td>
+        <td>None</td>
+        <td>None expected</td>
+        <td>Possible edge cut-off near map sides when pin is near east/west bound</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note">
+  <strong>Sub-decisions to lock at pick:</strong>
+  <br><br>
+  <strong>Q1 — Number font inside "X fresh finds":</strong> David's verbatim spec says "change to a sans serif font we already use" for the whole line.
+  This means the count number (currently FONT_NUMERAL — Times New Roman serif per project canonical from session 75) becomes Inter sans alongside the label.
+  Sans-throughout is what V1 mocks above. If you want to preserve FONT_NUMERAL for the count number (project rule: "letters → IM Fell/Cormorant/sans · numbers → FONT_NUMERAL") + only swap the label to Inter, flag at frame pick and I'll dial it in implementation.
+  <br><br>
+  <strong>Q2 — Number weight inside fresh finds:</strong> Inter 600 mocked across all frames. Could push to 700 if "18" reads light against the heavier serif name above. Easy iPhone-QA dial post-ship.
+  <br><br>
+  <strong>Q3 — 30-day window starting point:</strong> Filter on <code>posts.published_at >= NOW() - INTERVAL '30 days'</code> at the server query. Count drifts over time as posts age past the window. No `is_fresh` column infrastructure needed. Existing <code>findCount</code> semantic shifts from "all available finds" to "available finds posted in last 30 days" — single-consumer audit confirms this is safe (only PinCallout reads it).
+  <br><br>
+  <strong>Q4 — Fixture mirror:</strong> <code>lib/fixtures.ts</code> <code>getFixtureMallStats</code> mirrors MallStats for Review Board. Will need to extend with same 30-day semantic when filter ships — handled inline as a scope-adjacent byproduct.
+</div>
+
+</body>
+</html>
