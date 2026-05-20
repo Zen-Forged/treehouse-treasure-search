@@ -164,6 +164,31 @@ import { useUserRole } from "@/lib/useUserRole";
 //                        canonical entry path; nav stays Map-less
 //   - Session 179:       Map RESTORED as peer entry path alongside chip
 //
+// Session 190 — David iPhone QA on Vercel preview v0.189.0 + 716507f
+// F2: "Reorder where Map lives on Nav Bar. Place it between Explore and
+// Saved."
+//
+//   Before (session 179):
+//     Guest / shopper / admin:  Explore · Saved · Map            (3-tab)
+//     Vendor:                   Explore · Saved · Map · Booth    (4-tab)
+//   After (session 190):
+//     Guest / shopper / admin:  Explore · Map · Saved            (3-tab)
+//     Vendor:                   Explore · Map · Saved · Booth    (4-tab)
+//
+// 9th iteration of R10 D1; bounded reversal of session 121 R18 +
+// session 179's "Saved holds the stable 2nd position" rule per
+// feedback_surface_locked_design_reversals ✅ Promoted. Prior reasoning
+// quoted verbatim before drafting: session 114 R1 re-walk locked "Saved
+// holds the stable 2nd position so muscle memory transfers across role
+// transitions (sign-in / sign-out flips the rightmost slot, not the
+// middle)"; session 121 R18 preserved that: "Map slides in BETWEEN
+// Saved and the role-tab rather than displacing it." Session 190 flips
+// the slot-2 anchor from Saved to Map. The new muscle-memory anchor:
+// Map is always second-from-left, Saved sits at the more central
+// position adjacent to the role-specialty slot when present. Session
+// 114's "rightmost = role-specialty when present" rule preserved
+// (Booth/Admin stays rightmost when vendor/admin authed).
+//
 // Reversals stack explicitly per feedback_surface_locked_design_reversals
 // ✅ Promoted (~80+ cumulative firings across project). David QA
 // reasoning for restoring: chip is muscle-memory dependent (user has to
@@ -226,26 +251,28 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       key: "home", label: "Explore", href: "/",
       icon: <MdOutlineExplore size={22} />,
     },
-    {
-      key: "flagged", label: "Saved", href: "/flagged",
-      icon: <PiLeafBold size={21} />, badge: true,
-    },
-    // Session 179 — Map tab restored at position 3 (after Saved) per
-    // David QA Interp 2 design reversal. PiMapPinBold (outlined, weight-bold
-    // family matching PiLeafBold + PiStorefrontBold; reserves PiMapPinFill
-    // for primary-glyph identity contexts like the chip + /find/[id]
-    // cartographic eyebrow per session 178 paired-glyph vocabulary).
+    // Session 190 — Map moves from slot 3 (post-Saved) to slot 2
+    // (between Explore and Saved) per David iPhone QA on Vercel
+    // preview v0.189.0 + 716507f F2: "Reorder where Map lives on Nav
+    // Bar. Place it between Explore and Saved." Bounded reversal of
+    // session 179's slot-3 placement; full reversal trail captured in
+    // the file-top R10 D1 history block. PiMapPinBold glyph unchanged
+    // (outlined weight-bold family; PiMapPinFill reserved for primary-
+    // glyph identity contexts per session 178 paired-glyph vocabulary).
     {
       key: "map", label: "Map", href: "/map",
       icon: <PiMapPinBold size={22} />,
     },
+    {
+      key: "flagged", label: "Saved", href: "/flagged",
+      icon: <PiLeafBold size={21} />, badge: true,
+    },
     // Session 160 — Booth at rightmost slot per session-114 "rightmost =
     // role-specialty when present" rule. /my-shelf already passes
     // active="booth" (carryover from session 113); active highlight
-    // works without changes to consumer surfaces. Session 179 — slot
-    // shifts from position 3 to position 4 since Map now occupies slot
-    // 3; rightmost-when-present rule preserved (Booth still rightmost
-    // when vendor authed; Map sits between Saved + Booth).
+    // works without changes to consumer surfaces. Session 190 — Booth
+    // stays rightmost; only Map/Saved swap. Position shifts from slot
+    // 4 to slot 4 (unchanged when Map at slot 2 + Saved at slot 3).
     ...(showBoothTab ? [{
       key: "booth" as NavTab,
       label: "Booth",
