@@ -8,6 +8,44 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.189.0] — 2026-05-20
+
+### Session 189 — Admin Vendors tab Path B reversal: Force-unlink persistence + auto-claim vocab-drift fix + Relink end-to-end retirement — 3 runtime commits + 1 close
+
+3 runtime commits + 1 close. David's calibration question on the admin "Relink to request" affordance crystallized a 62-session-deferred decision (session 127 Path A vs B) into a coherent 3-arc ship that retires 634 LOC of obsolete substrate while shipping a clean structural answer to "vendor wants to switch emails." Cost-shape triage fired at 3 levels per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132: META-level interpretation triage (A bug fix / B replace with re-invite / C both — David picked B); sub-design call on Force-unlink scope (a always denies / b checkbox / c two buttons — David picked a); format-level cost shape (Shape α no design record / Shape β short design record — David picked α). The Shape α pick is itself meaningful — well-shaped narrow behavioral changes can ship clean via commit-body audit trail when operating-system rules (smallest→largest + audit-first + single-coupled-commit + dead-code-cleanup-as-byproduct + surface-locked-design-reversals) compose to cover the documentation needs.
+
+The session's load-bearing operational beat: audit-first via `feedback_visibility_tools_first` ✅ Promoted surfaced a 66-session-deep latent vocab-drift bug as adjacent finding during Arc 2 scoping. `app/api/setup/lookup-vendor/route.ts:97` filtered `.neq("status", "rejected")` but session 136's Requests tab redesign canonicalized the terminal status as `"denied"` via migration 021. The string `"rejected"` no longer exists in canonical vocabulary — `"denied"` was silently passing through auto-claim. Without this fix, Arc 2's Path B persistence wouldn't actually persist — auto-claim would still pick up denied requests on next sign-in. Sub-pattern of `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted-via-memory at session 141: vocab-drift surfaced as adjacent finding, NOT design reversal. Captured as Arc 1 in commit body explicitly. 22nd cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at Arc 1 commit boundary (html2canvas-pro `npm install` resolved for session 152's parked component).
+
+David's Vercel preview QA clean. Spotted one legacy operational issue post-ship: "Yesterday's Memories shows Disconnected status... I may just need a query for supabase to clear out that issue." — exactly the legacy pre-Path-B disconnected fossil flagged in Arc 3 commit body. Pre-session-189 force-unlinks left matchingRequest = approved while user_id = null; rows show DISCONNECTED with no actionable affordance. Shipped 3 SQL queries (VERIFY read-only + TARGETED single-row + BULK BACKFILL all-legacy) mirroring the live diagnosis predicate exactly. David ran the bulk backfill against production → "All clear." 5 legacy fossils cleaned in one paste. Legacy fossil retirement carry from Arc 3 closes same session.
+
+### Changed
+
+- **`app/api/setup/lookup-vendor/route.ts`** — auto-claim status filter `.neq("status", "rejected")` → `.in("status", ["pending", "approved"])`. Positive-list filter prevents future status additions from silently expanding claim-eligible set. Section-header comment updated to canonical "claim-eligible (status pending|approved)."
+- **`app/api/admin/vendors/route.ts` `handleForceUnlink`** — Path B persistence. After clearing `vendors.user_id`, queries matching `vendor_request` (mall_id + booth_number + status pending|approved + most-recent-first) and updates to `status="denied"` with auto-generated `denial_reason: "Replaced by admin force-unlink — booth re-invited to new email"`. Fires `vendor_request_denied` event (session 136 D12 payload shape) with `source: "force_unlink"` discriminator. `vendor_force_unlinked_by_admin` payload extended with `denied_request_id` for audit traceability. Deny is best-effort (logs but doesn't fail the request).
+- **`components/admin/ForceUnlinkConfirm.tsx`** — copy reflects Path B semantics: *"won't be able to re-claim this booth on next sign-in"* + *"Invite a new vendor email to attach this booth to a different account"* + italic muted footnote *"Reversible by re-approving the denied request from the Requests tab."* File-top comment block updated to mark Path B semantics canonical.
+- **`components/admin/VendorsTab.tsx`** — `PILL.disconnected` + `rowStatus` comments updated to mark "disconnected" as LEGACY pre-Path-B state. `showInvite` gate predicate UNCHANGED — Path B's deny-side-effect means post-force-unlink rows naturally surface Invite because diagnosis matchingRequest predicate excludes denied requests. Comment block updates clarify the new state-transition narrative.
+- **`package.json` version bumped 0.188.0 → 0.189.0** per Shape A versioning protocol.
+
+### Removed
+
+- **`components/admin/RelinkSheet.tsx`** — deleted entirely (-256 LOC). Sessions 124-126 substrate retire as scope-adjacent dead-code per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — Relink affordance retires because the canonical "vendor wants to switch emails" flow is now Force-unlink → Invite, not Force-unlink → Relink.
+- **`app/api/admin/vendors/route.ts handleRelink` function** + Arc 4 D14 section comment (-154 LOC). PATCH body discriminator `action?: "force-unlink" | "relink"` → `action?: "force-unlink"`; `vendorRequestId` body field dropped; action-dispatch `"relink"` branch + validation drop; PATCH section comment updated (two actions instead of three). Retirement reasoning preserved in section comment block as audit trail.
+- **`components/admin/VendorsTab.tsx`** Relink UI gate — `RelinkSheet` import + `relinkingVendor` useState + RelinkSheet modal render block + `onRelink` prop chain (VendorRowAccordion + ActionRow) + `showRelink` predicate + ActionRow "Relink to request" button all drop. Action row simplified to (conditional Invite) + Edit + (conditional Force-unlink) + Delete.
+
+### Fixed
+
+- **Session 127 Path A vs B 62-session-deferred decision** — finally lands as Path B (persistent force-unlink). Path A (today): Force-unlink soft-resets, auto-claim re-attaches prior email on next sign-in — was the wrong mental model for "vendor switches emails." Path B: Force-unlink also denies matching request → terminates prior email's claim path → admin invites new email → vendor claims with new email. Surfaced per `feedback_surface_locked_design_reversals` ✅ Promoted with prior reasoning quoted before drafting code.
+- **66-session-deep auto-claim vocab-drift bug** — pre-existing latent bug from session 123 ship surfaced as adjacent finding during Arc 2 audit. Auto-claim filter excluded only `"rejected"` (no requests today have this status post-session-136) but did NOT exclude `"denied"` (the canonical terminal status). Fix is load-bearing for Path B persistence to actually persist.
+- **80-session-deep silent-regression-byproduct (Yesterday's Memories + 4 other legacy disconnected rows)** — pre-Path-B force-unlinks left rows in `DISCONNECTED` state with no actionable affordance. SQL backfill query mirrors live diagnosis predicate; 5 fossils cleaned in single paste against production at session 189 close.
+
+### Deprecated
+
+- *(none)*
+
+[v0.189.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.189.0
+
+---
+
 ## [v0.188.0] — 2026-05-20
 
 ### Session 188 — Map PinCallout refinement: Frame B vertical-stacked symmetric reshape + 30-day freshness window + silent-regression repair + offset/padding dial chain — 9 runtime commits + 1 design-to-Ready + 1 close

@@ -1,6 +1,11 @@
 // components/admin/ForceUnlinkConfirm.tsx
 // Arc 4 D13 — confirmation modal for clearing vendors.user_id without
-// deleting the row. Reversible action — single tap, no type-to-confirm.
+// deleting the row. Session 189 Path B semantics: ALSO denies the matching
+// vendor_request so the prior email can't auto-claim back on next sign-in.
+// Reversible by re-approving the denied request from the Requests tab.
+// Single tap, no type-to-confirm (the deny is a configurable side effect of
+// the unlink, not a destructive primary action).
+//
 // Mounted from VendorsTab when admin taps "Force-unlink" on an expanded
 // row whose user_id != null.
 //
@@ -82,13 +87,17 @@ export default function ForceUnlinkConfirm({
         >
           {linked_user_email ? (
             <>
-              <strong>{linked_user_email}</strong> will lose /my-shelf access.
+              <strong>{linked_user_email}</strong> will lose /my-shelf access and won&apos;t be able to re-claim this booth on next sign-in.
             </>
           ) : (
-            <>The linked user will lose /my-shelf access.</>
+            <>The linked user will lose /my-shelf access and won&apos;t be able to re-claim this booth on next sign-in.</>
           )}
           <br />
-          The booth row stays in place — re-link a different user via Relink, or delete the booth entirely.
+          The booth row stays in place — Invite a new vendor email to attach this booth to a different account.
+          <br />
+          <span style={{ color: v1.inkMuted, fontSize: 12, fontStyle: "italic" }}>
+            Reversible by re-approving the denied request from the Requests tab.
+          </span>
         </div>
 
         {error && (

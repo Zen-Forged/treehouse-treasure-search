@@ -23,7 +23,7 @@
 // Flow (revised — no short-circuit):
 //   1. requireAuth — bearer token validated by service-role client
 //   2. Fetch the user's currently-linked vendor rows (may be empty, 1, or N)
-//   3. Fetch all non-rejected vendor_requests for lower(email) == lower(user.email)
+//   3. Fetch claim-eligible vendor_requests (status pending|approved) for lower(email) == lower(user.email)
 //   4. For each request, find an unlinked vendor row matching
 //      (mall_id, booth_number, user_id IS NULL). Collect matches.
 //   5. If any matches → single UPDATE ... IN (ids) guarded by
@@ -89,12 +89,17 @@ export async function POST(req: Request) {
 
   const alreadyLinkedCount = alreadyLinked?.length ?? 0;
 
-  // ── 2. Fetch all non-rejected vendor_requests for this email ──────────────
+  // ── 2. Fetch claim-eligible vendor_requests for this email ────────────────
+  // Positive-list status filter (pending|approved) — session 189 vocab-drift fix.
+  // The prior .neq("status", "rejected") predates session 136's canonical
+  // "denied" terminal status, so denied requests were silently passing
+  // through auto-claim. Required for force-unlink (Arc 2) to persist:
+  // marking a request "denied" must terminate the email's claim path.
   const { data: requests, error: requestErr } = await auth.service
     .from("vendor_requests")
     .select("mall_id, booth_number")
     .eq("email", email)
-    .neq("status", "rejected");
+    .in("status", ["pending", "approved"]);
 
   if (requestErr) {
     console.error("[setup/lookup-vendor] request fetch:", requestErr.message);
