@@ -8,6 +8,59 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.190.0] — 2026-05-20
+
+### Session 190 — Mapbox preview token HITL closes 36-session carry + /map auto-peek flyTo offset fix + 4-finding iPhone-QA dial bundle — 5 runtime commits + 1 close
+
+5 runtime commits + 1 close + 1 empty preview-trigger commit. David picked the long-deferred 🖐️ HITL Mapbox preview-only token setup at session open: 5-step block-by-block walkthrough closes 36-session carry (156→189) permanently — separate preview-only token provisioned in Mapbox Studio with no URL restrictions + set as `NEXT_PUBLIC_MAPBOX_TOKEN` in Vercel Preview-scope env; production token URL-restricted untouched. David asked "is step 4 required?" mid-flow → trade-off surfaced + David picked Path B (fresh-branch verification via empty trigger commit `a20abe3`). David walked Vercel preview clean: warm-cream cartography on /map + static map snapshots on /find/[id] both render. Carry retires permanently.
+
+Post-token-setup iPhone QA on preview surfaced /map auto-peek pin position bug (pre-existing from session 188 auto-peek substrate). Race between two TreehouseMap useEffects on mount when /map opens with pre-selected mall scope: scope-driven flyTo (800ms, NO offset) vs peek-state easeTo (320ms, WITH MAP_PEEK_OFFSET_Y). Longer animation lands last and overrides; pin lands at viewport center where callout obscures pin. Audit-first localized in 1 round per `feedback_visibility_tools_first` ✅ Promoted. Ref-based conditional offset shipped: apply `MAP_PEEK_OFFSET_Y` to scope-driven flyTo when `peekedMallIdRef.current === selectedMallId`. Both animations land at same target — race is no-op. 23rd cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate` ✅ Promoted at session 161 (html2canvas-pro on flyTo fix; `npm install` resolved in 1 round-trip).
+
+David walked /map ship clean + surfaced 4-finding refinement bundle in single message. Per `feedback_user_clarification_restate_interpretation` ✅ Promoted, restated each before drafting; cost-shape triage per finding per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132. 4 commits sequenced smallest→largest per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 (5 firings this session); build clean at every commit boundary; tsc + `npm run build` clean across all 48 routes.
+
+The session's structural beat: **preview-QA-gate-immediately-repays-setup-cost** (NEW Tech Rule candidate) — F2 surfaced a pre-existing bug latent since session 188 that only became visible because the preview QA loop newly worked, validating that operational-substrate investments repay their cost immediately when the next disciplined QA loop fires.
+
+### Added
+
+- **`lib/useUserLocation.ts`** — `{ requestPermission?: boolean }` option (default `true` backwards-compat). When false, hook subscribes to broadcasts but doesn't trigger fresh `getCurrentPosition`. Reusable pattern for any permission-prompt-prompting hook.
+- **`components/TreehouseMap.tsx`** — `peekedMallIdRef` for scope-driven flyTo conditional offset. Reads peekedMallId via ref inside flyTo effect so peek changes don't add it to that effect's deps (which would re-fire the long 800ms animation on every carousel tap).
+- **`components/BottomNav.tsx`** — file-top R10 D1 iteration log session 190 entry with before/after table for next refinement's reference. 9th cumulative iteration of R10 D1.
+
+### Changed
+
+- **`components/TreehouseMap.tsx`** — scope-driven flyTo now applies `offset: [0, MAP_PEEK_OFFSET_Y]` when `peekedMallIdRef.current === selectedMallId` (auto-peek scenario only). When scope changes without active peek for same mall, centering behavior unchanged.
+- **`components/MapCarousel.tsx`** — outer fixed wrapper bg constraint: `left: 0, right: 0` + `margin: "0 auto"` + `maxWidth: 430` so wrapper clips to mobile column on desktop / landscape iPhone. Transform stays free for framer-motion `y` entrance animation. On mobile-narrow viewports (≤430), behavior unchanged.
+- **`app/(tabs)/flagged/page.tsx`** — page-level `useUserLocation()` call updated to pass `{ requestPermission: false }`. Saved page subscribes without triggering prompt. If user granted permission earlier on /map (or any other requesting surface), cached state propagates via storage + custom event broadcasts; distance shows on Saved per-mall cards. Otherwise status stays `idle` → milesFromUser returns null → DistancePill renders nothing → sort falls back to save-recency desc.
+- **`components/BottomNav.tsx` badge geometry** — bounded revision of session 157 Review Board Profile #1 verbatim spec (`top: 0, right: -2, minWidth: 24, height: 22, borderRadius: 20, fontSize: 13`) → canonical iOS/Android corner-bubble pattern (`top: -5, right: -7, minWidth: 16, height: 16, borderRadius: 999, fontSize: 10, boxShadow: 0 0 0 1.5px v2.surface.input`). Negative offsets push badge outside icon row so it floats over icon's top-right corner. Pill stays pill-shaped via minWidth + horizontal padding (extends for 2-3 digit counts). 1.5px cream halo matches nav-bar surface for clean edge separation. Reversal trail preserved in in-file comment block per `feedback_surface_locked_design_reversals` ✅ Promoted.
+- **`components/BottomNav.tsx` tab array** — bounded reversal of session 121 R18 + session 179 "Saved holds slot 2" rule. Before: `Explore · Saved · Map · [Booth]`. After: `Explore · Map · Saved · [Booth]`. 9th iteration of R10 D1. New muscle-memory anchor: Map is always second-from-left; Saved sits at the more central position adjacent to the role-specialty slot when present. Session 114's "rightmost = role-specialty when present" rule preserved (Booth/Admin stays rightmost when vendor/admin authed). Prior reasoning quoted verbatim in commit body before drafting.
+- **`package.json` version bumped 0.189.0 → 0.190.0** per Shape A versioning protocol.
+
+### Fixed
+
+- **/map pre-selected mall pin position bug** — pre-existing from session 188 auto-peek substrate; race between scope-driven 800ms flyTo (no offset) vs peek-state 320ms easeTo (with offset). Longer animation wins → pin centered → callout obscures pin. Shape A surgical conditional offset via ref shipped as `716507f`.
+- **MapCarousel bg bleed past 430px mobile column** — on desktop / landscape iPhone, outer fixed wrapper bg flowed into negative-space gutters beside the centered (tabs)/ mobile column. Now clipped via margin auto + maxWidth.
+- **Saved page geolocation prompt fires unwanted** — `useUserLocation` auto-prompted on first mount across all consumers per R17 silent-first-mount design. Saved-context (`/flagged`) now opt-outs via `{ requestPermission: false }`. NOT a R17 D3 design reversal — D3 specified silent prompt for FEATURE surfaces (/map + /find/[id] + /shelf); Saved per-mall distance was added in session 121 R18 without re-evaluating the prompt mechanic. This commit closes that gap with an opt-out, not by overturning the canonical D3 default — sub-pattern of `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted-via-memory at session 141.
+
+### Removed
+
+- *(none — all changes are additive or in-place revisions)*
+
+### Deprecated
+
+- *(none)*
+
+### iPhone QA watch-items
+
+- **Pre-selected mall pin position** — open /map from Home with Crestwood/Middletown/America's pre-selected; confirm pin lands lower with callout above (matches Image 2 from session 190 chat, not Image 1).
+- **Carousel bg on desktop / landscape iPhone** — confirm carousel bg clips to the 430px centered column instead of bleeding into gutters.
+- **Saved silent geolocation** — sign out + open /flagged cold (no prior /map visit); confirm no location-permission prompt fires; per-mall distance pills hide silently; mall order falls back to save-recency.
+- **Saved badge corner-pill** — confirm corner-pill sits at top-right of leaf icon (overlapping), with cream halo separating it from icon + nav bg.
+- **BottomNav tab order** — confirm new order Explore → Map → Saved → [Booth if vendor]; role-specialty slot still rightmost.
+
+[v0.190.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.190.0
+
+---
+
 ## [v0.189.0] — 2026-05-20
 
 ### Session 189 — Admin Vendors tab Path B reversal: Force-unlink persistence + auto-claim vocab-drift fix + Relink end-to-end retirement — 3 runtime commits + 1 close
