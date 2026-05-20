@@ -888,9 +888,18 @@ export default function EditBoothSheet({
                 <Link
                   href="/contact"
                   style={{
-                    color:                v2.text.muted,
+                    // Session 191 post-QA REC-1 fix — bumped v2.text.muted
+                    // (#A39686, ~2.85:1 on cream) → v2.text.secondary
+                    // (#5C5246, ~6.9:1) to pass WCAG AA 4.5:1 for
+                    // interactive text <18px. Same offender class session
+                    // 174 contrast audit Shape β closed (baseline 99→0);
+                    // session 191 C4 reintroduced it on a brand-new
+                    // affordance the audit didn't enumerate. Matches
+                    // session 153 /login footer Link canonical exactly.
+                    color:                v2.text.secondary,
                     textDecoration:       "underline",
                     textDecorationStyle:  "dotted",
+                    textDecorationColor:  v2.text.secondary,
                     textUnderlineOffset:  3,
                   }}
                 >
