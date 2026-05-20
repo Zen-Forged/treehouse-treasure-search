@@ -22,12 +22,23 @@
 //     mall coords missing), the CTA row falls back to the original
 //     whole-callout-as-button + chevron behavior so the peek-state
 //     interaction still works without R17 wiring.
+//
+// Session 188 (D1-D20) — vertical-stacked symmetric composition reshape
+// (Frame β picked at design pass). See docs/map-pincallout-refinement-design.md.
+// Composition top→bottom: 56px circle thumb · DistancePill · mall name ·
+// PiLeaf + "X fresh finds" split-treatment line · CTA row. Everything
+// horizontally centered. Two bounded reversals surfaced in commit body:
+// R-1 reverses session-107 R10 D26 horizontal composition; R-2 reverses
+// session-158 D-bundle "fresh finds" Cormorant italic 14 → split treatment
+// (FONT_NUMERAL number + FONT_INTER label) per session-75 canonical
+// reaffirmed at 2026-05 ui-tokenization-audit. No-coords fallback branch
+// adopts same reshape minus DistancePill minus CTA row (D18).
 
 "use client";
 
 import * as React from "react";
-import { ChevronRight, MapPin, Navigation } from "lucide-react";
-import { PiCaretLeft, PiCaretRight } from "react-icons/pi";
+import { MapPin, Navigation } from "lucide-react";
+import { PiCaretLeft, PiCaretRight, PiLeaf } from "react-icons/pi";
 import { v1, v2, FONT_NUMERAL, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { navigateUrl } from "@/lib/mapsDeepLink";
 import { track } from "@/lib/clientEvents";
@@ -92,82 +103,80 @@ export default function PinCallout({
     window.location.href = navigateUrl(Number(mall.latitude), Number(mall.longitude));
   };
 
-  // Pill renders nothing on null miles, but the layout still reserves the
-  // header row so the name doesn't shift between the prompting / granted /
-  // denied states. The pill is visually optional.
-  const headerRow = (
-    <div
-      style={{
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "space-between",
-        gap:            8,
-        minWidth:       0,
-      }}
-    >
-      <div
-        style={{
-          fontFamily:   FONT_CORMORANT,
-          fontWeight:   600,
-          fontSize:     18,
-          color:        v2.text.primary,
-          lineHeight:   1.3,
-          minWidth:     0,
-          overflow:     "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace:   "nowrap",
-          flex:         1,
-        }}
-      >
-        {mall.name}
-      </div>
-      <DistancePill miles={miles} />
-    </div>
-  );
-
   // Session 123 — body shifts from discovery vocabulary ("X booths · Y finds")
   // to find→found vocabulary ("X saved finds"). When the user has saves at
   // this mall, the callout names what's WAITING there for them. When they
   // have none, fallback to total finds count preserves discovery affordance
   // for first-time / new-mall scenarios per Q2(b) of the session-123 scope
   // questions.
+  //
+  // Session 188 (D11) — non-saved findCount semantic is now "available finds
+  // posted in last 30 days at mall" (data-layer filter in getMallStatsByMallId
+  // per Arc 1.1). Lattice semantic preserved: saved = user's, fresh = mall
+  // inventory in the freshness window.
   const usesSaved = savedCount != null && savedCount > 0;
   const statCount = usesSaved ? savedCount : findCount;
-  // Session 158 dial B — non-saved copy "X finds" → "X fresh finds" per QA.
-  // Saved-state copy unchanged ("X saved finds") since David didn't flag it
-  // and the lattice semantic (saved = user's, fresh = mall inventory) holds.
-  // Dial F — stat label color v2.text.muted → v2.accent.green so the entire
-  // statline reads in the brand green (number + label visually unified).
   const statLabel = usesSaved ? "saved finds" : "fresh finds";
+
+  // Session 188 (D9 + D10) — vertical-stacked split-treatment stat line.
+  // PiLeaf outline prefix · FONT_NUMERAL count number (session-75 canonical
+  // for numeric stamps, reaffirmed at 2026-05 ui-tokenization-audit) ·
+  // FONT_INTER sans label (David's verbatim "sans serif font we already use").
+  // Both v2.accent.green. Reuses MallScopeHeader split-treatment pattern per
+  // session 75 D5. BOUNDED REVERSAL of session-158 Cormorant italic 14 line.
   const statLine = (
     <div
       style={{
-        fontFamily: FONT_CORMORANT,
-        fontStyle:  "italic",
-        fontSize:   14,
-        fontWeight: 700,
-        color:      v2.accent.green,
-        lineHeight: 1.3,
+        display:     "inline-flex",
+        alignItems:  "center",
+        gap:         6,
+        color:       v2.accent.green,
+        lineHeight:  1.3,
       }}
     >
-      <span style={{ fontFamily: FONT_NUMERAL, color: v2.accent.green, fontStyle: "normal", fontWeight: 700 }}>
+      <PiLeaf size={15} color={v2.accent.green} aria-hidden="true" />
+      <span style={{ fontFamily: FONT_NUMERAL, fontWeight: 700, fontSize: 14 }}>
         {statCount}
       </span>
-      {" "}
-      {statLabel}
+      <span style={{ fontFamily: FONT_INTER, fontWeight: 600, fontSize: 14, letterSpacing: "0.01em" }}>
+        {statLabel}
+      </span>
     </div>
   );
 
+  // Session 188 (D8) — centered mall name. Right-aligned ellipsis truncation
+  // retires; centered allows 2-line wrap naturally when long names exceed
+  // callout width.
+  const mallNameRow = (
+    <div
+      style={{
+        fontFamily: FONT_CORMORANT,
+        fontWeight: 600,
+        fontSize:   20,
+        color:      v2.text.primary,
+        lineHeight: 1.3,
+        textAlign:  "center",
+        maxWidth:   "100%",
+      }}
+    >
+      {mall.name}
+    </div>
+  );
+
+  // Session 188 (D4 + D5 + D6) — 56px circle thumb. Hero image fills via
+  // objectFit cover; MapPin glyph fallback at 18px when null. 1.5px outline
+  // + soft shadow for lift against v2.surface.card callout body.
   const heroThumb = (
     <div
       style={{
-        width:        36,
-        height:       36,
+        width:        56,
+        height:       56,
         flexShrink:   0,
-        borderRadius: 6,
+        borderRadius: "50%",
         overflow:     "hidden",
         background:   v2.bg.main,
-        border:       `1px solid ${v2.border.light}`,
+        border:       `1.5px solid ${v2.surface.card}`,
+        boxShadow:    "0 2px 6px rgba(42,26,10,0.15)",
         display:      "flex",
         alignItems:   "center",
         justifyContent: "center",
@@ -181,12 +190,15 @@ export default function PinCallout({
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       ) : (
-        <MapPin size={16} strokeWidth={1.8} color={v2.text.secondary} aria-hidden="true" />
+        <MapPin size={18} strokeWidth={1.8} color={v2.text.secondary} aria-hidden="true" />
       )}
     </div>
   );
 
-  // ── Original whole-callout-as-button shape (fallback when no coords). ──
+  // ── No-coords fallback (D18) — same vertical-stacked reshape minus
+  // DistancePill minus CTA row. Whole-card-as-button preserves the
+  // commit affordance. Defensive coverage for future-malls / transient
+  // race conditions; all production malls have coords today. ──
   if (!hasCoords) {
     return (
       <div
@@ -205,34 +217,33 @@ export default function PinCallout({
           style={{
             position:        "relative",
             display:         "flex",
+            flexDirection:   "column",
             alignItems:      "center",
             gap:             10,
             minWidth:        200,
-            padding:         "8px 12px 8px 10px",
+            padding:         "14px 18px 14px",
             background:      v2.surface.card,
             border:          `1px solid ${v2.border.light}`,
-            borderRadius:    10,
+            borderRadius:    12,
             boxShadow:       v1.shadow.callout,
             cursor:          "pointer",
-            textAlign:       "left",
+            textAlign:       "center",
             pointerEvents:   "auto",
             WebkitTapHighlightColor: "transparent",
           }}
         >
           {heroThumb}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-            {headerRow}
-            {statLine}
-          </div>
-          <ChevronRight size={14} strokeWidth={2.0} color={v2.accent.green} aria-hidden="true" />
+          {mallNameRow}
+          {statLine}
           <Tail />
         </button>
       </div>
     );
   }
 
-  // ── R17 Arc 2 shape — header + stat + Browse/Go CTA row. ──
-  // Session 158 Arc 3 — outer wrapper now hosts a horizontal flex row so the
+  // ── R17 Arc 2 shape — vertical-stacked symmetric (session 188 D1-D17). ──
+  // Composition top→bottom: thumb · DistancePill · mall name · stat line · CTA row.
+  // Session 158 Arc 3 — outer wrapper hosts a horizontal flex row so the
   // optional prev/next chevron bubbles can flank the callout (D9). Total
   // width centers on the pin via translate(-50%) regardless of arrows.
   return (
@@ -261,32 +272,30 @@ export default function PinCallout({
           position:      "relative",
           display:       "flex",
           flexDirection: "column",
-          gap:           6,
-          minWidth:      240,
-          padding:       "8px 10px 10px",
+          alignItems:    "center",
+          gap:           7,
+          minWidth:      230,
+          padding:       "14px 18px",
           background:    v2.surface.card,
           border:        `1px solid ${v2.border.light}`,
-          borderRadius:  10,
+          borderRadius:  12,
           boxShadow:     v1.shadow.callout,
-          textAlign:     "left",
+          textAlign:     "center",
           pointerEvents: "auto",
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        {/* Top: thumb + (header row + stat) */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {heroThumb}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-            {headerRow}
-            {statLine}
-          </div>
-        </div>
+        {/* D2 vertical stack: thumb · pill · name · stat · CTA */}
+        {heroThumb}
+        <DistancePill miles={miles} />
+        {mallNameRow}
+        <div style={{ marginTop: 2 }}>{statLine}</div>
 
         {/* Mini CTA row — Directions (outline, native maps deep-link) + Explore
             (filled green, scope-commit). Dial G reversed the original order +
             swapped styles so Explore reads as the primary action (filled +
             rightmost), matching the canonical primary-CTA position. */}
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, width: "100%", marginTop: 5 }}>
           <button
             type="button"
             onClick={onGo}
