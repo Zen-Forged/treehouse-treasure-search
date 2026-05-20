@@ -121,18 +121,18 @@ function tenMilesInPixels(zoom: number, lat: number): number {
 // (element center ≈ pin - 62 ≈ container center; clearance ≥ 120px Pro
 // Max / ≥ 43px iPhone SE).
 //
-// Session 188 (Arc 1.3 iPhone-QA dial) — PinCallout vertical-stacked
+// Session 188 (Arc 1.3 iPhone-QA dial chain) — PinCallout vertical-stacked
 // symmetric reshape (Arc 1.2) grew callout from ~155px to ~205px tall.
 // Same +60 offset puts callout center ~55px ABOVE container center,
-// clipping at frame top on smaller viewports. Dial 1: 60 → 115 calibrated
-// math for callout center at container center; David iPhone QA on Vercel
-// preview reported still clipping. Dial 2: 115 → 140 ships verbatim per
-// David's pick. New math: pin lands 140px BELOW container vertical center,
-// callout (~205px + 12px tail = 217px) extends from (container_center - 77)
-// up to pin. Element CENTER ≈ pin - 109 ≈ container_center + 31 — callout
-// sits slightly below container center but well clear of top frame edge
-// (real-device measurements at iPhone QA take precedence over calculated
-// midpoint math).
+// clipping at frame top on smaller viewports. Dial chain across 3 rounds:
+//   Dial 1: 60 → 115 (calibrated midpoint math; David QA still clipping)
+//   Dial 2: 115 → 140 (David verbatim pick; David QA still clipping)
+//   Dial 3: 140 → 150 (David verbatim pick; settled)
+// Final math: pin lands 150px BELOW container vertical center; callout
+// (~205px + 12px tail = 217px) extends from (container_center - 67) up
+// to pin. Element CENTER ≈ pin - 109 ≈ container_center + 41 — callout
+// sits below container center but well clear of frame top edge. Real-
+// device measurements take precedence over calculated midpoint math.
 //
 // 2nd cumulative firing of NEW Tech Rule candidate from session 180 —
 // "Container-geometry change cascades to recalibrate Mapbox easeTo offset."
@@ -140,7 +140,7 @@ function tenMilesInPixels(zoom: number, lat: number): number {
 //
 // Mapbox offset convention: target center lands at
 // (container_center.x + x, container_center.y + y); negative Y = upward.
-const MAP_PEEK_OFFSET_Y = 140;
+const MAP_PEEK_OFFSET_Y = 150;
 
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
