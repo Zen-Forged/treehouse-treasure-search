@@ -474,31 +474,44 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               }}>
                 {tab.icon}
                 {showBadge && (
-                  // R10 session 107 — TNR numeral on the green pill per D4.
-                  // Pill geometry: session 89 baseline (20×20+, 10px radius);
-                  // session 154 bumped to 24×22+, 11px radius + font 12 → 13 so
-                  // 2-digit save counts ("47", "85") read literally instead of
-                  // clipping to "9+" (David's session-154 chrome ask, item 3).
-                  // Green bg, paper-cream stroke retired.
+                  // Session 190 — David iPhone QA F4 on Vercel preview:
+                  // "Update the Saved notification counter to read more
+                  // like most apps with the bubble in the corner of the
+                  // icon. For our use case it can be more pill shaped."
+                  // Bounded revision of session 157 Review Board Profile
+                  // #1 verbatim spec — the 22×24+ badge at top:0 right:-2
+                  // sat inline with the icon row (same 22px height as the
+                  // icon-row container) rather than overlapping the icon's
+                  // top-right corner like canonical iOS/Android badges.
+                  //
+                  // New: smaller 16×16+ bubble at top:-5 right:-7 — negative
+                  // offsets push it slightly outside the icon row so it
+                  // reads as floating over the icon's corner rather than
+                  // sitting beside it. Pill stays pill-shaped via
+                  // minWidth/paddingX (extends horizontally for 2-3 digit
+                  // counts without distorting the curve). The 1.5px halo
+                  // matches the nav bar surface (v2.surface.input) so the
+                  // badge edge reads cleanly against the icon underneath
+                  // and against the nav-bar bg, mirroring canonical badge
+                  // separation rings.
+                  //
+                  // Per feedback_surface_locked_design_reversals ✅ Promoted:
+                  // session 157 Review Board Profile #1 specified those
+                  // values verbatim for "centers more over the leaf icon
+                  // instead of floating off the top-right corner" — that
+                  // was a partial pass; today's QA flips the design back
+                  // toward the canonical floating-corner pattern. Cited
+                  // explicitly so the reversal trail is preserved.
                   <div style={{
-                    // Session 157 Review Board Profile #1 — David supplied
-                    // exact style spec verbatim: "position: absolute;
-                    // top: -0px; right: -2px; ... border-radius: 20px;".
-                    // Shipped as-given per feedback_user_provided_verbatim_values_ship_as_is.
-                    // Visual effect: badge centers more over the leaf icon
-                    // instead of floating off the top-right corner. Note —
-                    // borderRadius 20 caps at height/2 = 11 since the badge
-                    // height is 22, so the rendered curve is identical to
-                    // borderRadius 11; David's 20 captured verbatim
-                    // anyway for spec-fidelity.
-                    position: "absolute", top: 0, right: -2,
-                    minWidth: 24, height: 22, paddingLeft: 5, paddingRight: 5,
-                    borderRadius: 20, background: C.green,
+                    position: "absolute", top: -5, right: -7,
+                    minWidth: 16, height: 16, paddingLeft: 4, paddingRight: 4,
+                    borderRadius: 999, background: C.green,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontFamily: FONT_NUMERAL,
-                    fontSize: 13, fontWeight: 600, color: "#fff",
-                    lineHeight: 1, letterSpacing: "-0.01em",
+                    fontSize: 10, fontWeight: 700, color: "#fff",
+                    lineHeight: 1, letterSpacing: 0,
                     boxSizing: "border-box", whiteSpace: "nowrap",
+                    boxShadow: `0 0 0 1.5px ${v2.surface.input}`,
                   }}>
                     {badgeLabel(flaggedCount)}
                   </div>
