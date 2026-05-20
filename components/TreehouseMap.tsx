@@ -124,19 +124,23 @@ function tenMilesInPixels(zoom: number, lat: number): number {
 // Session 188 (Arc 1.3 iPhone-QA dial) — PinCallout vertical-stacked
 // symmetric reshape (Arc 1.2) grew callout from ~155px to ~205px tall.
 // Same +60 offset puts callout center ~55px ABOVE container center,
-// clipping at frame top on smaller viewports. Dial: 60 → 115. New math:
-// pin lands 115px BELOW container center, callout (renders ABOVE pin,
-// 205px + 12px tail offset = 217px) extends from (container_center - 102)
-// up to pin. Element CENTER ≈ pin - 109 ≈ container_center + 6, so the
-// callout reads visually centered in the bordered-window vertical space.
+// clipping at frame top on smaller viewports. Dial 1: 60 → 115 calibrated
+// math for callout center at container center; David iPhone QA on Vercel
+// preview reported still clipping. Dial 2: 115 → 140 ships verbatim per
+// David's pick. New math: pin lands 140px BELOW container vertical center,
+// callout (~205px + 12px tail = 217px) extends from (container_center - 77)
+// up to pin. Element CENTER ≈ pin - 109 ≈ container_center + 31 — callout
+// sits slightly below container center but well clear of top frame edge
+// (real-device measurements at iPhone QA take precedence over calculated
+// midpoint math).
 //
-// 2nd firing of NEW Tech Rule candidate from session 180 — "Container-
-// geometry change cascades to recalibrate Mapbox easeTo offset." Promotes
-// to memory on 2nd firing per feedback_tech_rule_promotion_destination.
+// 2nd cumulative firing of NEW Tech Rule candidate from session 180 —
+// "Container-geometry change cascades to recalibrate Mapbox easeTo offset."
+// Promotes to memory on 2nd firing per feedback_tech_rule_promotion_destination.
 //
 // Mapbox offset convention: target center lands at
 // (container_center.x + x, container_center.y + y); negative Y = upward.
-const MAP_PEEK_OFFSET_Y = 115;
+const MAP_PEEK_OFFSET_Y = 140;
 
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
