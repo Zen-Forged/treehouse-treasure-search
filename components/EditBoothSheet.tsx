@@ -17,7 +17,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Pencil, X, Loader as LoaderIcon, AlertTriangle, ImagePlus, Trash2, User as UserIcon } from "lucide-react";
+import { Pencil, X, Loader as LoaderIcon, AlertTriangle, Camera, Trash2, User as UserIcon } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { compressImage } from "@/lib/imageUpload";
 import { normalizeFacebookUrl, normalizeInstagramUrl } from "@/lib/socialUrls";
@@ -425,10 +425,14 @@ export default function EditBoothSheet({
             </button>
           </div>
 
-          {/* Booth photo — replace + remove. Shipped in both vendor and admin
-              modes (admin self-help and vendor self-edit converge on the same
-              affordance set). Hero ops fire immediately, NOT on Save — keeps
-              the change-feels-atomic mental model the on-photo bubbles had. */}
+          {/* Booth photo — replace + remove. Session 191 D4 — camera-bubble +
+              trash-corner overlay on photo retires the sibling-text-button
+              column (R2 reversal of session 186 D5 surfaced explicitly per
+              feedback_surface_locked_design_reversals ✅ Promoted). Photo
+              container itself is the tap target → file picker. Trash-corner
+              stops propagation so it doesn't double-fire the picker.
+              Shipped in both vendor and admin modes; hero ops fire
+              immediately, NOT on Save — atomic-change mental model. */}
           <div style={{ marginBottom: 16 }}>
             <label
               style={{
@@ -442,17 +446,53 @@ export default function EditBoothSheet({
             >
               Booth photo
             </label>
-            <div style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleHeroUpload(f);
+                e.target.value = "";
+              }}
+            />
+            <div
+              role="button"
+              tabIndex={heroBusy || submitting ? -1 : 0}
+              aria-label={heroUrl ? "Replace booth photo" : "Add booth photo"}
+              onClick={() => {
+                if (heroBusy || submitting) return;
+                fileInputRef.current?.click();
+              }}
+              onKeyDown={(e) => {
+                if (heroBusy || submitting) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              style={{
+                width: 84,
+                height: 84,
+                borderRadius: 8,
+                overflow: "visible", // overlays extend past corners
+                position: "relative",
+                background: heroUrl ? undefined : vendorHueBg(vendor.display_name ?? ""),
+                border: `1px solid ${v2.border.light}`,
+                cursor: heroBusy || submitting ? "default" : "pointer",
+                WebkitTapHighlightColor: "transparent",
+                outline: "none",
+              }}
+            >
+              {/* Photo content — clipped to rounded-8 via inner wrapper because
+                  outer overflow:visible is needed for overlay corners. */}
               <div
                 style={{
-                  flexShrink: 0,
-                  width: 84,
-                  height: 84,
+                  position: "absolute",
+                  inset: 0,
                   borderRadius: 8,
                   overflow: "hidden",
-                  position: "relative",
-                  background: heroUrl ? undefined : vendorHueBg(vendor.display_name ?? ""),
-                  border: `1px solid ${v2.border.light}`,
                 }}
               >
                 {heroUrl && (
@@ -486,69 +526,56 @@ export default function EditBoothSheet({
                   </div>
                 )}
               </div>
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleHeroUpload(f);
-                    e.target.value = "";
-                  }}
-                />
+              {/* Camera-bubble — bottom-right corner; explicit "this is editable" affordance. */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  bottom: -4,
+                  right: -4,
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: v2.surface.card,
+                  border: `1px solid ${v2.border.light}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  pointerEvents: "none", // container handles tap
+                }}
+              >
+                <Camera size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
+              </div>
+              {/* Trash-corner — top-right corner, renders only when photo present. */}
+              {heroUrl && (
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Remove booth photo"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHeroRemove();
+                  }}
                   disabled={!!heroBusy || submitting}
                   style={{
-                    flex: 1,
-                    padding: "0 12px",
-                    borderRadius: 8,
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
                     background: v2.surface.card,
                     border: `1px solid ${v2.border.light}`,
-                    fontFamily: FONT_INTER,
-                    fontSize: 13,
-                    color: v2.text.primary,
-                    cursor: heroBusy || submitting ? "default" : "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 6,
+                    cursor: heroBusy || submitting ? "default" : "pointer",
+                    padding: 0,
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  <ImagePlus size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
-                  {heroUrl ? "Replace photo" : "Add photo"}
+                  <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.accent.red }} />
                 </button>
-                {heroUrl && (
-                  <button
-                    type="button"
-                    onClick={handleHeroRemove}
-                    disabled={!!heroBusy || submitting}
-                    style={{
-                      flex: 1,
-                      padding: "0 12px",
-                      borderRadius: 8,
-                      background: "transparent",
-                      border: `1px solid ${v2.border.light}`,
-                      fontFamily: FONT_INTER,
-                      fontSize: 13,
-                      color: v2.text.secondary,
-                      cursor: heroBusy || submitting ? "default" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 6,
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
-                    Remove photo
-                  </button>
-                )}
-              </div>
+              )}
             </div>
             {heroError && (
               <div
@@ -682,11 +709,13 @@ export default function EditBoothSheet({
                   vendor form's marginBottom: 14 for ~24px total breath. */}
               <div style={{ height: 1, background: v2.border.light, margin: "10px 0 18px" }} />
 
-              {/* D5 — Profile photo (avatar). Mirrors hero photo's atomic
-                  Replace/Remove pattern; 96×96 circular crop preview to
-                  match the 40px /shelf compound-lockup render (Arc 2)
-                  while showing enough detail for the vendor to confirm
-                  framing pre-upload. compressImage(maxWidth=256) per D5. */}
+              {/* D5 — Profile photo (avatar). Session 191 D4 — camera-bubble +
+                  trash-corner overlay; same pattern as Booth photo (R2
+                  reversal of session 186 D5 sibling-text-buttons surfaced).
+                  96×96 circular crop preview matches the 40px /shelf
+                  compound-lockup render (Arc 2) while showing enough detail
+                  for the vendor to confirm framing pre-upload.
+                  compressImage(maxWidth=256) per session 186 D5. */}
               <div style={{ marginBottom: 16 }}>
                 <label
                   style={{
@@ -700,17 +729,53 @@ export default function EditBoothSheet({
                 >
                   Profile photo
                 </label>
-                <div style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
+                <input
+                  ref={avatarFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleAvatarUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+                <div
+                  role="button"
+                  tabIndex={avatarBusy || submitting ? -1 : 0}
+                  aria-label={avatarUrl ? "Replace profile photo" : "Add profile photo"}
+                  onClick={() => {
+                    if (avatarBusy || submitting) return;
+                    avatarFileInputRef.current?.click();
+                  }}
+                  onKeyDown={(e) => {
+                    if (avatarBusy || submitting) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      avatarFileInputRef.current?.click();
+                    }
+                  }}
+                  style={{
+                    width:        96,
+                    height:       96,
+                    borderRadius: "50%",
+                    overflow:     "visible", // overlays extend past corners
+                    position:     "relative",
+                    background:   avatarUrl ? undefined : v2.surface.warm,
+                    border:       `1px solid ${v2.border.light}`,
+                    cursor:       avatarBusy || submitting ? "default" : "pointer",
+                    WebkitTapHighlightColor: "transparent",
+                    outline:      "none",
+                  }}
+                >
+                  {/* Photo content — clipped to circle via inner wrapper because
+                      outer overflow:visible is needed for overlay corners. */}
                   <div
                     style={{
-                      flexShrink:   0,
-                      width:        96,
-                      height:       96,
+                      position:     "absolute",
+                      inset:        0,
                       borderRadius: "50%",
                       overflow:     "hidden",
-                      position:     "relative",
-                      background:   avatarUrl ? undefined : v2.surface.warm,
-                      border:       `1px solid ${v2.border.light}`,
                     }}
                   >
                     {avatarUrl ? (
@@ -728,10 +793,10 @@ export default function EditBoothSheet({
                     ) : (
                       <div
                         style={{
-                          position:      "absolute",
-                          inset:         0,
-                          display:       "flex",
-                          alignItems:    "center",
+                          position:       "absolute",
+                          inset:          0,
+                          display:        "flex",
+                          alignItems:     "center",
                           justifyContent: "center",
                         }}
                       >
@@ -756,69 +821,57 @@ export default function EditBoothSheet({
                       </div>
                     )}
                   </div>
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                    <input
-                      ref={avatarFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleAvatarUpload(f);
-                        e.target.value = "";
-                      }}
-                    />
+                  {/* Camera-bubble — bottom-right corner. Geometry mirrors Booth
+                      photo overlay exactly for cross-surface visual consistency. */}
+                  <div
+                    aria-hidden
+                    style={{
+                      position:      "absolute",
+                      bottom:        -4,
+                      right:         -4,
+                      width:         28,
+                      height:        28,
+                      borderRadius:  "50%",
+                      background:    v2.surface.card,
+                      border:        `1px solid ${v2.border.light}`,
+                      display:       "flex",
+                      alignItems:    "center",
+                      justifyContent: "center",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <Camera size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
+                  </div>
+                  {/* Trash-corner — top-right corner, renders only when avatar present. */}
+                  {avatarUrl && (
                     <button
                       type="button"
-                      onClick={() => avatarFileInputRef.current?.click()}
+                      aria-label="Remove profile photo"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAvatarRemove();
+                      }}
                       disabled={!!avatarBusy || submitting}
                       style={{
-                        flex:                  1,
-                        padding:               "0 12px",
-                        borderRadius:          8,
-                        background:            v2.surface.card,
-                        border:                `1px solid ${v2.border.light}`,
-                        fontFamily:            FONT_INTER,
-                        fontSize:              13,
-                        color:                 v2.text.primary,
-                        cursor:                avatarBusy || submitting ? "default" : "pointer",
-                        display:               "flex",
-                        alignItems:            "center",
-                        justifyContent:        "center",
-                        gap:                   6,
+                        position:      "absolute",
+                        top:           -4,
+                        right:         -4,
+                        width:         24,
+                        height:        24,
+                        borderRadius:  "50%",
+                        background:    v2.surface.card,
+                        border:        `1px solid ${v2.border.light}`,
+                        display:       "flex",
+                        alignItems:    "center",
+                        justifyContent: "center",
+                        cursor:        avatarBusy || submitting ? "default" : "pointer",
+                        padding:       0,
                         WebkitTapHighlightColor: "transparent",
                       }}
                     >
-                      <ImagePlus size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
-                      {avatarUrl ? "Replace photo" : "Add photo"}
+                      <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.accent.red }} />
                     </button>
-                    {avatarUrl && (
-                      <button
-                        type="button"
-                        onClick={handleAvatarRemove}
-                        disabled={!!avatarBusy || submitting}
-                        style={{
-                          flex:                  1,
-                          padding:               "0 12px",
-                          borderRadius:          8,
-                          background:            "transparent",
-                          border:                `1px solid ${v2.border.light}`,
-                          fontFamily:            FONT_INTER,
-                          fontSize:              13,
-                          color:                 v2.text.secondary,
-                          cursor:                avatarBusy || submitting ? "default" : "pointer",
-                          display:               "flex",
-                          alignItems:            "center",
-                          justifyContent:        "center",
-                          gap:                   6,
-                          WebkitTapHighlightColor: "transparent",
-                        }}
-                      >
-                        <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
-                        Remove photo
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
                 {avatarError && (
                   <div
