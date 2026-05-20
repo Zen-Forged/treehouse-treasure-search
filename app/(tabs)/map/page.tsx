@@ -73,7 +73,7 @@ import MapCarousel from "@/components/MapCarousel";
 // trigger" to "back-to-Explore navigation" (mirror of Home chip's
 // forward-to-/map role); MallSheet picker becomes dormant on /map.
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { getActiveMalls } from "@/lib/posts";
+import { getActiveMalls, getMallStatsByMallId, type MallStats } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import { v2 } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
@@ -85,10 +85,27 @@ import type { Mall } from "@/types/treehouse";
 // applies here when user navigates Home → /map → Home → /map).
 let cachedMalls: Mall[] | null = null;
 
+// Session 188 — module-scope cache for mall stats (booth + 30-day fresh
+// finds counts). Silent regression repair: getMallStatsByMallId existed
+// since session 108 (R10 Arc 3) explicitly for PinCallout's stat row but
+// the wiring from /map/page.tsx → MapPageBody → TreehouseMap was never
+// completed. PinCallout falls through to findCount={stats?.findCount ?? 0}
+// → always 0 for unsaved-state users (saved-state branch uses savedCount
+// which IS wired separately via TreehouseMap savedMallScopes, masking
+// the bug for signed-in shoppers with saves at the mall).
+//
+// Diagnosed via /api/diag/mall-stats probe — production posts table has
+// 71 finds across 5 malls in the 30-day window; America's Antique Mall
+// has 6 alone. Bug was in consumer wiring, not data layer.
+let cachedMallStats: Record<string, MallStats> | null = null;
+
 export default function MapPage() {
   const router = useRouter();
   const [mallId, setMallId] = useSavedMallId();
   const [malls, setMalls] = React.useState<Mall[]>(() => cachedMalls ?? []);
+  const [mallStats, setMallStats] = React.useState<Record<string, MallStats>>(
+    () => cachedMallStats ?? {}
+  );
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
   const [resetKey, setResetKey] = React.useState(0);
   // Session 179 — sheetOpen state retired alongside MallSheet import per
@@ -100,6 +117,10 @@ export default function MapPage() {
     getActiveMalls().then((next) => {
       cachedMalls = next;
       setMalls(next);
+    });
+    getMallStatsByMallId().then((next) => {
+      cachedMallStats = next;
+      setMallStats(next);
     });
   }, []);
 
@@ -184,6 +205,7 @@ export default function MapPage() {
       <MapPageTransition>
         <MapPageBody
           malls={malls}
+          mallStats={mallStats}
           selectedMallId={mallId}
           peekedMallId={peekedMallId}
           resetKey={resetKey}
