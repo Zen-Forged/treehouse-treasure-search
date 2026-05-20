@@ -132,8 +132,21 @@ export default function MapCarousel({
             // nav-top; shelf padding-bottom 6 puts cards-bottom 12px above
             // nav-top. Safe-area-aware on notched iPhones.
             bottom:        "max(81px, calc(env(safe-area-inset-bottom, 0px) + 81px))",
+            // Session 190 — David iPhone QA F1 (Vercel preview on desktop /
+            // landscape phone): "Clean up the carousel background so it
+            // doesn't extend past the UI." Pre-190: left:0 + right:0 spans
+            // full viewport, bg bleeds into the gutters beside the (tabs)/
+            // 430px mobile column when viewport > 430. New: left:0 + right:0
+            // + margin:0 auto + maxWidth:430 caps wrapper width at the
+            // mobile-column width + centers via margin-auto (transform
+            // stays free for framer-motion's y animation). On mobile-narrow
+            // viewports (≤430), behavior is unchanged. On desktop, the
+            // carousel bg now clips to the same column as the rest of
+            // (tabs)/ chrome.
             left:          0,
             right:         0,
+            margin:        "0 auto",
+            maxWidth:      430,
             zIndex:        35,
             pointerEvents: "none",
             // Session 180 — David iPhone QA findings 4 + 5 of 5:
