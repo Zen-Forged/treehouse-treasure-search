@@ -116,17 +116,27 @@ function tenMilesInPixels(zoom: number, lat: number): number {
 // container's top edge, leaving the callout's top flush against
 // masthead/chip chrome.
 //
-// New offset +60 puts pin 60px BELOW container vertical center. The
-// callout (renders ABOVE the pin, ~155px tall + tail) extends from
-// (container_center - 95) up to pin. Element CENTER ≈ pin - 62 ≈
-// container center, so the callout+pin element reads visually
-// centered in the bordered-window vertical space. Clearance above
-// callout ≥ 120px on Pro Max / ≥ 43px on iPhone SE (well clear of
-// chip-bottom chrome).
+// Session 180 offset +60 puts pin 60px BELOW container vertical center,
+// calibrated for the then-current ~155px horizontal callout shape
+// (element center ≈ pin - 62 ≈ container center; clearance ≥ 120px Pro
+// Max / ≥ 43px iPhone SE).
+//
+// Session 188 (Arc 1.3 iPhone-QA dial) — PinCallout vertical-stacked
+// symmetric reshape (Arc 1.2) grew callout from ~155px to ~205px tall.
+// Same +60 offset puts callout center ~55px ABOVE container center,
+// clipping at frame top on smaller viewports. Dial: 60 → 115. New math:
+// pin lands 115px BELOW container center, callout (renders ABOVE pin,
+// 205px + 12px tail offset = 217px) extends from (container_center - 102)
+// up to pin. Element CENTER ≈ pin - 109 ≈ container_center + 6, so the
+// callout reads visually centered in the bordered-window vertical space.
+//
+// 2nd firing of NEW Tech Rule candidate from session 180 — "Container-
+// geometry change cascades to recalibrate Mapbox easeTo offset." Promotes
+// to memory on 2nd firing per feedback_tech_rule_promotion_destination.
 //
 // Mapbox offset convention: target center lands at
 // (container_center.x + x, container_center.y + y); negative Y = upward.
-const MAP_PEEK_OFFSET_Y = 60;
+const MAP_PEEK_OFFSET_Y = 115;
 
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
