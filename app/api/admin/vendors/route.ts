@@ -203,9 +203,13 @@ export async function GET(req: Request) {
 // Three actions, discriminated by the `action` field on the body:
 //
 //   • (none)         → Edit: display_name + booth_number + mall_id (session 74)
-//   • "force-unlink" → Arc 4 D13: clear vendors.user_id, leave row in place
+//   • "force-unlink" → Arc 4 D13 (session 189 Path B): clear vendors.user_id
+//                       AND deny the matching vendor_request so the prior
+//                       email's auto-claim path is terminated
 //   • "relink"       → Arc 4 D14: assign user_id from a vendor_request, sync
 //                       display_name + slug from request, auto-approve if pending
+//                       (RETIRED in Arc 3 — session 189 Path B makes Invite the
+//                       sole re-attach affordance)
 //
 // Edit auto-derives slug from display_name. All three catch 23505 (unique-
 // constraint violation, typically the (mall_id, booth_number) pair OR slug
@@ -505,16 +509,22 @@ export async function DELETE(req: Request) {
   });
 }
 
-// ─── Arc 4 D13 — force-unlink ────────────────────────────────────────────────
-// Clear vendors.user_id on a claimed booth without deleting the row. The auth
-// user keeps their session but loses /my-shelf access (lands on <NoBooth>);
-// session-123 auto-claim will re-claim on their next sign-in if a matching
-// approved vendor_request still exists. Reversible by design — that's why
-// the modal has no type-to-confirm step (D13).
+// ─── Arc 4 D13 — force-unlink (session 189 Path B semantics) ─────────────────
+// Clear vendors.user_id on a claimed booth without deleting the row + terminate
+// the prior email's claim path by denying the matching vendor_request. The auth
+// user keeps their session but loses /my-shelf access (lands on <NoBooth>) AND
+// can no longer re-claim via auto-claim on next sign-in. Reversible by
+// re-approving the denied request from the Requests tab.
+//
+// Session 127 deferred the Path A (soft reset; auto-relink) vs Path B
+// (persistent; terminate prior email) decision. Session 189 locks Path B per
+// David's "they should not be able to login with both emails" requirement.
+// Auto-claim filter at /api/setup/lookup-vendor was also fixed in Arc 1
+// (.neq "rejected" → .in pending|approved) so the denied status is honored.
 async function handleForceUnlink(auth: AuthOk, vendorId: string) {
   const { data: vendor, error: fetchErr } = await auth.service
     .from("vendors")
-    .select("id, display_name, slug, user_id")
+    .select("id, display_name, slug, user_id, mall_id, booth_number")
     .eq("id", vendorId)
     .maybeSingle();
 
@@ -534,6 +544,7 @@ async function handleForceUnlink(auth: AuthOk, vendorId: string) {
 
   const prevUserId = vendor.user_id;
 
+  // ── 1. Clear vendors.user_id ──
   const { data: updated, error: updateErr } = await auth.service
     .from("vendors")
     .update({ user_id: null })
@@ -546,19 +557,75 @@ async function handleForceUnlink(auth: AuthOk, vendorId: string) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
 
+  // ── 2. Deny the matching vendor_request (Path B persistence) ──
+  // Query mirrors diagnosis predicate at route.ts:154 — same (mall_id,
+  // booth_number) + status pending|approved. If multiple match (shouldn't
+  // happen given migration 005's partial unique index but defensive), deny
+  // the most recently created so the rest stay as audit history.
+  let deniedRequestId: string | null = null;
+  let deniedRequestEmail: string | null = null;
+  {
+    const { data: matchingRequests, error: lookupErr } = await auth.service
+      .from("vendor_requests")
+      .select("id, email, status, created_at")
+      .eq("mall_id", vendor.mall_id)
+      .eq("booth_number", vendor.booth_number ?? "")
+      .in("status", ["pending", "approved"])
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (lookupErr) {
+      console.error("[admin/vendors PATCH force-unlink] request lookup:", lookupErr.message);
+      // Don't fail the request — vendors row already unlinked. Log + continue.
+    } else if (matchingRequests && matchingRequests.length > 0) {
+      const target = matchingRequests[0];
+      const denialReason =
+        "Replaced by admin force-unlink — booth re-invited to new email";
+
+      const { error: denyErr } = await auth.service
+        .from("vendor_requests")
+        .update({ status: "denied", denial_reason: denialReason })
+        .eq("id", target.id);
+
+      if (denyErr) {
+        console.error("[admin/vendors PATCH force-unlink] request deny:", denyErr.message);
+      } else {
+        deniedRequestId    = target.id;
+        deniedRequestEmail = target.email;
+
+        // Fire vendor_request_denied with source distinguisher for analytics.
+        // Reason text never logged (matches session 136 D12 convention).
+        await recordEvent("vendor_request_denied", {
+          user_id: auth.user.id,
+          payload: {
+            request_id:           target.id,
+            mall_id:              vendor.mall_id,
+            booth_number:         vendor.booth_number,
+            denial_reason_length: denialReason.length,
+            actor_email:          auth.user.email ?? null,
+            source:               "force_unlink",
+          },
+        });
+      }
+    }
+  }
+
   console.log("[admin/vendors PATCH force-unlink] unlinked", {
     vendorId,
-    display_name: vendor.display_name,
-    prev_user_id: prevUserId,
+    display_name:         vendor.display_name,
+    prev_user_id:         prevUserId,
+    denied_request_id:    deniedRequestId,
+    denied_request_email: deniedRequestEmail,
   });
 
   await recordEvent("vendor_force_unlinked_by_admin", {
     user_id: auth.user.id,
     payload: {
-      vendor_id:    vendorId,
-      vendor_slug:  vendor.slug,
-      display_name: vendor.display_name,
-      prev_user_id: prevUserId,
+      vendor_id:         vendorId,
+      vendor_slug:       vendor.slug,
+      display_name:      vendor.display_name,
+      prev_user_id:      prevUserId,
+      denied_request_id: deniedRequestId,
     },
   });
 

@@ -92,13 +92,13 @@ const PILL = {
   // "in flight, no admin action required" — distinct signal from amber's
   // "needs attention." Calibrated against PILL.linked/unlinked/collision.
   pending:   { bg: "#e8e5dc", fg: "#6e6a5e", bd: "rgba(110,106,94,0.30)" },
-  // Disconnected: user_id=null + vendor_request matches by name + booth +
-  // auth.users entry exists for the request email. Admin force-unlinked an
-  // active vendor; auto-claim will re-attach on next sign-in (per session-127
-  // Path A decision — force-unlink is a soft reset, not a hard sever).
-  // Intentional amber-token reuse from PILL.unlinked (Path A + Option 1):
-  // the "needs to know auto-relink is incoming" semantic still belongs in
-  // amber's "be aware" register; the pill copy carries the disambiguation.
+  // Disconnected: LEGACY state — pre-session-189 Path A row (force-unlinked
+  // with matching request still approved). Post-Path-B (session 189),
+  // force-unlink denies the matching request as a side effect, so new
+  // disconnected rows shouldn't appear. Existing legacy rows surface here
+  // until admin re-runs force-unlink (applies Path B persistence) OR denies
+  // the matching request from the Requests tab. Same amber tokens as
+  // unlinked; pill copy still carries the disambiguation.
   disconnected: { bg: "#f4ead4", fg: "#b6843a", bd: "rgba(182,132,58,0.30)" },
 } as const;
 
@@ -143,10 +143,12 @@ function rowStatus(v: VendorRow): RowStatus {
   if (v.user_id !== null)       return "linked";
   // user_id IS NULL — three sub-cases:
   //   • orphan (no matching request) → "unlinked"
-  //   • matching request + no auth user → "pending" (post-relink wait)
-  //   • matching request + auth user exists → "disconnected" (Path A:
-  //     admin force-unlinked an active vendor; auto-claim re-attaches on
-  //     next sign-in via still-approved vendor_request)
+  //     (also includes post-Path-B force-unlinked rows: their matching
+  //      request was denied as a side effect, so matchingRequest is null)
+  //   • matching request + no auth user → "pending" (admin invited vendor;
+  //     vendor hasn't signed in yet)
+  //   • matching request + auth user exists → "disconnected" (LEGACY Path A
+  //     row from before session 189 — see PILL.disconnected comment)
   if (v.diagnosis?.matchingRequest !== null && v.diagnosis !== null) {
     return v.diagnosis.authUserExists ? "disconnected" : "pending";
   }
