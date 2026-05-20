@@ -154,29 +154,25 @@ const KY_BOUNDS: LngLatBoundsLike = [
 const KY_CENTER: [number, number] = [-85.3, 37.8];
 const KY_FIT_ZOOM = 6.4;
 
-// Session 161 — fitBounds bottom padding accounts for the MapCarousel
-// "shelf" that floats at the bottom of the viewport. Without this, the
-// southernmost pins fitted by fitBounds land underneath the shelf and
-// are visually obscured.
+// Session 188 — symmetric fitBounds padding for centered pin distribution.
+// Renamed from FIT_PADDING_WITH_SHELF: the session-161 carousel-overlay
+// shelf retired at session 178 (F2 Map page extraction); the carousel now
+// sits BELOW the bordered map window in its own page-flow area, no longer
+// overlaying map content. The 223px bottom reservation (calibrated for
+// the old overlay geometry) became leftover and pushed pin clusters into
+// the upper portion of the bordered window post-178, surfacing at
+// session-188 iPhone QA: David's Reset-state screenshot showed pins
+// clustered in upper-middle with the lower half empty.
 //
-// Math (matches session 161 MapCarousel shelf wrapper geometry):
-//   shelf bottom in viewport = 87 + safe-area-inset-bottom (from screen bottom)
-//   shelf content height     = 10 + 114 + 12 = 136 (top pad + card + bottom pad)
-//   shelf top in viewport    = 223 + safe-area-inset-bottom (from screen bottom)
-//
-// (Card height bumped 108 → 114 in session 161 dial round 2 to absorb
-// the name lineHeight bump 1.3 → 1.5 for glyph-bottom clearance under
-// overflow:hidden; shelf top tracks the new card height directly.)
-//
-// The drawer (which contains TreehouseMap) has paddingBottom: safe-area,
-// so the map container's bottom edge sits at safe-area from screen bottom.
-// In map-container coordinates, shelf-top therefore lands at:
-//   (223 + safe-area) - safe-area = 223px above the map's bottom edge.
-//
-// The safe-area component cancels — padding constant doesn't need to vary
-// with device geometry. Horizontal + top padding preserved at 56 from the
-// pre-session-161 value to keep coastal coordinate clusters from clipping.
-const FIT_PADDING_WITH_SHELF = { top: 56, right: 56, bottom: 223, left: 56 };
+// Dial: bottom 223 → 56 (symmetric with other sides). Pin bounds-rectangle
+// now centers in (container - 56 each side), reading visually centered in
+// the bordered window vertical space. Horizontal + top padding preserved
+// verbatim from the session-161 calibration (coastal coordinate clusters
+// stay clear of edges). Constant renamed (FIT_PADDING_WITH_SHELF →
+// FIT_PADDING) to retire the misleading "shelf" name (semantic-changed-
+// by-rename pattern per feedback_dead_code_cleanup_as_byproduct ✅
+// Promoted, same shape as session 175 STICKY_THIN_HEIGHT → HERO_BOTTOM_EDGE).
+const FIT_PADDING = { top: 56, right: 56, bottom: 56, left: 56 };
 
 // Session 161 — David's iPhone QA item #5: "Change the you are here pin to
 // something more simple, no branding other than color. it can be smaller as
@@ -665,7 +661,7 @@ export default function TreehouseMap({
           .filter((m) => m.latitude != null && m.longitude != null)
           .map((m) => [Number(m.longitude), Number(m.latitude)] as [number, number]);
         if (coords.length === 0) {
-          map.fitBounds(KY_BOUNDS, { padding: FIT_PADDING_WITH_SHELF, duration: 600 });
+          map.fitBounds(KY_BOUNDS, { padding: FIT_PADDING, duration: 600 });
           return;
         }
         const bounds = coords.reduce(
@@ -675,9 +671,10 @@ export default function TreehouseMap({
         // maxZoom 11 stops over-zoom when malls are tightly clustered or
         // there's only one — a single point would otherwise zoom to the
         // map's maxZoom (14) and look like the specific-mall scope.
-        // FIT_PADDING_WITH_SHELF.bottom = 217 keeps southernmost pins above
-        // the MapCarousel shelf at the bottom of the viewport.
-        map.fitBounds(bounds, { padding: FIT_PADDING_WITH_SHELF, duration: 600, maxZoom: 11 });
+        // Session 188 — comment text updated alongside FIT_PADDING rename
+        // (FIT_PADDING_WITH_SHELF → FIT_PADDING; bottom 223 → 56). Shelf
+        // overlay retired session 178; symmetric padding now centers pins.
+        map.fitBounds(bounds, { padding: FIT_PADDING, duration: 600, maxZoom: 11 });
         return;
       }
       const mall = malls.find((m) => m.id === selectedMallId);
