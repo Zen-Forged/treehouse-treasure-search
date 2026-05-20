@@ -200,16 +200,16 @@ export async function GET(req: Request) {
 }
 
 // ─── PATCH ────────────────────────────────────────────────────────────────────
-// Three actions, discriminated by the `action` field on the body:
+// Two actions, discriminated by the `action` field on the body:
 //
 //   • (none)         → Edit: display_name + booth_number + mall_id (session 74)
 //   • "force-unlink" → Arc 4 D13 (session 189 Path B): clear vendors.user_id
 //                       AND deny the matching vendor_request so the prior
 //                       email's auto-claim path is terminated
-//   • "relink"       → Arc 4 D14: assign user_id from a vendor_request, sync
-//                       display_name + slug from request, auto-approve if pending
-//                       (RETIRED in Arc 3 — session 189 Path B makes Invite the
-//                       sole re-attach affordance)
+//
+// "relink" action retired in session 189 Arc 3 — Invite vendor is now the
+// sole re-attach affordance under Path B semantics. See handleForceUnlink
+// for the canonical email-switch flow.
 //
 // Edit auto-derives slug from display_name. All three catch 23505 (unique-
 // constraint violation, typically the (mall_id, booth_number) pair OR slug
@@ -230,8 +230,7 @@ export async function PATCH(req: Request) {
 
   let body: {
     vendorId?:        string;
-    action?:          "force-unlink" | "relink";
-    vendorRequestId?: string;
+    action?:          "force-unlink";
     display_name?:    string;
     booth_number?:    string | null;
     mall_id?:         string;
@@ -250,16 +249,6 @@ export async function PATCH(req: Request) {
   // ── Action dispatch ──
   if (body.action === "force-unlink") {
     return handleForceUnlink(auth, vendorId);
-  }
-  if (body.action === "relink") {
-    const requestId = body.vendorRequestId?.trim();
-    if (!requestId) {
-      return NextResponse.json(
-        { error: "vendorRequestId is required for relink." },
-        { status: 400 },
-      );
-    }
-    return handleRelink(auth, vendorId, requestId);
   }
 
   // ── No action → Edit (existing session-74 path) ──
@@ -632,157 +621,3 @@ async function handleForceUnlink(auth: AuthOk, vendorId: string) {
   return NextResponse.json({ ok: true, vendor: updated });
 }
 
-// ─── Arc 4 D14 — relink ──────────────────────────────────────────────────────
-// Production-clean replacement for SQL paste: assign the vendors row to a
-// matching vendor_request (same mall_id + booth_number, status pending or
-// approved) and sync display_name + slug. user_id is derived via auth.users
-// lookup by request.email — vendor_requests itself has no user_id column.
-// If status was 'pending', auto-approves the request as a side effect.
-async function handleRelink(auth: AuthOk, vendorId: string, requestId: string) {
-  // ── 1. Fetch vendors row ──
-  const { data: vendor, error: vendorErr } = await auth.service
-    .from("vendors")
-    .select("id, display_name, slug, user_id, mall_id, booth_number")
-    .eq("id", vendorId)
-    .maybeSingle();
-  if (vendorErr) {
-    return NextResponse.json({ error: vendorErr.message }, { status: 500 });
-  }
-  if (!vendor) {
-    return NextResponse.json({ error: "Booth not found." }, { status: 404 });
-  }
-
-  // ── 2. Fetch vendor_request ──
-  const { data: request, error: requestErr } = await auth.service
-    .from("vendor_requests")
-    .select("id, name, first_name, last_name, booth_name, email, mall_id, booth_number, status")
-    .eq("id", requestId)
-    .maybeSingle();
-  if (requestErr) {
-    return NextResponse.json({ error: requestErr.message }, { status: 500 });
-  }
-  if (!request) {
-    return NextResponse.json({ error: "Vendor request not found." }, { status: 404 });
-  }
-
-  // ── 3. Validation: status + (mall_id, booth_number) match ──
-  if (request.status !== "pending" && request.status !== "approved") {
-    return NextResponse.json(
-      { error: `Request status is "${request.status}". Only pending or approved requests can be relinked.` },
-      { status: 400 },
-    );
-  }
-  if (request.mall_id !== vendor.mall_id || (request.booth_number ?? null) !== (vendor.booth_number ?? null)) {
-    return NextResponse.json(
-      {
-        error: "Request mall + booth number do not match this vendor row. Pick a different request or edit the booth first.",
-        code:  "BOOTH_MISMATCH",
-      },
-      { status: 400 },
-    );
-  }
-
-  // ── 4. Resolve target display_name (matches approve-flow priority order) ──
-  const firstName  = (request.first_name as string | null)?.trim() ?? "";
-  const lastName   = (request.last_name  as string | null)?.trim() ?? "";
-  const boothName  = (request.booth_name as string | null)?.trim() ?? "";
-  const legacyName = (request.name       as string | null)?.trim() ?? "";
-  const newDisplayName =
-    boothName ||
-    (firstName && lastName ? `${firstName} ${lastName}` : "") ||
-    legacyName;
-
-  if (!newDisplayName) {
-    return NextResponse.json(
-      { error: "Request has no usable name (booth_name + first/last + name all empty)." },
-      { status: 400 },
-    );
-  }
-
-  // ── 5. Resolve user_id via auth.users lookup by email ──
-  // Mirrors the diagnose-request:170-195 pattern. If no auth user exists for
-  // the request email yet, leave user_id null and let session-123 auto-claim
-  // pick up linkage on their first sign-in.
-  let newUserId: string | null = null;
-  if (request.email) {
-    const { data: usersPage, error: usersErr } = await auth.service.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
-    if (usersErr) {
-      console.error("[admin/vendors PATCH relink] auth.users lookup:", usersErr.message);
-    } else {
-      const targetEmail = request.email.trim().toLowerCase();
-      const match = usersPage.users.find(
-        (u) => (u.email ?? "").trim().toLowerCase() === targetEmail,
-      );
-      newUserId = match?.id ?? null;
-    }
-  }
-
-  // ── 6. UPDATE vendors row ──
-  const newSlug = slugify(newDisplayName);
-  const { data: updated, error: updateErr } = await auth.service
-    .from("vendors")
-    .update({
-      user_id:      newUserId,
-      display_name: newDisplayName,
-      slug:         newSlug,
-    })
-    .eq("id", vendorId)
-    .select("*, mall:malls(id, name, slug, city, state, address, status)")
-    .single();
-
-  if (updateErr) {
-    if (updateErr.code === "23505") {
-      return NextResponse.json(
-        {
-          error: "Slug or booth-number conflict on relink. Edit the conflicting booth first.",
-          code:  "BOOTH_CONFLICT",
-        },
-        { status: 409 },
-      );
-    }
-    console.error("[admin/vendors PATCH relink] update:", updateErr.message);
-    return NextResponse.json({ error: updateErr.message }, { status: 500 });
-  }
-
-  // ── 7. Auto-approve pending request as side effect ──
-  // Design record D14 step 4. vendor_requests has no approved_at column
-  // (verified migration 001) so only status updates; R3 event timestamp
-  // captures the time.
-  if (request.status === "pending") {
-    const { error: approveErr } = await auth.service
-      .from("vendor_requests")
-      .update({ status: "approved" })
-      .eq("id", requestId);
-    if (approveErr) {
-      console.error("[admin/vendors PATCH relink] auto-approve request:", approveErr.message);
-      // Vendors row already updated; don't fail the request — just log.
-    }
-  }
-
-  console.log("[admin/vendors PATCH relink] relinked", {
-    vendorId,
-    requestId,
-    prev_display_name: vendor.display_name,
-    new_display_name:  newDisplayName,
-    prev_user_id:      vendor.user_id,
-    new_user_id:       newUserId,
-  });
-
-  await recordEvent("vendor_relinked_by_admin", {
-    user_id: auth.user.id,
-    payload: {
-      vendor_id:         vendorId,
-      vendor_request_id: requestId,
-      prev_display_name: vendor.display_name,
-      new_display_name:  newDisplayName,
-      prev_user_id:      vendor.user_id,
-      new_user_id:       newUserId,
-      pending_promoted:  request.status === "pending",
-    },
-  });
-
-  return NextResponse.json({ ok: true, vendor: updated });
-}
