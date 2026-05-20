@@ -715,18 +715,35 @@ export async function getMallBySlug(slug: string): Promise<Mall | null> {
  * payload is small (~kB range) and aggregating in-process avoids needing
  * a database function for a single-consumer stat. If consumers grow or
  * row counts climb 10×, promote to a Postgres aggregate or RPC.
+ *
+ * Session 188 — `findCount` semantic shifts from "all available finds at
+ * mall" to "available finds posted in last 30 days at mall." Posts query
+ * filters `created_at >= NOW() - 30 days` to scope the count to the
+ * canonical project-wide freshness window (D11 + D12 of
+ * docs/map-pincallout-refinement-design.md). Design record referenced
+ * `published_at`; codebase canonical is `created_at` (set at row
+ * insertion = functionally the publication timestamp). Schema-forced
+ * deviation, not a design reversal. Variable name preserved to avoid an
+ * invasive rename; semantic captured here as the canonical reference.
+ *
+ * The 30-day filter is the canonical project-wide freshness window. If
+ * future surfaces want a "fresh activity" affordance, reuse this window
+ * unless explicitly redesigned.
  */
 export interface MallStats {
   boothCount: number;
   findCount:  number;
 }
 
+const FRESHNESS_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
 export async function getMallStatsByMallId(): Promise<Record<string, MallStats>> {
   // Review Board (session 150) — fixture-substitute.
   if (isReviewMode()) return getFixtureMallStats();
+  const thirtyDaysAgo = new Date(Date.now() - FRESHNESS_WINDOW_MS).toISOString();
   const [vendorsRes, postsRes] = await Promise.all([
     supabase.from("vendors").select("mall_id"),
-    supabase.from("posts").select("mall_id").eq("status", "available"),
+    supabase.from("posts").select("mall_id").eq("status", "available").gte("created_at", thirtyDaysAgo),
   ]);
 
   if (vendorsRes.error) console.error("[posts] getMallStatsByMallId vendors:", vendorsRes.error.message);

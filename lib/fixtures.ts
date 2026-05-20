@@ -376,12 +376,26 @@ export function getFixtureVendorPosts(vendorId: string): Post[] {
 // MallStats shape from lib/posts.ts (boothCount + findCount). Mirrored
 // here rather than imported to keep fixtures.ts dependency-free of the
 // data layer it back-stops.
+//
+// Session 188 — findCount mirrors the 30-day freshness window semantic
+// from lib/posts.ts getMallStatsByMallId. POST_BASE seeds created_at at
+// May 2026 dates so most fixture posts fall inside the window; edge
+// fixtures (oldest indices) may age out naturally over time. Acceptable
+// drift for Review Board fixtures — the semantic match matters more than
+// stable counts.
+const FRESHNESS_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
 export function getFixtureMallStats(): Record<string, { boothCount: number; findCount: number }> {
+  const thirtyDaysAgo = Date.now() - FRESHNESS_WINDOW_MS;
   const stats: Record<string, { boothCount: number; findCount: number }> = {};
   for (const mall of FIXTURE_MALLS) {
     stats[mall.id] = {
       boothCount: FIXTURE_VENDORS.filter((v) => v.mall_id === mall.id).length,
-      findCount:  FIXTURE_POSTS.filter((p) => p.mall_id === mall.id && p.status === "available").length,
+      findCount:  FIXTURE_POSTS.filter((p) =>
+        p.mall_id === mall.id &&
+        p.status === "available" &&
+        new Date(p.created_at).getTime() >= thirtyDaysAgo
+      ).length,
     };
   }
   return stats;
