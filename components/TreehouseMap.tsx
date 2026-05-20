@@ -124,15 +124,27 @@ function tenMilesInPixels(zoom: number, lat: number): number {
 // Session 188 (Arc 1.3 iPhone-QA dial chain) — PinCallout vertical-stacked
 // symmetric reshape (Arc 1.2) grew callout from ~155px to ~205px tall.
 // Same +60 offset puts callout center ~55px ABOVE container center,
-// clipping at frame top on smaller viewports. Dial chain across 3 rounds:
-//   Dial 1: 60 → 115 (calibrated midpoint math; David QA still clipping)
-//   Dial 2: 115 → 140 (David verbatim pick; David QA still clipping)
-//   Dial 3: 140 → 150 (David verbatim pick; settled)
-// Final math: pin lands 150px BELOW container vertical center; callout
-// (~205px + 12px tail = 217px) extends from (container_center - 67) up
-// to pin. Element CENTER ≈ pin - 109 ≈ container_center + 41 — callout
-// sits below container center but well clear of frame top edge. Real-
-// device measurements take precedence over calculated midpoint math.
+// clipping at frame top on smaller viewports. Dial chain settled at 110
+// across 4 rounds, with a structural-fix layer surfacing mid-chain:
+//   Dial 1: 60 → 115 (calibrated midpoint; David QA still clipping)
+//   Dial 2: 115 → 140 (David verbatim; still clipping)
+//   Dial 3: 140 → 150 (David verbatim; "settled" — but against the
+//                       broken FIT_PADDING_WITH_SHELF.bottom = 223 baseline)
+//   Dial 4: 150 → 110 (David verbatim; recalibrated AFTER dial 5 fixed
+//                       the padding asymmetry that was masking the
+//                       correct midpoint math)
+//
+// Lesson per feedback_kill_bug_class_after_3_patches ✅ Promoted: dials
+// 1-3 were patching the symptom against the wrong baseline; dial 5
+// (FIT_PADDING bottom 223 → 56 symmetric) was the structural layer.
+// Once padding centered the bordered window, offset needed less downward
+// shift — settled near the originally-calculated +110 midpoint.
+//
+// Final math: pin lands 110px BELOW container vertical center; callout
+// (~205px + 12px tail = 217px) extends from (container_center - 107) up
+// to pin. Element CENTER ≈ pin - 109 ≈ container_center + 1 — callout
+// reads visually dead-centered in the bordered-window vertical space
+// post-padding-fix.
 //
 // 2nd cumulative firing of NEW Tech Rule candidate from session 180 —
 // "Container-geometry change cascades to recalibrate Mapbox easeTo offset."
@@ -140,7 +152,7 @@ function tenMilesInPixels(zoom: number, lat: number): number {
 //
 // Mapbox offset convention: target center lands at
 // (container_center.x + x, container_center.y + y); negative Y = upward.
-const MAP_PEEK_OFFSET_Y = 150;
+const MAP_PEEK_OFFSET_Y = 110;
 
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
