@@ -66,7 +66,6 @@ import {
   BoothTitleBlock,
   MallBlock,
   WindowView,
-  BoothCloser,
   BoothPageStyles,
   v1,
   FONT_LORA,
@@ -579,8 +578,6 @@ export default function PublicShelfPage() {
                 clearance={48}
               />
             )}
-
-            <BoothCloser />
           </>
         )}
 
