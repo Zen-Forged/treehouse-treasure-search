@@ -1600,6 +1600,17 @@ export default function FindDetailPage() {
       {/* Quoted caption (v1.1 19px) */}
       {post.caption && (
         <div style={{ padding: "0 30px", marginBottom: 30, textAlign: "center" }}>
+          {/* Session 192 F5 — hairline above the generated caption separates
+              it from the title/price block. Matches v1.inkHairline used as
+              the divider at line 666 on this same page. */}
+          <div
+            style={{
+              width: "100%",
+              height: 1,
+              background: v1.inkHairline,
+              marginBottom: 22,
+            }}
+          />
           <span
             style={{
               fontFamily: FONT_LORA,
