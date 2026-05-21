@@ -38,7 +38,13 @@ import { normalizeFacebookUrl, normalizeInstagramUrl } from "@/lib/socialUrls";
 export const dynamic = "force-dynamic";
 
 const BIO_MAX_LEN             = 280;  // D7 — UI counter mirrors this
-const DIRECTIONS_TEXT_MAX_LEN = 500;  // D10 — safety cap; no UI counter
+// Session 191 — D10 reversed (`feedback_surface_locked_design_reversals`).
+// Session 186 D10 said "directions are short by nature; cap is defensive
+// not user-facing" → 500-char server cap with no UI counter. Session 191
+// EditBoothSheet revisit (docs/edit-booth-sheet-revisit-design.md D10)
+// reverses: vendor-facing UI counter at 280 matches bio's pattern + the
+// Twitter mental model. Server cap moves 500 → 280 to mirror.
+const DIRECTIONS_TEXT_MAX_LEN = 280;  // D10 — vendor-facing cap; UI counter mirrors this
 const URL_MAX_LEN              = 500;  // length cap on raw input before normalization
 
 // Normalizes incoming optional string fields. Three intents collapse to:

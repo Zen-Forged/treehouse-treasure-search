@@ -8,6 +8,79 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.191.0] — 2026-05-20
+
+### Session 191 — EditBoothSheet UI revisit (Q-016 carry from session 186): 4-section structure + photo overlays + FB/IG icon prefixes + dynamic URL preview + WCAG launch-blocker fix caught by design-reviewer subagent — 7 runtime commits + 1 close
+
+David redirected from recommended batched iPhone QA into Q-016 EditBoothSheet UI revisit. Sheet grew organically from 2 fields → 7 fields across sessions 184-187 vendor profile enrichment arc; this session restructured holistically into 4 numbered sections + photo affordance overlay primitive + Phosphor icon prefixes on social inputs + escape-hatch /contact Link + sub-text size bumps + bio placeholder color fix + directions UI counter.
+
+Two cost-shape triages this session: (1) META Shape A at session-open per `feedback_pre_mockup_prose_model_first` ✅ Promoted + `feedback_v2_options_before_drafting` ✅ Promoted at session 135 — David's prose covers structural axes; 8 batched `AskUserQuestion` answers cover fill axes; no V1 mockup needed. (2) Post-implementation Shape B at design-reviewer subagent review — 4 prose-resolvable axes after agent caught launch-blocker WCAG fail.
+
+17 frozen decisions D1-D17 in `docs/edit-booth-sheet-revisit-design.md` + 4 explicit reversals R1-R4 (session 186 D2 divider / D5 sibling buttons / D10 counter / D11 field labels) + 6 Tier B headroom items + 7-row risk register. **33rd cumulative firing of `feedback_design_record_as_execution_spec` ✅ Promoted** across 33+ different features — D1-D17 ran clean through C2-C4 implementation with zero re-scoping mid-flight.
+
+**First production catch of a launch-blocker by the design-reviewer subagent.** After C4 push, dispatched `Agent({ subagent_type: "design-reviewer" })` for citation-grounded code review against the locked design record. Agent caught REC-1: "Need to update?" Link at v2.text.muted (#A39686) on cream (#FFFCF5) computes ~2.85:1 — fails WCAG 2.1 SC 1.4.3 (4.5:1 for interactive text <18px). Same offender class session 174 contrast audit Shape β closed (baseline 99 → 0); session 191 C4 reintroduced it on a brand-new affordance the audit didn't enumerate. **3rd cumulative firing of `feedback_subagent_dispatch_catches_audit_drift`** ✅ Promoted-via-memory at session 173 — sub-pattern: agent catches what humans + audits miss when bug-class substrate is freshly relevant.
+
+Shape B improvement bundle (4 commits sequenced smallest→largest): C5 REC-1 contrast fix (Link color v2.text.muted → v2.text.secondary; matches session 153 /login footer canonical) + C6 Save CTA breathing room (24px wrapper marginTop) + C7 Section 1 sub-header (promotes Tier B3 to V1 per agent REC-2 Gestalt similarity reasoning) + C8 dynamic canonical URL preview + scope-adjacent WCAG fix on FB/IG helpers (`npm run lint:contrast` back to pre-session-191 baseline of 3 pre-existing violations).
+
+The 6-session arc from "build the subagent" (session 172) → "first dispatch validates trust contract" (173) → "audit drift catch" (173) → **"first launch-blocker catch before merge"** (191) is itself a compounding-discipline data point: operational substrate investments repay their cost in a measurable way each session. Session 191 compressed what would historically be 2-3 sessions (design pass + implementation + post-implementation QA + post-QA fix bundle) into one focused session because the operating-system rules all composed cleanly at this scale.
+
+### Added
+
+- **`docs/edit-booth-sheet-revisit-design.md`** — 17 frozen decisions D1-D17 + 4 reversals R1-R4 + 6 Tier B headroom + 7-row risk register + 5-arc implementation sequencing (~336 LOC).
+- **Camera-bubble + trash-corner photo affordance overlay pattern** in `EditBoothSheet.tsx` for both Booth photo (84×84 rounded-8) + Profile photo (96×96 circular). Photo container itself becomes the tap target → file picker. Trash-corner stops propagation so it doesn't double-fire the picker. Keyboard-accessible via `role="button"` + Enter/Space handler. aria-label per state.
+- **PiFacebookLogo + PiInstagramLogo icon prefixes** on social URL inputs (v2.accent.green, size 18, absolute-positioned in left padding slot). Matches session 187 AboutBoothSection display canonical for consumer/edit visual symmetry.
+- **Dynamic canonical URL preview helper text** below FB/IG inputs — empty input shows "We'll format this as a link." (forward-looking); non-empty + valid shows "Will display as: {stripped-canonical}" so vendor sees what's saved without scrolling the input. `wordBreak: break-all` wraps long URLs multi-line.
+- **`<Link href="/contact">` inline escape-hatch** in Section 1 booth-name helper. Uses `/contact` route from Wave 1 session 92 — reuses 100% of existing infrastructure per `feedback_synthesize_existing_row_to_reuse_flow_infra` ✅ Promoted.
+- **4 numbered section wrappers** (Your Booth Identity / About Your Booth / Connect With Shoppers / Find Me in the Mall) with Cormorant 18 upright titles + Cormorant italic 14 sub-headers.
+- **Section 1 sub-header** *"Show shoppers your booth's photos and name."* added post-QA per design-reviewer REC-2 (promotes design record Tier B3 to V1).
+- **`.th-bio-textarea::placeholder` CSS rule** (`color: v2.text.muted; opacity: 1`) so Firefox honors the explicit placeholder color (browser default light-gray was hard to read).
+- **`DIRECTIONS_MAX_LEN` + `DIRECTIONS_WARN_LEN` constants** mirroring bio's 280-char pattern; directions textarea slice-caps onChange; UI counter at bottom-right turns red at 270+.
+- **`dirsValid` check** in `canSave` predicate.
+
+### Changed
+
+- **`/api/vendor/profile`** — `DIRECTIONS_TEXT_MAX_LEN` constant 500 → 280 mirroring the new vendor-facing cap. Error message updates to match. R3 reversal of session 186 D10 surfaced explicitly per `feedback_surface_locked_design_reversals` ✅ Promoted.
+- **EditBoothSheet field labels dropped** where section header carries meaning — Bio / Facebook URL / Instagram URL / In-mall directions labels retire (R4 reversal of session 186 D11). aria-label attributes added on unlabeled inputs so screen readers carry the field name.
+- **Profile photo moved** from inside the vendor-only block at the bottom into Section 1 (Your Booth Identity) per D12. Gated by `{mode === "vendor" && ...}` since avatar is vendor-mode only.
+- **Sub-text size bumps** per D8 — field labels FONT_INTER 13 → 14, helper text 14 → 15, char counters 11 → 12.
+- **Bio textarea placeholder copy** simplified — "Tell shoppers about your booth — what you specialize in, what makes it worth visiting…" → "What you specialize in, what makes it worth visiting…" (section sub-header now carries the "tell shoppers" framing).
+- **"Need to update?" Link color** v2.text.muted → v2.text.secondary (REC-1 launch-blocker WCAG fix; ~2.85:1 → ~6.9:1 on cream).
+- **FB + IG helper text color** v2.text.muted → v2.text.secondary (same WCAG fix class as REC-1; closes 2 new lint:contrast violations session 191 introduced).
+- **Save CTA wrapper** gains `marginTop: 24` breath above Section 4 counter (P1-C post-QA fix).
+- **Section 1 h3 margin** "0 0 14px" → "0 0 4px" to compose with new sub-header's "0 0 14px" for consistent 18px total bottom breath matching Sections 2-4.
+- **`package.json` version bumped 0.190.0 → 0.191.0** per Shape A versioning protocol.
+
+### Removed
+
+- **Session 186 D2 hairline divider** between booth-name + identity sections (R1 reversal; gap-only 32px section marginBottom delimiter per D3).
+- **Session 186 D5 sibling Replace/Remove text-buttons** + `ImagePlus` icon usage (R2 reversal; camera-bubble + trash-corner overlays per D4).
+- **Session 186 D10 no-UI-counter + 500-char defensive cap** (R3 reversal; UI counter at 280; server cap moves to match).
+- **384-LOC dead-coded `{false && ...}` vendor-only block** retired via `sed -i 'start,end d'` per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted (NEW Tech Rule candidate: "Long-range Edit via temporarily-dead-coded {false && ...} block + sed cleanup" — when Edit target too large for safe single-string-match, gate old block with `{false && expr}` then sed-delete; cleaner than multi-pass Edits that risk JSX brace miscount).
+
+### Fixed
+
+- **WCAG launch-blocker** on "Need to update?" Link (REC-1) — caught by design-reviewer subagent before merge. First production catch of a launch-blocker by the agent shipped session 172.
+- **Long URLs flowing off input edge** without visual indicator (P1-B) — dynamic canonical preview below input shows full normalized URL so vendor sees what's saved.
+- **Save CTA cramped against Section 4 counter** (P1-C) — 24px wrapper marginTop adds breath above Save changes button.
+- **Section 1 lacks sub-header** breaking Gestalt similarity pattern Sections 2-4 establish (P2-A REC-2) — added matching directive voice sub-header.
+- **Bio placeholder reads pale** (D9) — explicit `::placeholder { color: v2.text.muted; opacity: 1 }` rule overrides browser default light-gray.
+- **24th cumulative firing of `feedback_pre_existing_local_env_build_failure_at_boundary_gate`** ✅ Promoted at session 161 — html2canvas-pro node_modules drift (parked Share My Shelf from session 152); `npm install` at C2 commit boundary resolved in 1 round-trip per canonical recipe.
+
+### Deprecated
+
+- *(none)*
+
+### iPhone QA watch-items
+
+- Sheet body ~30% taller than session 186 baseline; on iPhone SE (smallest viewport) Save CTA requires scroll to reach. Risk-1 in design record captures this; B5 sticky-Save CTA promotion is the escalation path if friction surfaces.
+- Bio Lora italic 15px entry voice (session 186 D7 lock) vs vendor's iPhone arm-length legibility — outside advisory bounds per design-reviewer subagent; brand-voice call. Watch for vendor feedback post-real-content-seeding.
+- Photo overlay `role="button"` containers + sibling Trash button accessible-name parity — verify with VoiceOver enabled on iPhone QA (REC-3 advisory; likely passes — both have aria-labels).
+- Long Facebook share URLs in preview helper wrap multi-line via `wordBreak: break-all`; verify legibility on real content seeding.
+
+[v0.191.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.191.0
+
+---
+
 ## [v0.190.0] — 2026-05-20
 
 ### Session 190 — Mapbox preview token HITL closes 36-session carry + /map auto-peek flyTo offset fix + 4-finding iPhone-QA dial bundle — 5 runtime commits + 1 close

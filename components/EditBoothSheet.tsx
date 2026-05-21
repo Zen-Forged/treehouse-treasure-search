@@ -16,8 +16,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Pencil, X, Loader as LoaderIcon, AlertTriangle, ImagePlus, Trash2, User as UserIcon } from "lucide-react";
+import { Pencil, X, Loader as LoaderIcon, AlertTriangle, Camera, Trash2, User as UserIcon } from "lucide-react";
+import { PiFacebookLogo, PiInstagramLogo } from "react-icons/pi";
 import { authFetch } from "@/lib/authFetch";
 import { compressImage } from "@/lib/imageUpload";
 import { normalizeFacebookUrl, normalizeInstagramUrl } from "@/lib/socialUrls";
@@ -32,6 +34,13 @@ import type { Vendor, Mall } from "@/types/treehouse";
 // 10-char warning threshold (270+).
 const BIO_MAX_LEN  = 280;
 const BIO_WARN_LEN = 270;
+
+// Session 191 D10 — directions character limit. Counter mirrors bio's
+// pattern. Reverses session 186 D10 (no UI counter; 500-char defensive
+// server cap) per feedback_surface_locked_design_reversals ✅ Promoted.
+// Server cap in /api/vendor/profile mirrors this constant.
+const DIRECTIONS_MAX_LEN  = 280;
+const DIRECTIONS_WARN_LEN = 270;
 
 interface EditBoothSheetProps {
   vendor:    Vendor;
@@ -128,6 +137,10 @@ export default function EditBoothSheet({
   const igInputInvalid     = trimmedIg !== "" && instagramCanonical === null;
   const urlsValid          = !fbInputInvalid && !igInputInvalid;
   const bioValid           = trimmedBio.length <= BIO_MAX_LEN;
+  // Session 191 D10 — directions cap mirrors bio (280 chars). canSave
+  // gates on dirsValid so user can't submit past the cap; onChange also
+  // slice-caps the value so the textarea visually clamps at 280.
+  const dirsValid          = trimmedDirs.length <= DIRECTIONS_MAX_LEN;
   const hasChange =
     mode === "vendor"
       ? (trimmedName !== initial.displayName.trim() || enrichmentDirty)
@@ -140,7 +153,7 @@ export default function EditBoothSheet({
     hasChange &&
     trimmedName.length > 0 &&
     (mode === "vendor" || mallId.length > 0) &&
-    (mode !== "vendor" || (urlsValid && bioValid));
+    (mode !== "vendor" || (urlsValid && bioValid && dirsValid));
 
   async function handleHeroUpload(file: File) {
     if (heroBusy) return;
@@ -425,16 +438,62 @@ export default function EditBoothSheet({
             </button>
           </div>
 
-          {/* Booth photo — replace + remove. Shipped in both vendor and admin
-              modes (admin self-help and vendor self-edit converge on the same
-              affordance set). Hero ops fire immediately, NOT on Save — keeps
-              the change-feels-atomic mental model the on-photo bubbles had. */}
+          {/* ====================================================
+              Section 1 — Your Booth Identity
+              Session 191 D1+D2 — numbered section header (Cormorant 18
+              upright). Contains Booth photo (both modes) + Profile photo
+              (vendor mode) + Booth name (vendor mode) OR BoothFormFields
+              (admin mode) + helper-with-Link (vendor mode). No sub-header
+              per D1 — 3 field labels disambiguate the section's content.
+              ==================================================== */}
+          <section style={{ marginBottom: 32 }}>
+            <h3
+              style={{
+                fontFamily: FONT_CORMORANT,
+                fontSize:   18,
+                fontWeight: 500,
+                color:      v2.text.primary,
+                lineHeight: 1.3,
+                margin:     "0 0 4px",
+              }}
+            >
+              1. Your Booth Identity
+            </h3>
+            {/* Session 191 post-QA P2-A — Section 1 sub-header added per
+                design-reviewer subagent REC-2 (Gestalt similarity: Sections
+                2-4 establish [number title] / [italic sub-header] / [fields]
+                pattern; Section 1 originally omitted sub-header per D1's
+                "3 distinct field labels disambiguate" reasoning but the
+                visual rhythm broke — Section 1 read as a different shape).
+                Promotes design record Tier B3 to V1. Copy parallels
+                Sections 2-4 directive voice. */}
+            <p
+              style={{
+                fontFamily: FONT_CORMORANT,
+                fontStyle:  "italic",
+                fontSize:   14,
+                color:      v2.text.secondary,
+                lineHeight: 1.4,
+                margin:     "0 0 14px",
+              }}
+            >
+              Show shoppers your booth&apos;s photos and name.
+            </p>
+
+          {/* Booth photo — replace + remove. Session 191 D4 — camera-bubble +
+              trash-corner overlay on photo retires the sibling-text-button
+              column (R2 reversal of session 186 D5 surfaced explicitly per
+              feedback_surface_locked_design_reversals ✅ Promoted). Photo
+              container itself is the tap target → file picker. Trash-corner
+              stops propagation so it doesn't double-fire the picker.
+              Shipped in both vendor and admin modes; hero ops fire
+              immediately, NOT on Save — atomic-change mental model. */}
           <div style={{ marginBottom: 16 }}>
             <label
               style={{
                 display: "block",
                 fontFamily: FONT_INTER,
-                fontSize: 13,
+                fontSize: 14, // Session 191 D8 — bumped 13 → 14
                 color: v2.text.secondary,
                 lineHeight: 1.25,
                 marginBottom: 8,
@@ -442,17 +501,53 @@ export default function EditBoothSheet({
             >
               Booth photo
             </label>
-            <div style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleHeroUpload(f);
+                e.target.value = "";
+              }}
+            />
+            <div
+              role="button"
+              tabIndex={heroBusy || submitting ? -1 : 0}
+              aria-label={heroUrl ? "Replace booth photo" : "Add booth photo"}
+              onClick={() => {
+                if (heroBusy || submitting) return;
+                fileInputRef.current?.click();
+              }}
+              onKeyDown={(e) => {
+                if (heroBusy || submitting) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              style={{
+                width: 84,
+                height: 84,
+                borderRadius: 8,
+                overflow: "visible", // overlays extend past corners
+                position: "relative",
+                background: heroUrl ? undefined : vendorHueBg(vendor.display_name ?? ""),
+                border: `1px solid ${v2.border.light}`,
+                cursor: heroBusy || submitting ? "default" : "pointer",
+                WebkitTapHighlightColor: "transparent",
+                outline: "none",
+              }}
+            >
+              {/* Photo content — clipped to rounded-8 via inner wrapper because
+                  outer overflow:visible is needed for overlay corners. */}
               <div
                 style={{
-                  flexShrink: 0,
-                  width: 84,
-                  height: 84,
+                  position: "absolute",
+                  inset: 0,
                   borderRadius: 8,
                   overflow: "hidden",
-                  position: "relative",
-                  background: heroUrl ? undefined : vendorHueBg(vendor.display_name ?? ""),
-                  border: `1px solid ${v2.border.light}`,
                 }}
               >
                 {heroUrl && (
@@ -486,69 +581,56 @@ export default function EditBoothSheet({
                   </div>
                 )}
               </div>
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleHeroUpload(f);
-                    e.target.value = "";
-                  }}
-                />
+              {/* Camera-bubble — bottom-right corner; explicit "this is editable" affordance. */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  bottom: -4,
+                  right: -4,
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: v2.surface.card,
+                  border: `1px solid ${v2.border.light}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  pointerEvents: "none", // container handles tap
+                }}
+              >
+                <Camera size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
+              </div>
+              {/* Trash-corner — top-right corner, renders only when photo present. */}
+              {heroUrl && (
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Remove booth photo"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHeroRemove();
+                  }}
                   disabled={!!heroBusy || submitting}
                   style={{
-                    flex: 1,
-                    padding: "0 12px",
-                    borderRadius: 8,
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
                     background: v2.surface.card,
                     border: `1px solid ${v2.border.light}`,
-                    fontFamily: FONT_INTER,
-                    fontSize: 13,
-                    color: v2.text.primary,
-                    cursor: heroBusy || submitting ? "default" : "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 6,
+                    cursor: heroBusy || submitting ? "default" : "pointer",
+                    padding: 0,
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  <ImagePlus size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
-                  {heroUrl ? "Replace photo" : "Add photo"}
+                  <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.accent.red }} />
                 </button>
-                {heroUrl && (
-                  <button
-                    type="button"
-                    onClick={handleHeroRemove}
-                    disabled={!!heroBusy || submitting}
-                    style={{
-                      flex: 1,
-                      padding: "0 12px",
-                      borderRadius: 8,
-                      background: "transparent",
-                      border: `1px solid ${v2.border.light}`,
-                      fontFamily: FONT_INTER,
-                      fontSize: 13,
-                      color: v2.text.secondary,
-                      cursor: heroBusy || submitting ? "default" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 6,
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
-                    Remove photo
-                  </button>
-                )}
-              </div>
+              )}
             </div>
             {heroError && (
               <div
@@ -573,15 +655,202 @@ export default function EditBoothSheet({
             )}
           </div>
 
+          {/* Profile photo (avatar) — vendor mode only. Session 191 D12
+              moves this INTO Section 1 (was inside vendor-only block at
+              bottom in session 186). Session 191 D4 — camera-bubble +
+              trash-corner overlay; same pattern as Booth photo (R2
+              reversal of session 186 D5 sibling-text-buttons). 96×96
+              circular crop preview matches the 40px /shelf compound-lockup
+              render (session 187 Arc 2); compressImage(maxWidth=256)
+              per session 186 D5. */}
+          {mode === "vendor" && (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display:      "block",
+                  fontFamily:   FONT_INTER,
+                  fontSize:     14,
+                  color:        v2.text.secondary,
+                  lineHeight:   1.25,
+                  marginBottom: 8,
+                }}
+              >
+                Profile photo
+              </label>
+              <input
+                ref={avatarFileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleAvatarUpload(f);
+                  e.target.value = "";
+                }}
+              />
+              <div
+                role="button"
+                tabIndex={avatarBusy || submitting ? -1 : 0}
+                aria-label={avatarUrl ? "Replace profile photo" : "Add profile photo"}
+                onClick={() => {
+                  if (avatarBusy || submitting) return;
+                  avatarFileInputRef.current?.click();
+                }}
+                onKeyDown={(e) => {
+                  if (avatarBusy || submitting) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    avatarFileInputRef.current?.click();
+                  }
+                }}
+                style={{
+                  width:        96,
+                  height:       96,
+                  borderRadius: "50%",
+                  overflow:     "visible",
+                  position:     "relative",
+                  background:   avatarUrl ? undefined : v2.surface.warm,
+                  border:       `1px solid ${v2.border.light}`,
+                  cursor:       avatarBusy || submitting ? "default" : "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  outline:      "none",
+                }}
+              >
+                <div
+                  style={{
+                    position:     "absolute",
+                    inset:        0,
+                    borderRadius: "50%",
+                    overflow:     "hidden",
+                  }}
+                >
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      style={{
+                        position:  "absolute",
+                        inset:     0,
+                        width:     "100%",
+                        height:    "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        position:       "absolute",
+                        inset:          0,
+                        display:        "flex",
+                        alignItems:     "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <UserIcon size={32} strokeWidth={1.5} style={{ color: v2.text.muted }} />
+                    </div>
+                  )}
+                  {avatarBusy && (
+                    <div
+                      style={{
+                        position:       "absolute",
+                        inset:          0,
+                        background:     "rgba(20,14,6,0.42)",
+                        display:        "flex",
+                        alignItems:     "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <LoaderIcon
+                        size={18}
+                        style={{ color: v2.surface.card, animation: "spin 0.9s linear infinite" }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div
+                  aria-hidden
+                  style={{
+                    position:       "absolute",
+                    bottom:         -4,
+                    right:          -4,
+                    width:          28,
+                    height:         28,
+                    borderRadius:   "50%",
+                    background:     v2.surface.card,
+                    border:         `1px solid ${v2.border.light}`,
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "center",
+                    pointerEvents:  "none",
+                  }}
+                >
+                  <Camera size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
+                </div>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    aria-label="Remove profile photo"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAvatarRemove();
+                    }}
+                    disabled={!!avatarBusy || submitting}
+                    style={{
+                      position:       "absolute",
+                      top:            -4,
+                      right:          -4,
+                      width:          24,
+                      height:         24,
+                      borderRadius:   "50%",
+                      background:     v2.surface.card,
+                      border:         `1px solid ${v2.border.light}`,
+                      display:        "flex",
+                      alignItems:     "center",
+                      justifyContent: "center",
+                      cursor:         avatarBusy || submitting ? "default" : "pointer",
+                      padding:        0,
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                  >
+                    <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.accent.red }} />
+                  </button>
+                )}
+              </div>
+              {avatarError && (
+                <div
+                  style={{
+                    marginTop:    8,
+                    padding:      "8px 10px",
+                    borderRadius: 8,
+                    background:   v2.surface.error,
+                    border:       `1px solid ${v2.border.error}`,
+                    fontFamily:   FONT_INTER,
+                    fontSize:     12,
+                    color:        v2.accent.red,
+                    lineHeight:   1.5,
+                    display:      "flex",
+                    alignItems:   "flex-start",
+                    gap:          6,
+                  }}
+                >
+                  <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 2, color: v2.accent.red }} />
+                  <span>{avatarError}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Form — vendor mode renders display_name only; admin mode renders
-              the full 3-field BoothFormFields. */}
+              the full 3-field BoothFormFields. Session 191 D7 — helper text
+              now includes inline /contact Link per "Need to update?" affordance
+              + sub-text bump 14 → 15 per D8. */}
           {mode === "vendor" ? (
-            <div style={{ marginBottom: 14 }}>
+            <div>
               <label
                 style={{
                   display: "block",
                   fontFamily: FONT_INTER,
-                  fontSize: 13,
+                  fontSize: 14,
                   color: v2.text.secondary,
                   lineHeight: 1.25,
                   marginBottom: 6,
@@ -603,18 +872,6 @@ export default function EditBoothSheet({
                 // to read. David: "keyboard shouldn't auto-pop up as it
                 // covers most of the text. Keyboard should only pop-up
                 // on click inside the menu input."
-                //
-                // Structural fix per `feedback_kill_bug_class_after_3_patches`
-                // — session 175 patched the keyboard-cover symptom via
-                // onFocus + scrollIntoView, which only fired AFTER
-                // auto-focus had already pushed the keyboard up. Removing
-                // autoFocus removes the symptom at its source. The
-                // onFocus scrollIntoView is retained because it still
-                // matters when the user manually taps the input (the
-                // sheet is bottom-anchored + the input sits high in the
-                // sheet body, so scrolling the input into the
-                // above-keyboard region is still load-bearing on user
-                // tap).
                 onFocus={(e) => {
                   const target = e.currentTarget;
                   setTimeout(() => target.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
@@ -638,20 +895,36 @@ export default function EditBoothSheet({
                 style={{
                   fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
-                  // Session 175 iPhone QA — helper 11 → 14. David: "Booth
-                  // number and location... text is just way too low." Paired
-                  // with title 16 → 20 + eyebrow 11 → 13 above. 14 matches
-                  // /login bottom sub-text bump (also 14 → 16 / weight 500
-                  // this session) for cross-surface Cormorant italic
-                  // helper-voice consistency.
-                  fontSize: 14,
+                  // Session 191 D8 — helper 14 → 15. Cormorant italic
+                  // helper-voice; "Need to update?" inline Link → /contact
+                  // (existing route from Wave 1 session 92) per D7.
+                  fontSize: 15,
                   color: v2.text.secondary,
                   lineHeight: 1.4,
                   marginTop: 6,
                 }}
               >
-                Booth number and location are managed by Treehouse Finds.
-                Reach out if either needs to change.
+                Booth number and location are managed by Treehouse Finds.{" "}
+                <Link
+                  href="/contact"
+                  style={{
+                    // Session 191 post-QA REC-1 fix — bumped v2.text.muted
+                    // (#A39686, ~2.85:1 on cream) → v2.text.secondary
+                    // (#5C5246, ~6.9:1) to pass WCAG AA 4.5:1 for
+                    // interactive text <18px. Same offender class session
+                    // 174 contrast audit Shape β closed (baseline 99→0);
+                    // session 191 C4 reintroduced it on a brand-new
+                    // affordance the audit didn't enumerate. Matches
+                    // session 153 /login footer Link canonical exactly.
+                    color:                v2.text.secondary,
+                    textDecoration:       "underline",
+                    textDecorationStyle:  "dotted",
+                    textDecorationColor:  v2.text.secondary,
+                    textUnderlineOffset:  3,
+                  }}
+                >
+                  Need to update?
+                </Link>
               </div>
             </div>
           ) : (
@@ -664,207 +937,60 @@ export default function EditBoothSheet({
               disabled={submitting}
             />
           )}
+          </section>
+          {/* === End Section 1 === */}
 
-          {/* Session 186 — Vendor identity section per D14 in
-              docs/vendor-profile-enrichment-design.md (D2 divider + D5
-              avatar + D7 bio + D8 URL inputs + D10 directions). Vendor
+          {/* Session 186 — Vendor identity sections. Session 191 D1 splits
+              what was a single flat block into 3 numbered sections (D2
+              hairline divider retired per D3 — R1 reversal of session 186
+              D2; gap-only delimiter via section marginBottom: 32). Vendor
               mode only — admin mode (on /shelves) routes enrichment
               edits through the impersonation flow (/my-shelf?vendor=<id>
               Pencil → vendor mode of this sheet, session 148 admin-vendor
-              parity). Surfaced as a sub-decision inside D15 per
-              `feedback_schema_forced_deviation_not_design_reversal` —
-              D15 said "both modes get all 5 fields"; Arc 1 ships vendor
-              mode in /shelves remains a single-PATCH path against
-              /api/admin/vendors. */}
+              parity). */}
           {mode === "vendor" && (
             <>
-              {/* D2 — hairline divider. 10px above composes with the
-                  vendor form's marginBottom: 14 for ~24px total breath. */}
-              <div style={{ height: 1, background: v2.border.light, margin: "10px 0 18px" }} />
-
-              {/* D5 — Profile photo (avatar). Mirrors hero photo's atomic
-                  Replace/Remove pattern; 96×96 circular crop preview to
-                  match the 40px /shelf compound-lockup render (Arc 2)
-                  while showing enough detail for the vendor to confirm
-                  framing pre-upload. compressImage(maxWidth=256) per D5. */}
-              <div style={{ marginBottom: 16 }}>
-                <label
-                  style={{
-                    display:      "block",
-                    fontFamily:   FONT_INTER,
-                    fontSize:     13,
-                    color:        v2.text.secondary,
-                    lineHeight:   1.25,
-                    marginBottom: 8,
-                  }}
-                >
-                  Profile photo
-                </label>
-                <div style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
-                  <div
-                    style={{
-                      flexShrink:   0,
-                      width:        96,
-                      height:       96,
-                      borderRadius: "50%",
-                      overflow:     "hidden",
-                      position:     "relative",
-                      background:   avatarUrl ? undefined : v2.surface.warm,
-                      border:       `1px solid ${v2.border.light}`,
-                    }}
-                  >
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        style={{
-                          position:  "absolute",
-                          inset:     0,
-                          width:     "100%",
-                          height:    "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          position:      "absolute",
-                          inset:         0,
-                          display:       "flex",
-                          alignItems:    "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <UserIcon size={32} strokeWidth={1.5} style={{ color: v2.text.muted }} />
-                      </div>
-                    )}
-                    {avatarBusy && (
-                      <div
-                        style={{
-                          position:       "absolute",
-                          inset:          0,
-                          background:     "rgba(20,14,6,0.42)",
-                          display:        "flex",
-                          alignItems:     "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <LoaderIcon
-                          size={18}
-                          style={{ color: v2.surface.card, animation: "spin 0.9s linear infinite" }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                    <input
-                      ref={avatarFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleAvatarUpload(f);
-                        e.target.value = "";
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => avatarFileInputRef.current?.click()}
-                      disabled={!!avatarBusy || submitting}
-                      style={{
-                        flex:                  1,
-                        padding:               "0 12px",
-                        borderRadius:          8,
-                        background:            v2.surface.card,
-                        border:                `1px solid ${v2.border.light}`,
-                        fontFamily:            FONT_INTER,
-                        fontSize:              13,
-                        color:                 v2.text.primary,
-                        cursor:                avatarBusy || submitting ? "default" : "pointer",
-                        display:               "flex",
-                        alignItems:            "center",
-                        justifyContent:        "center",
-                        gap:                   6,
-                        WebkitTapHighlightColor: "transparent",
-                      }}
-                    >
-                      <ImagePlus size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
-                      {avatarUrl ? "Replace photo" : "Add photo"}
-                    </button>
-                    {avatarUrl && (
-                      <button
-                        type="button"
-                        onClick={handleAvatarRemove}
-                        disabled={!!avatarBusy || submitting}
-                        style={{
-                          flex:                  1,
-                          padding:               "0 12px",
-                          borderRadius:          8,
-                          background:            "transparent",
-                          border:                `1px solid ${v2.border.light}`,
-                          fontFamily:            FONT_INTER,
-                          fontSize:              13,
-                          color:                 v2.text.secondary,
-                          cursor:                avatarBusy || submitting ? "default" : "pointer",
-                          display:               "flex",
-                          alignItems:            "center",
-                          justifyContent:        "center",
-                          gap:                   6,
-                          WebkitTapHighlightColor: "transparent",
-                        }}
-                      >
-                        <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
-                        Remove photo
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {avatarError && (
-                  <div
-                    style={{
-                      marginTop:    8,
-                      padding:      "8px 10px",
-                      borderRadius: 8,
-                      background:   v2.surface.error,
-                      border:       `1px solid ${v2.border.error}`,
-                      fontFamily:   FONT_INTER,
-                      fontSize:     12,
-                      color:        v2.accent.red,
-                      lineHeight:   1.5,
-                      display:      "flex",
-                      alignItems:   "flex-start",
-                      gap:          6,
-                    }}
-                  >
-                    <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 2, color: v2.accent.red }} />
-                    <span>{avatarError}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* D7 — Bio (textarea + 280-char counter). Cormorant italic
+              {/* ====================================================
+                  Section 2 — About Your Booth
+                  D7 — Bio (textarea + 280-char counter). Cormorant italic
                   placeholder matches the literary-serif voice that the
-                  bio will read in on /shelf (Arc 2 AboutBoothSection). */}
-              <div style={{ marginBottom: 14 }}>
-                <label
+                  bio will read in on /shelf (Arc 2 AboutBoothSection).
+                  Session 191 D5 — field label dropped (section header
+                  carries meaning). D9 — placeholder color explicit.
+                  ==================================================== */}
+              <section style={{ marginBottom: 32 }}>
+                <h3
                   style={{
-                    display:      "block",
-                    fontFamily:   FONT_INTER,
-                    fontSize:     13,
-                    color:        v2.text.secondary,
-                    lineHeight:   1.25,
-                    marginBottom: 6,
+                    fontFamily: FONT_CORMORANT,
+                    fontSize:   18,
+                    fontWeight: 500,
+                    color:      v2.text.primary,
+                    lineHeight: 1.3,
+                    margin:     "0 0 4px",
                   }}
                 >
-                  Bio
-                </label>
+                  2. About Your Booth
+                </h3>
+                <p
+                  style={{
+                    fontFamily: FONT_CORMORANT,
+                    fontStyle:  "italic",
+                    fontSize:   14,
+                    color:      v2.text.secondary,
+                    lineHeight: 1.4,
+                    margin:     "0 0 14px",
+                  }}
+                >
+                  Tell shoppers about your booth and what makes it worth visiting.
+                </p>
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX_LEN))}
-                  placeholder="Tell shoppers about your booth — what you specialize in, what makes it worth visiting…"
+                  placeholder="What you specialize in, what makes it worth visiting…"
+                  aria-label="Bio"
                   disabled={submitting}
                   rows={4}
+                  className="th-bio-textarea"
                   style={{
                     width:           "100%",
                     boxSizing:       "border-box",
@@ -889,126 +1015,225 @@ export default function EditBoothSheet({
                     display:        "flex",
                     justifyContent: "flex-end",
                     fontFamily:     FONT_INTER,
-                    fontSize:       11,
+                    fontSize:       12,
                     color:          trimmedBio.length >= BIO_WARN_LEN ? v2.accent.red : v2.text.muted,
                     marginTop:      4,
                   }}
                 >
                   {trimmedBio.length}/{BIO_MAX_LEN}
                 </div>
-              </div>
+              </section>
+              {/* === End Section 2 === */}
 
-              {/* D8 — Facebook URL. Lenient http(s):// validation; no host
-                  allowlist (vendors can paste fb.me / m.facebook.com /
-                  shortlinks). Save button gates on validity; field-level
-                  amber border surfaces invalid input live. */}
-              <div style={{ marginBottom: 14 }}>
-                <label
+              {/* ====================================================
+                  Section 3 — Connect With Shoppers
+                  D8 — Facebook + Instagram URLs. Lenient http(s)://
+                  validation; no host allowlist. Session 191 D5 — field
+                  labels dropped (section header + Phosphor icon prefix
+                  per D6 carry meaning). D14 — "We'll format this as a
+                  link." sub-helper renders under each input.
+                  ==================================================== */}
+              <section style={{ marginBottom: 32 }}>
+                <h3
                   style={{
-                    display:      "block",
-                    fontFamily:   FONT_INTER,
-                    fontSize:     13,
-                    color:        v2.text.secondary,
-                    lineHeight:   1.25,
-                    marginBottom: 6,
+                    fontFamily: FONT_CORMORANT,
+                    fontSize:   18,
+                    fontWeight: 500,
+                    color:      v2.text.primary,
+                    lineHeight: 1.3,
+                    margin:     "0 0 4px",
                   }}
                 >
-                  Facebook URL
-                </label>
-                <input
-                  value={facebookUrl}
-                  onChange={(e) => setFacebookUrl(e.target.value)}
-                  placeholder="facebook.com/yourbooth"
-                  disabled={submitting}
-                  inputMode="url"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck={false}
+                  3. Connect With Shoppers
+                </h3>
+                <p
                   style={{
-                    width:           "100%",
-                    boxSizing:       "border-box",
-                    padding:         "11px 12px",
-                    borderRadius:    10,
-                    background:      trimmedFb !== initial.facebookUrl.trim() ? v2.accent.greenSoft : v2.surface.card,
-                    border:          `1px solid ${
-                      fbInputInvalid
-                        ? v2.accent.red
-                        : trimmedFb !== initial.facebookUrl.trim() ? v2.accent.green : v2.border.light
-                    }`,
-                    color:           v2.text.primary,
-                    fontSize:        14,
-                    outline:         "none",
-                    fontFamily:      FONT_INTER,
-                    appearance:      "none",
-                    WebkitAppearance: "none",
-                  }}
-                />
-              </div>
-
-              {/* D8 — Instagram URL. Same shape as Facebook. */}
-              <div style={{ marginBottom: 14 }}>
-                <label
-                  style={{
-                    display:      "block",
-                    fontFamily:   FONT_INTER,
-                    fontSize:     13,
-                    color:        v2.text.secondary,
-                    lineHeight:   1.25,
-                    marginBottom: 6,
+                    fontFamily: FONT_CORMORANT,
+                    fontStyle:  "italic",
+                    fontSize:   14,
+                    color:      v2.text.secondary,
+                    lineHeight: 1.4,
+                    margin:     "0 0 14px",
                   }}
                 >
-                  Instagram URL
-                </label>
-                <input
-                  value={instagramUrl}
-                  onChange={(e) => setInstagramUrl(e.target.value)}
-                  placeholder="@yourbooth or instagram.com/yourbooth"
-                  disabled={submitting}
-                  inputMode="url"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  style={{
-                    width:           "100%",
-                    boxSizing:       "border-box",
-                    padding:         "11px 12px",
-                    borderRadius:    10,
-                    background:      trimmedIg !== initial.instagramUrl.trim() ? v2.accent.greenSoft : v2.surface.card,
-                    border:          `1px solid ${
-                      igInputInvalid
-                        ? v2.accent.red
-                        : trimmedIg !== initial.instagramUrl.trim() ? v2.accent.green : v2.border.light
-                    }`,
-                    color:           v2.text.primary,
-                    fontSize:        14,
-                    outline:         "none",
-                    fontFamily:      FONT_INTER,
-                    appearance:      "none",
-                    WebkitAppearance: "none",
-                  }}
-                />
-              </div>
+                  Share your journey on social media.
+                </p>
 
-              {/* D10 — In-mall directions (textarea, multiline). Server
-                  caps at 500 chars; no UI counter — directions are short
-                  by nature and the cap is defensive not user-facing. */}
-              <div style={{ marginBottom: 14 }}>
-                <label
+                {/* Facebook URL — icon prefix via absolute-positioned
+                    PiFacebookLogo; input paddingLeft 12 → 38 to clear
+                    the 18px glyph + 8px breath. Matches session 187
+                    AboutBoothSection display canonical. */}
+                <div style={{ marginBottom: 4, position: "relative" }}>
+                  <PiFacebookLogo
+                    aria-hidden
+                    size={18}
+                    color={v2.accent.green}
+                    style={{
+                      position:      "absolute",
+                      left:          12,
+                      top:           "50%",
+                      transform:     "translateY(-50%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                    placeholder="facebook.com/yourbooth"
+                    aria-label="Facebook URL"
+                    disabled={submitting}
+                    inputMode="url"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    style={{
+                      width:           "100%",
+                      boxSizing:       "border-box",
+                      padding:         "11px 12px 11px 38px",
+                      borderRadius:    10,
+                      background:      trimmedFb !== initial.facebookUrl.trim() ? v2.accent.greenSoft : v2.surface.card,
+                      border:          `1px solid ${
+                        fbInputInvalid
+                          ? v2.accent.red
+                          : trimmedFb !== initial.facebookUrl.trim() ? v2.accent.green : v2.border.light
+                      }`,
+                      color:           v2.text.primary,
+                      fontSize:        14,
+                      outline:         "none",
+                      fontFamily:      FONT_INTER,
+                      appearance:      "none",
+                      WebkitAppearance: "none",
+                    }}
+                  />
+                </div>
+                {/* Session 191 post-QA P1-B — dynamic canonical preview.
+                    Empty input → forward-looking helper. Non-empty + valid
+                    → "Will display as: {canonical-stripped-https}" so the
+                    vendor sees what the system will store + display, even
+                    when their raw paste was a long share URL. Color bumped
+                    v2.text.muted → v2.text.secondary (WCAG AA 4.5:1 vs
+                    2.85:1 fail; same fix class as REC-1 — closes the 2 new
+                    lint:contrast violations session 191 introduced at the
+                    same helper site). */}
+                <p
                   style={{
-                    display:      "block",
-                    fontFamily:   FONT_INTER,
-                    fontSize:     13,
-                    color:        v2.text.secondary,
-                    lineHeight:   1.25,
-                    marginBottom: 6,
+                    fontFamily: FONT_CORMORANT,
+                    fontStyle:  "italic",
+                    fontSize:   14,
+                    color:      v2.text.secondary,
+                    lineHeight: 1.4,
+                    margin:     "4px 0 14px",
+                    wordBreak:  "break-all",
                   }}
                 >
-                  In-mall directions
-                </label>
+                  {trimmedFb === "" || !facebookCanonical
+                    ? "We’ll format this as a link."
+                    : `Will display as: ${facebookCanonical.replace(/^https:\/\//, "")}`}
+                </p>
+
+                {/* Instagram URL — same shape as Facebook. */}
+                <div style={{ marginBottom: 4, position: "relative" }}>
+                  <PiInstagramLogo
+                    aria-hidden
+                    size={18}
+                    color={v2.accent.green}
+                    style={{
+                      position:      "absolute",
+                      left:          12,
+                      top:           "50%",
+                      transform:     "translateY(-50%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    value={instagramUrl}
+                    onChange={(e) => setInstagramUrl(e.target.value)}
+                    placeholder="@yourbooth or instagram.com/yourbooth"
+                    aria-label="Instagram URL"
+                    disabled={submitting}
+                    inputMode="url"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    style={{
+                      width:           "100%",
+                      boxSizing:       "border-box",
+                      padding:         "11px 12px 11px 38px",
+                      borderRadius:    10,
+                      background:      trimmedIg !== initial.instagramUrl.trim() ? v2.accent.greenSoft : v2.surface.card,
+                      border:          `1px solid ${
+                        igInputInvalid
+                          ? v2.accent.red
+                          : trimmedIg !== initial.instagramUrl.trim() ? v2.accent.green : v2.border.light
+                      }`,
+                      color:           v2.text.primary,
+                      fontSize:        14,
+                      outline:         "none",
+                      fontFamily:      FONT_INTER,
+                      appearance:      "none",
+                      WebkitAppearance: "none",
+                    }}
+                  />
+                </div>
+                {/* Session 191 post-QA P1-B + contrast — same pattern as
+                    Facebook helper above. Dynamic canonical preview +
+                    v2.text.secondary for WCAG AA. */}
+                <p
+                  style={{
+                    fontFamily: FONT_CORMORANT,
+                    fontStyle:  "italic",
+                    fontSize:   14,
+                    color:      v2.text.secondary,
+                    lineHeight: 1.4,
+                    margin:     "4px 0 0",
+                    wordBreak:  "break-all",
+                  }}
+                >
+                  {trimmedIg === "" || !instagramCanonical
+                    ? "We’ll format this as a link."
+                    : `Will display as: ${instagramCanonical.replace(/^https:\/\//, "")}`}
+                </p>
+              </section>
+              {/* === End Section 3 === */}
+
+              {/* ====================================================
+                  Section 4 — Find Me in the Mall
+                  D10 — In-mall directions (textarea, multiline). Session
+                  191 reverses session 186 D10 — UI counter restored at
+                  280-char cap (R3 reversal surfaced; server cap moves
+                  500→280 in /api/vendor/profile). Session 191 D5 — field
+                  label dropped (section header carries meaning).
+                  ==================================================== */}
+              <section style={{ marginBottom: 18 }}>
+                <h3
+                  style={{
+                    fontFamily: FONT_CORMORANT,
+                    fontSize:   18,
+                    fontWeight: 500,
+                    color:      v2.text.primary,
+                    lineHeight: 1.3,
+                    margin:     "0 0 4px",
+                  }}
+                >
+                  4. Find Me in the Mall
+                </h3>
+                <p
+                  style={{
+                    fontFamily: FONT_CORMORANT,
+                    fontStyle:  "italic",
+                    fontSize:   14,
+                    color:      v2.text.secondary,
+                    lineHeight: 1.4,
+                    margin:     "0 0 14px",
+                  }}
+                >
+                  Help shoppers find you easily.
+                </p>
                 <textarea
                   value={directionsText}
-                  onChange={(e) => setDirectionsText(e.target.value)}
+                  onChange={(e) => setDirectionsText(e.target.value.slice(0, DIRECTIONS_MAX_LEN))}
                   placeholder="Walk back along the right wall, past the green sign — booth is on the left after the staircase."
+                  aria-label="In-mall directions"
                   disabled={submitting}
                   rows={3}
                   style={{
@@ -1029,9 +1254,23 @@ export default function EditBoothSheet({
                     WebkitAppearance: "none",
                   }}
                 />
-              </div>
+                <div
+                  style={{
+                    display:        "flex",
+                    justifyContent: "flex-end",
+                    fontFamily:     FONT_INTER,
+                    fontSize:       12,
+                    color:          trimmedDirs.length >= DIRECTIONS_WARN_LEN ? v2.accent.red : v2.text.muted,
+                    marginTop:      4,
+                  }}
+                >
+                  {trimmedDirs.length}/{DIRECTIONS_MAX_LEN}
+                </div>
+              </section>
+              {/* === End Section 4 === */}
             </>
           )}
+
 
           {/* Conflict / error */}
           {error && (
@@ -1056,7 +1295,12 @@ export default function EditBoothSheet({
             </div>
           )}
 
-          {/* CTA */}
+          {/* CTA — session 191 post-QA P1-C: marginTop 24 breathes the
+              Save changes button away from Section 4's directions counter
+              which previously sat directly above (Nielsen #8 aesthetic +
+              minimalist design). Wrapper div carries the marginTop so the
+              FormButton primitive contract stays untouched. */}
+          <div style={{ marginTop: 24 }}>
           <FormButton
             size="compact"
             onClick={handleSave}
@@ -1093,9 +1337,20 @@ export default function EditBoothSheet({
           >
             Cancel
           </button>
+          </div>{/* /CTA wrapper (session 191 P1-C marginTop:24 breath) */}
         </motion.div>
       </div>
-      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+      <style>{`
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        /* Session 191 D9 — explicit bio placeholder color. Browser default
+           placeholder color is light gray; italic Lora 15px in light gray
+           against cream bg (v2.surface.card #FFFCF5) reads pale and hard to
+           parse. Pin to v2.text.muted with opacity:1 so Firefox honors it. */
+        .th-bio-textarea::placeholder {
+          color: ${v2.text.muted};
+          opacity: 1;
+        }
+      `}</style>
     </>
   );
 }
