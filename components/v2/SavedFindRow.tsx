@@ -68,7 +68,11 @@ export default function SavedFindRow({
       style={{
         padding: "12px 20px",
         display: "grid",
-        gridTemplateColumns: "24px 64px 1fr 36px",
+        // Session 192 F4 — find-row template trims the 24px ✓ Found slot
+        // while the indicator is hidden for MVP. Revival: flip
+        // SHOW_FOUND_INDICATOR to true (below) + change template back to
+        // "24px 64px 1fr 36px".
+        gridTemplateColumns: "64px 1fr 36px",
         gap: 12,
         alignItems: "center",
         borderTop: `1px solid ${v2.border.light}`,
@@ -84,7 +88,15 @@ export default function SavedFindRow({
         opacity: dim ? 0.55 : 1,
       }}
     >
-      <FoundCheckCircle isFound={isFound} onToggle={onToggleFound} />
+      {/* Session 192 F4 — ✓ Found indicator hidden for MVP per David's
+          iPhone QA: "not needed for MVP, keep code." Find-to-found north
+          star (session 121) stays valid; this is a temporary scope-trim,
+          not a retirement. Revive: flip `false` → `true`. The
+          useShopperFindsFound hook + isFound + onToggleFound prop chain
+          + FoundCheckCircle component file all stay wired so revival is
+          a single-character flip. Pattern matches session 191 C4
+          long-range dead-code preservation. */}
+      {false && <FoundCheckCircle isFound={isFound} onToggle={onToggleFound} />}
 
       <div
         aria-hidden
