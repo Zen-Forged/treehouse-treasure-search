@@ -400,6 +400,94 @@ export async function sendDenialNotice(
   });
 }
 
+// ── Email #2.6 — New booth request admin alert (session 193) ────────────────
+
+export interface NewBoothRequestAlertPayload {
+  firstName:     string;
+  lastName:      string;
+  email:         string;
+  mallName?:     string | null;
+  boothNumber?:  string | null;
+  boothName?:    string | null;
+  proofImageUrl: string;
+}
+
+/**
+ * Sends an internal admin alert when a new booth request is submitted.
+ *
+ * Triggered by: POST /api/vendor-request (after successful insert, in
+ * parallel with sendRequestReceived).
+ *
+ * Recipient defaults to david@zenforged.com; overridable via
+ * ADMIN_ALERT_EMAIL env var. replyTo is the vendor's email so admin can
+ * reply directly from inbox to ask follow-up questions.
+ *
+ * Best-effort delivery like all other email functions — a failed admin
+ * alert never fails the underlying vendor-request POST.
+ */
+export async function sendNewBoothRequestAlert(
+  payload: NewBoothRequestAlertPayload,
+): Promise<{ ok: boolean; error?: string }> {
+  const adminEmail = process.env.ADMIN_ALERT_EMAIL ?? "david@zenforged.com";
+  const siteUrl    = getSiteUrl();
+  const adminUrl   = `${siteUrl}/admin`;
+
+  const vendorName = `${payload.firstName.trim()} ${payload.lastName.trim()}`.trim() || "(no name)";
+  const mallLine   = payload.mallName?.trim() || "(no location)";
+  const boothLine  = payload.boothNumber?.trim() || "—";
+  const boothNm    = payload.boothName?.trim() || "—";
+
+  const subject = `New booth request — ${vendorName} at ${mallLine}`;
+
+  const html = renderEmailShell({
+    preheader: `${vendorName} submitted a booth request.`,
+    bodyHtml: `
+      <p style="${pStyle}">A new booth request just came in.</p>
+
+      <div style="margin: 0 0 20px;">
+        <img src="${escapeAttr(payload.proofImageUrl)}" alt="Booth proof photo" width="540" style="display: block; width: 100%; max-width: 540px; height: auto; border-radius: 12px; border: 1px solid ${HAIR_SOFT};" />
+      </div>
+
+      <div style="${boxStyle}">
+        <p style="${boxPStyle}"><strong style="color:${INK};font-weight:600;">Name:</strong> ${escapeHtml(vendorName)}</p>
+        <p style="${boxPStyle}"><strong style="color:${INK};font-weight:600;">Email:</strong> ${escapeHtml(payload.email)}</p>
+        <p style="${boxPStyle}"><strong style="color:${INK};font-weight:600;">Mall:</strong> ${escapeHtml(mallLine)}</p>
+        <p style="${boxPStyle}"><strong style="color:${INK};font-weight:600;">Booth #:</strong> ${escapeHtml(boothLine)}</p>
+        <p style="${boxPStyle} margin-bottom: 0;"><strong style="color:${INK};font-weight:600;">Booth name:</strong> ${escapeHtml(boothNm)}</p>
+      </div>
+
+      <div style="margin: 0 0 12px; padding: 0 4px;">
+        <a href="${escapeAttr(adminUrl)}" style="display: block; padding: 15px 20px; background: #1e4d2b; color: #fff9e8; font-family: ${SERIF}; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 10px; text-align: center; letter-spacing: 0.005em;">
+          Review in admin
+        </a>
+      </div>
+    `,
+    footerHtml: `Internal admin notification — Treehouse Finds.`,
+  });
+
+  const text = [
+    `A new booth request just came in.`,
+    ``,
+    `Name: ${vendorName}`,
+    `Email: ${payload.email}`,
+    `Mall: ${mallLine}`,
+    `Booth #: ${boothLine}`,
+    `Booth name: ${boothNm}`,
+    ``,
+    `Proof photo: ${payload.proofImageUrl}`,
+    ``,
+    `Review in admin: ${adminUrl}`,
+  ].join("\n");
+
+  return sendEmail({
+    to:      adminEmail,
+    replyTo: payload.email,
+    subject,
+    html,
+    text,
+  });
+}
+
 // ── Email #3 — Window share (Q-007, session 39) ─────────────────────────
 
 /**

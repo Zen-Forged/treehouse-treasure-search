@@ -29,7 +29,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendRequestReceived } from "@/lib/email";
+import { sendRequestReceived, sendNewBoothRequestAlert } from "@/lib/email";
 import { recordEvent } from "@/lib/events";
 
 // ─── Error logging utility ────────────────────────────────────────────────────
@@ -287,17 +287,40 @@ export async function POST(req: NextRequest) {
       `Mall: ${trimmedMall || "not specified"} — IP: ${ip}`
     );
 
-    // ── Email #1: Request received (best-effort) ──────────────────────────
-    const emailResult = await sendRequestReceived({
-      firstName: trimmedFirst,
-      email:     trimmedEmail,
-      mallName:  trimmedMall,
-    });
+    // ── Emails (best-effort, parallelized) ────────────────────────────────
+    //   #1 sendRequestReceived → vendor-facing receipt
+    //   #2 sendNewBoothRequestAlert → internal admin alert to david@zenforged.com
+    // Both are best-effort — a failed send NEVER fails the POST. Parallelizing
+    // shaves ~200ms off the response without changing failure semantics.
+    const [vendorEmailResult, adminAlertResult] = await Promise.all([
+      sendRequestReceived({
+        firstName: trimmedFirst,
+        email:     trimmedEmail,
+        mallName:  trimmedMall,
+      }),
+      sendNewBoothRequestAlert({
+        firstName:     trimmedFirst,
+        lastName:      trimmedLast,
+        email:         trimmedEmail,
+        mallName:      trimmedMall,
+        boothNumber:   trimmedBoothNumber,
+        boothName:     trimmedBooth,
+        proofImageUrl: proofImageUrl,
+      }),
+    ]);
 
-    if (!emailResult.ok) {
+    if (!vendorEmailResult.ok) {
       logError("Request received email failed to send", {
         ip,
-        error: emailResult.error,
+        error: vendorEmailResult.error,
+        details: { userAgent, vendorEmail: trimmedEmail },
+      });
+    }
+
+    if (!adminAlertResult.ok) {
+      logError("Admin alert email failed to send", {
+        ip,
+        error: adminAlertResult.error,
         details: { userAgent, vendorEmail: trimmedEmail },
       });
     }
