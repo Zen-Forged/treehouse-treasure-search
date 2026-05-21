@@ -8,6 +8,50 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.192.0] — 2026-05-20
+
+### Session 192 — 5-finding iPhone-QA-driven dial bundle: F5 caption hairline + F2 BoothCloser retire on /shelf + F4 ✓ Found indicator gated for MVP + F3 ShareSheet QR scope owner-only + F1 social-link about:blank fix — 5 runtime commits + 1 close
+
+David opened with `/session-open` against stale local context (project actually at session 191, not 163 per loaded CLAUDE.md). Local main was **31 commits behind origin/main**; resolved via `feedback_worktree_drift_reset_and_cherry_pick.md` ✅ Promoted at session 153 detection sub-pattern + new "stash-rename + FF" resolution sub-pattern (preserves in-progress brand-asset work without clobber).
+
+David then surfaced **5 iPhone QA findings** in single message — instead of running the recommended batched walk across v0.187.0 → v0.191.0, the walk happened ahead of session-open + the findings landed inline. Bundle ran end-to-end without a design pass per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132: all 5 findings triaged as **Shape A pure dials** (audit-first surfaced concrete fix shape per finding; no V1 mockup needed). 5 commits sequenced smallest→largest per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 (5 firings this session, ~579+ cumulative).
+
+Audit-first parallel grep on all 5 findings before drafting any code; 3-question batched `AskUserQuestion` resolved 3 independent unblocking decisions (F4 radio identity + F2 retire scope + home-hero worktree-drift) in 1 round-trip per `feedback_user_clarification_restate_interpretation` ✅ Promoted. Build clean at every commit boundary; tsc + `npx next build` clean across all 48 routes throughout.
+
+### Added
+
+- **F5 hairline above generated caption on `/find/[id]`** — `v1.inkHairline` divider inside existing caption wrapper conditional so it renders only when `post.caption` is non-null. Matches the `v1.inkHairline` pattern at line 666 on same page. Width 100% inside wrapper's `padding 0 30px`; `marginBottom: 22` leaves quiet breath before the italic opening quote.
+- **F3 BoothEntity.showQr opt-in capability flag** — discriminated-union ShareSheet entity type extended with `showQr?: boolean`. `/my-shelf` callsite passes `showQr: true` (owner-view); `/shelf/[slug]` callsite stays default (shoppers AND admin viewing /shelf see Email + SMS only). Sub-pattern of session-80 BoothHero `saved + onToggleBookmark` opt-in extended to discriminated-union entity capability flag.
+
+### Changed
+
+- **F1 AboutBoothSection FB/IG social links** — swap from `<button onClick={() => { track + window.open(url, "_blank", "noopener,noreferrer") }}>` to native `<a href={url} target="_blank" rel="noopener noreferrer" onClick={() => track()}>`. iPhone Safari treats JS-initiated tabs as popups without intact parent reference, so back-nav landed on `about:blank` instead of /shelf. User-initiated anchor click creates a proper tab with intact history. Same secure-link intent as D9 (target=_blank + noopener + noreferrer), different implementation — explicitly NOT a design reversal per `feedback_surface_locked_design_reversals` ✅ Promoted; surfaced in commit body.
+- **F4 SavedFindRow grid template** trimmed from `"24px 64px 1fr 36px"` → `"64px 1fr 36px"` to avoid 36px dead-space gutter when `<FoundCheckCircle>` render is gated. Revival: two flips (`false → true` on render line + template restore).
+
+### Removed
+
+- **F2 `<BoothCloser>` mount on `/shelf/[slug]`** — closer text "Thanks for visiting my booth..." (session 157 ship + session 167 refinement) reads redundant after vendor profile enrichment Arc 2 (session 187) gave each booth its own bio + social links + in-mall directions. Component preserved in `components/BoothPage.tsx` for `/my-shelf` consumer + future /shelf revival. Historical comments on /shelf referencing BoothCloser placement left as design-lineage documentation.
+- **F3 FindShareBody QR channel + screen state machine** — `FindGridScreen` tiles drop QR (SMS + Copy Link only); `screen` state collapses to single-grid render (`useState` + `useEffect` reset + `showBack` + `onBack` all retire as dead-code byproduct per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted); `FindQrScreen` function deleted (~33 LOC; was FindShareBody's only consumer).
+- **F3 `share_find_qr_viewed` event type** — retired from 3 declarations: `lib/clientEvents.ts` union + `lib/events.ts` union + `app/api/events/route.ts` CLIENT_EVENT_TYPES whitelist. `share_find_channel_tapped` keeps its existing "qr_code" payload value (no new rows will fire it going forward from find-tier; preserved for historical event rows).
+- **F4 `<FoundCheckCircle>` render in SavedFindRow** — wrapped in `{false && <FoundCheckCircle ...>}` per session 191 NEW pattern "long-range Edit via `{false && ...}` dead-code preservation" extended to single-render-line scale. **2nd firing of session 191 pattern → Tech Rule promotion-ready on 3rd firing.** Hook + props + component file all stay wired untouched; find-to-found product thesis from session 121 stays valid (temporary MVP scope-trim, not retirement).
+- **F1 `window.open()` JS-initiated tab open** — replaced by user-initiated anchor (see above).
+
+### Fixed
+
+- **F1 iPhone Safari about:blank back-nav on social links** — root cause: `window.open()` from a click handler creates a popup-style tab without intact parent reference; tapping browser back lands on `about:blank` instead of the originating page. Fix: native `<a target="_blank">` anchor (user-initiated nav → normal tab with proper back-history).
+
+### iPhone QA watch-items
+
+- **F5 caption hairline** reads as designed on `/find/[id]` (only renders when caption exists; should sit just above the opening italic quote with quiet breath).
+- **F2 /shelf bottom** feels right after BoothCloser retire (no awkward gap; BoothHero content rolls naturally into BottomNav).
+- **F4 row layout** reflows cleanly on `/saved` — no dead 36px gutter on the left of each saved-find row.
+- **F3 ShareSheet QR** appears on `/my-shelf` (vendor owner-view) + **absent** from `/find/[id]` AND `/shelf/[slug]` (shoppers + admin). SMS + Email + Copy Link channels unchanged on respective surfaces.
+- **F1 social link tap** → external app/browser opens FB or IG → tap browser back → returns to `/shelf/[slug]` cleanly (not `about:blank`).
+
+[v0.192.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.192.0
+
+---
+
 ## [v0.191.0] — 2026-05-20
 
 ### Session 191 — EditBoothSheet UI revisit (Q-016 carry from session 186): 4-section structure + photo overlays + FB/IG icon prefixes + dynamic URL preview + WCAG launch-blocker fix caught by design-reviewer subagent — 7 runtime commits + 1 close
