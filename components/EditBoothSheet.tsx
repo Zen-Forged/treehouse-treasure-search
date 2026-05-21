@@ -1257,7 +1257,12 @@ export default function EditBoothSheet({
             </div>
           )}
 
-          {/* CTA */}
+          {/* CTA — session 191 post-QA P1-C: marginTop 24 breathes the
+              Save changes button away from Section 4's directions counter
+              which previously sat directly above (Nielsen #8 aesthetic +
+              minimalist design). Wrapper div carries the marginTop so the
+              FormButton primitive contract stays untouched. */}
+          <div style={{ marginTop: 24 }}>
           <FormButton
             size="compact"
             onClick={handleSave}
@@ -1294,6 +1299,7 @@ export default function EditBoothSheet({
           >
             Cancel
           </button>
+          </div>{/* /CTA wrapper (session 191 P1-C marginTop:24 breath) */}
         </motion.div>
       </div>
       <style>{`
