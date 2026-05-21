@@ -454,11 +454,31 @@ export default function EditBoothSheet({
                 fontWeight: 500,
                 color:      v2.text.primary,
                 lineHeight: 1.3,
-                margin:     "0 0 14px",
+                margin:     "0 0 4px",
               }}
             >
               1. Your Booth Identity
             </h3>
+            {/* Session 191 post-QA P2-A — Section 1 sub-header added per
+                design-reviewer subagent REC-2 (Gestalt similarity: Sections
+                2-4 establish [number title] / [italic sub-header] / [fields]
+                pattern; Section 1 originally omitted sub-header per D1's
+                "3 distinct field labels disambiguate" reasoning but the
+                visual rhythm broke — Section 1 read as a different shape).
+                Promotes design record Tier B3 to V1. Copy parallels
+                Sections 2-4 directive voice. */}
+            <p
+              style={{
+                fontFamily: FONT_CORMORANT,
+                fontStyle:  "italic",
+                fontSize:   14,
+                color:      v2.text.secondary,
+                lineHeight: 1.4,
+                margin:     "0 0 14px",
+              }}
+            >
+              Show shoppers your booth&apos;s photos and name.
+            </p>
 
           {/* Booth photo — replace + remove. Session 191 D4 — camera-bubble +
               trash-corner overlay on photo retires the sibling-text-button
