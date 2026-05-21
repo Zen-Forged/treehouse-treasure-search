@@ -8,6 +8,35 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.193.0] — 2026-05-21
+
+### Session 193 — Strategic analytics conversation + Ask #1 events reset (HITL prod) + Ask #3 admin alert email on new booth request — 1 runtime commit + 1 HITL + 1 close
+
+David opened with `/session-open`; standup recommended batched iPhone PWA walk across 6 production tags (v0.187.0 → v0.192.0) + customer-feature-list review. David redirected to a 4-axis strategic analytics ask: (1) reset events table for clean live-data baseline; (2) track new visitors (currently no page-view event tracked anywhere); (3) email david@zenforged.com on new booth request submission; (4) visual entity-resolved analytics admin tab (raw `find_id` / `vendor_slug` strings replaced by photo + title + price tiles).
+
+Strategic conversation surfaced the load-bearing connection between asks #2 and #4: the events table tracks specific *actions* (saves, shares, bookmarks) but NOT page views — so "what pages are getting viewed" is a data shape that doesn't exist yet. Page-view tracking is the substrate ask #4 needs to work visually. Vercel Analytics ($10/mo Pro, built-in) handles unique visitor counts + top pages natively with zero engineering; complementary to a custom entity-aware in-app tab. Per `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132, surfaced 3 cost shapes per ask + load-bearing clarification questions before drafting any code. David picked: full wipe both environments / "engaged visitor" definition recommended for #2 (deferred to session 194) / Shape B new dedicated Engagement tab for #4 / ship #1 + #3 today, defer #2 + #4.
+
+### Added
+
+- **`sendNewBoothRequestAlert()` in `lib/email.ts`** — internal admin alert email mirroring existing `sendRequestReceived` shape; reuses `renderEmailShell` + paper-cream brand tokens. Body includes proof photo banner (540px max-width, 12px radius, 1px hairline border) + details block (Name / Email / Mall / Booth # / Booth name; em-dash placeholder for null booth fields) + "Review in admin" full-width green CTA linking to `/admin`. Recipient defaults to `david@zenforged.com`, overridable via `ADMIN_ALERT_EMAIL` env var. `replyTo` set to vendor's email so admin can reply directly from inbox to ask follow-up questions. Best-effort delivery — a failed send NEVER fails the underlying `/api/vendor-request` POST.
+
+### Changed
+
+- **`/api/vendor-request` POST email-send block** — parallelized via `Promise.all([sendRequestReceived(...), sendNewBoothRequestAlert(...)])`. Both sends are independent + best-effort; parallelization shaves ~200ms off response time without changing failure semantics. Each send's `!ok` result logs via the existing `logError` helper.
+
+### Fixed
+
+- **R3 events table baseline** — `TRUNCATE TABLE events` applied to prod via HITL SQL paste (BEGIN/COMMIT-wrapped with `COUNT(*)` audit before + after). Staging skipped per David's call (was never fully synced; will rebuild if a preview surface is needed for #2/#4 implementation). **Discovery flagged for session 194**: `rows_before = 0`. R3 events have been wired since session 73 (~120 sessions); the empty baseline suggests writes may be silently failing in prod OR the table was wiped externally. Investigation owed before visual-analytics tab design (Shape B for ask #4) — the tab is moot if the substrate isn't writing. Carries as session 194 primary investigation.
+
+### iPhone QA watch-items
+
+- Submit a test booth request via `/vendor-request` on production; confirm `david@zenforged.com` receives the alert email with: proof photo banner, all 5 details rows populated (or em-dashes for null booth fields), Review-in-admin CTA routes to `/admin`, replyTo header carries vendor's email address.
+- Confirm vendor still receives `sendRequestReceived` receipt (existing behavior preserved through parallel-send refactor).
+
+[v0.193.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.193.0
+
+---
+
 ## [v0.192.0] — 2026-05-20
 
 ### Session 192 — 5-finding iPhone-QA-driven dial bundle: F5 caption hairline + F2 BoothCloser retire on /shelf + F4 ✓ Found indicator gated for MVP + F3 ShareSheet QR scope owner-only + F1 social-link about:blank fix — 5 runtime commits + 1 close
