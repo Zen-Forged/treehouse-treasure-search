@@ -20,14 +20,17 @@
 // matches the iconBubble convention used for other engagement-tier
 // bubbles like BookmarkBoothBubble + ShareBubble).
 //
-// Tap behavior (D9): window.open(url, '_blank', 'noopener,noreferrer')
-// — opens in new tab/window with secure rel attributes. Fires
-// `vendor_social_tapped` R3 analytics event with vendor_slug + platform
-// payload (whitelisted in app/api/events/route.ts at session 186 Arc 1
-// commit 1; ingest path verified). URLs are written canonical via
-// lib/socialUrls.ts normalizer on the Arc 1 PATCH path, so no
-// client-side normalization needed here — just open whatever is in the
-// DB column.
+// Tap behavior (D9): native <a href target="_blank" rel="noopener
+// noreferrer"> with onClick firing the `vendor_social_tapped` R3
+// analytics event (vendor_slug + platform payload; whitelisted in
+// app/api/events/route.ts at session 186 Arc 1 commit 1). Session 192
+// F1 swap: was JS-initiated window.open() — iPhone Safari treats those
+// tabs as popups without parent reference, so tapping back lands on
+// about:blank. User-initiated anchor click creates a proper tab with
+// intact history. Same-intent implementation change (D9 secure-link
+// goal preserved), NOT a design reversal. URLs are written canonical
+// via lib/socialUrls.ts normalizer on the Arc 1 PATCH path, so no
+// client-side normalization needed here.
 
 "use client";
 
@@ -56,9 +59,10 @@ export default function AboutBoothSection({
   // the vendor section would be" for vendors who haven't enriched yet.
   if (!trimmedBio && !hasFb && !hasIg) return null;
 
-  function handleSocialTap(platform: "facebook" | "instagram", url: string) {
+  // Analytics-only handler — anchor's native target="_blank" handles tab
+  // open (per session 192 F1 swap from window.open).
+  function handleSocialTap(platform: "facebook" | "instagram") {
     track("vendor_social_tapped", { vendor_slug: vendorSlug, platform });
-    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -102,24 +106,28 @@ export default function AboutBoothSection({
           }}
         >
           {hasFb && (
-            <button
-              type="button"
-              onClick={() => handleSocialTap("facebook", facebookUrl!)}
+            <a
+              href={facebookUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => handleSocialTap("facebook")}
               aria-label="Open booth on Facebook"
               style={socialBubbleStyle}
             >
               <PiFacebookLogo size={20} color={v2.accent.green} aria-hidden />
-            </button>
+            </a>
           )}
           {hasIg && (
-            <button
-              type="button"
-              onClick={() => handleSocialTap("instagram", instagramUrl!)}
+            <a
+              href={instagramUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => handleSocialTap("instagram")}
               aria-label="Open booth on Instagram"
               style={socialBubbleStyle}
             >
               <PiInstagramLogo size={20} color={v2.accent.green} aria-hidden />
-            </button>
+            </a>
           )}
         </div>
       )}
