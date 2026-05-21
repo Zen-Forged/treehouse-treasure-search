@@ -71,9 +71,13 @@ type EmailStatus =
  *   - Channel handlers (entity-specific URLs, SMS body templates, analytics)
  */
 export type ShareSheetEntity =
-  | { kind: "booth"; vendor: Vendor; mall: Mall | null }
+  | { kind: "booth"; vendor: Vendor; mall: Mall | null; showQr?: boolean }
   | { kind: "mall";  mall: Mall | "all-kentucky" }
   | { kind: "find";  post: Post; vendor: Vendor; mall: Mall | null };
+// Session 192 F3 — `showQr` on booth entity gates the QR channel + screen.
+// QR is owner/booth-admin affordance only (vendor prints + posts in physical
+// booth space); /my-shelf passes showQr: true; /shelf callsite stays default
+// (false) so shoppers AND admin viewing /shelf see Email + SMS only.
 
 export interface ShareSheetProps {
   open:    boolean;
@@ -240,6 +244,11 @@ function BoothShareBody({
     setScreen("grid");
   }
 
+  // Session 192 F3 — QR channel + screen gated on entity.showQr opt-in.
+  // /my-shelf passes showQr: true; /shelf default = false (no QR for
+  // shoppers OR admin viewing /shelf).
+  const showQr = entity.showQr === true;
+
   return (
     <BottomSheet
       open={open}
@@ -257,7 +266,7 @@ function BoothShareBody({
           mallAddress={mallAddress}
           onEmailTap={handleEmailTap}
           onSmsTap={handleSmsTap}
-          onQrTap={handleQrTap}
+          onQrTap={showQr ? handleQrTap : undefined}
         />
       )}
 
@@ -279,7 +288,7 @@ function BoothShareBody({
         />
       )}
 
-      {screen === "qr" && (
+      {showQr && screen === "qr" && (
         <QrScreen
           boothName={boothName}
           boothNo={boothNo}
@@ -393,11 +402,11 @@ function MallShareBody({
 }
 
 // ─── FindShareBody ───────────────────────────────────────────────────────
-// Find-tier share path. Channel set: SMS + QR + Copy Link. Replaces the
-// /find/[id] OS-native navigator.share() with the in-app sheet so the
-// share moment carries Treehouse identity.
+// Find-tier share path. Channel set: SMS + Copy Link (session 192 F3 retired
+// QR — QR is owner/booth-admin affordance only). Replaces the /find/[id]
+// OS-native navigator.share() with the in-app sheet so the share moment
+// carries Treehouse identity.
 type FindEntity = Extract<ShareSheetEntity, { kind: "find" }>;
-type FindScreen = "grid" | "qr";
 
 function FindShareBody({
   open,
@@ -408,14 +417,6 @@ function FindShareBody({
   onClose: () => void;
   entity:  FindEntity;
 }) {
-  const [screen, setScreen] = useState<FindScreen>("grid");
-
-  // Reset on open. Body scroll lock is owned by <BottomSheet>.
-  useEffect(() => {
-    if (!open) return;
-    setScreen("grid");
-  }, [open]);
-
   // Find data derivation (D3 of session 137 design)
   const post       = entity.post;
   const vendor     = entity.vendor;
@@ -442,11 +443,6 @@ function FindShareBody({
     onClose();
   }
 
-  function handleQrTap() {
-    track("share_find_channel_tapped", { ...trackPayload, channel: "qr_code" });
-    setScreen("qr");
-  }
-
   function handleCopyLinkTap() {
     track("share_find_channel_tapped", { ...trackPayload, channel: "copy_link" });
   }
@@ -455,49 +451,30 @@ function FindShareBody({
     track("share_find_copy_link_completed", trackPayload);
   }
 
-  function handleBack() {
-    setScreen("grid");
-  }
-
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
       ariaLabel="Share this find"
-      showBack={screen !== "grid"}
-      onBack={handleBack}
     >
-      {screen === "grid" && (
-        <FindGridScreen
-          findTitle={findTitle}
-          boothNo={boothNo}
-          vendorName={vendorName}
-          mallContext={mallContext}
-          findUrl={findUrl}
-          onSmsTap={handleSmsTap}
-          onQrTap={handleQrTap}
-          onCopyLinkTap={handleCopyLinkTap}
-          onCopyLinkSuccess={handleCopyLinkSuccess}
-        />
-      )}
-
-      {screen === "qr" && (
-        <FindQrScreen
-          findTitle={findTitle}
-          boothNo={boothNo}
-          vendorName={vendorName}
-          mallContext={mallContext}
-          findUrl={findUrl}
-          trackPayload={trackPayload}
-        />
-      )}
+      <FindGridScreen
+        findTitle={findTitle}
+        boothNo={boothNo}
+        vendorName={vendorName}
+        mallContext={mallContext}
+        findUrl={findUrl}
+        onSmsTap={handleSmsTap}
+        onCopyLinkTap={handleCopyLinkTap}
+        onCopyLinkSuccess={handleCopyLinkSuccess}
+      />
     </BottomSheet>
   );
 }
 
 // ─── GridScreen (Booth) ──────────────────────────────────────────────────
-// Frame C grid for booth entity — 3 tiles (Email + SMS + QR) + footer
-// disclaimer. "Share via" eyebrow above the grid (D5).
+// Frame C grid for booth entity — Email + SMS always; QR conditionally
+// (session 192 F3: owner-only opt-in via entity.showQr). "Share via"
+// eyebrow above the grid (D5).
 function GridScreen({
   boothName,
   boothNo,
@@ -513,12 +490,14 @@ function GridScreen({
   mallAddress: string;
   onEmailTap:  () => void;
   onSmsTap:    () => void;
-  onQrTap:     () => void;
+  onQrTap?:    () => void;
 }) {
   const tiles: ChannelGridTile[] = [
-    { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email",   onClick: onEmailTap },
-    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",     onClick: onSmsTap },
-    { kind: "channel", icon: <PiQrCode         size={22} color={v2.text.primary} />, label: "QR Code", onClick: onQrTap },
+    { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email", onClick: onEmailTap },
+    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",   onClick: onSmsTap },
+    ...(onQrTap
+      ? [{ kind: "channel" as const, icon: <PiQrCode size={22} color={v2.text.primary} />, label: "QR Code", onClick: onQrTap }]
+      : []),
   ];
 
   return (
@@ -583,6 +562,8 @@ function MallGridScreen({
 }
 
 // ─── FindGridScreen ──────────────────────────────────────────────────────
+// Session 192 F3 — QR channel retired (find-tier no longer carries QR; QR is
+// owner/booth-admin affordance only).
 function FindGridScreen({
   findTitle,
   boothNo,
@@ -590,7 +571,6 @@ function FindGridScreen({
   mallContext,
   findUrl,
   onSmsTap,
-  onQrTap,
   onCopyLinkTap,
   onCopyLinkSuccess,
 }: {
@@ -600,13 +580,11 @@ function FindGridScreen({
   mallContext:       string;
   findUrl:           string;
   onSmsTap:          () => void;
-  onQrTap:           () => void;
   onCopyLinkTap:     () => void;
   onCopyLinkSuccess: () => void;
 }) {
   const tiles: ChannelGridTile[] = [
-    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",     onClick: onSmsTap },
-    { kind: "channel", icon: <PiQrCode         size={22} color={v2.text.primary} />, label: "QR Code", onClick: onQrTap },
+    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS", onClick: onSmsTap },
     { kind: "copy",    url: findUrl, onTap: onCopyLinkTap, onCopySuccess: onCopyLinkSuccess },
   ];
 
@@ -1013,41 +991,6 @@ function MallQrScreen({
         addressLine={mallAddress ?? undefined}
       />
       <QrDisplay url={mallUrl} caption={isKentucky ? "Scan to browse Treehouse Finds" : "Scan to visit this mall"} />
-    </>
-  );
-}
-
-// ─── FindQrScreen ────────────────────────────────────────────────────────
-function FindQrScreen({
-  findTitle,
-  boothNo,
-  vendorName,
-  mallContext,
-  findUrl,
-  trackPayload,
-}: {
-  findTitle:    string;
-  boothNo:      string | null;
-  vendorName:   string;
-  mallContext:  string;
-  findUrl:      string;
-  trackPayload: { post_id: string; vendor_slug: string };
-}) {
-  useEffect(() => {
-    track("share_find_qr_viewed", trackPayload);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <>
-      <SlimHeader
-        title={findTitle}
-        titleClamp={2}
-        boothPill={boothNo ?? undefined}
-        contextLabel={vendorName || undefined}
-        addressLine={mallContext || undefined}
-      />
-      <QrDisplay url={findUrl} caption="Scan to view this find" />
     </>
   );
 }

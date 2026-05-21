@@ -52,7 +52,6 @@ const CLIENT_EVENT_TYPES = [
   "share_mall_sms_initiated",
   "share_mall_copy_link_completed",
   "share_find_channel_tapped",
-  "share_find_qr_viewed",
   "share_find_sms_initiated",
   "share_find_copy_link_completed",
   // Session 154 — Home chrome restructure D12; event key preserved across

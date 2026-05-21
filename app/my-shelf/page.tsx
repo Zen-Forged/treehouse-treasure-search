@@ -1071,7 +1071,11 @@ function MyBoothInner() {
         <ShareSheet
           open={shareOpen}
           onClose={() => setShareOpen(false)}
-          entity={{ kind: "booth", vendor: activeVendor, mall }}
+          // Session 192 F3 — QR channel is owner/booth-admin affordance only;
+          // /my-shelf is the canonical owner-view surface so showQr opts in.
+          // /shelf/[slug] callsite stays default (showQr undefined → false) so
+          // shoppers AND admin viewing /shelf see Email + SMS only.
+          entity={{ kind: "booth", vendor: activeVendor, mall, showQr: true }}
         />
       )}
 
