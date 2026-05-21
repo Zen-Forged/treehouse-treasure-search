@@ -1106,17 +1106,29 @@ export default function EditBoothSheet({
                     }}
                   />
                 </div>
+                {/* Session 191 post-QA P1-B — dynamic canonical preview.
+                    Empty input → forward-looking helper. Non-empty + valid
+                    → "Will display as: {canonical-stripped-https}" so the
+                    vendor sees what the system will store + display, even
+                    when their raw paste was a long share URL. Color bumped
+                    v2.text.muted → v2.text.secondary (WCAG AA 4.5:1 vs
+                    2.85:1 fail; same fix class as REC-1 — closes the 2 new
+                    lint:contrast violations session 191 introduced at the
+                    same helper site). */}
                 <p
                   style={{
                     fontFamily: FONT_CORMORANT,
                     fontStyle:  "italic",
                     fontSize:   14,
-                    color:      v2.text.muted,
+                    color:      v2.text.secondary,
                     lineHeight: 1.4,
                     margin:     "4px 0 14px",
+                    wordBreak:  "break-all",
                   }}
                 >
-                  We&apos;ll format this as a link.
+                  {trimmedFb === "" || !facebookCanonical
+                    ? "We’ll format this as a link."
+                    : `Will display as: ${facebookCanonical.replace(/^https:\/\//, "")}`}
                 </p>
 
                 {/* Instagram URL — same shape as Facebook. */}
@@ -1163,17 +1175,23 @@ export default function EditBoothSheet({
                     }}
                   />
                 </div>
+                {/* Session 191 post-QA P1-B + contrast — same pattern as
+                    Facebook helper above. Dynamic canonical preview +
+                    v2.text.secondary for WCAG AA. */}
                 <p
                   style={{
                     fontFamily: FONT_CORMORANT,
                     fontStyle:  "italic",
                     fontSize:   14,
-                    color:      v2.text.muted,
+                    color:      v2.text.secondary,
                     lineHeight: 1.4,
                     margin:     "4px 0 0",
+                    wordBreak:  "break-all",
                   }}
                 >
-                  We&apos;ll format this as a link.
+                  {trimmedIg === "" || !instagramCanonical
+                    ? "We’ll format this as a link."
+                    : `Will display as: ${instagramCanonical.replace(/^https:\/\//, "")}`}
                 </p>
               </section>
               {/* === End Section 3 === */}
