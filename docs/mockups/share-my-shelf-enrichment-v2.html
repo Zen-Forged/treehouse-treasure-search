@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Share My Shelf Enrichment — V2 Mockup (Axis B: Brand Depth)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:        #FBF6EA;
+    --warm:         #F4ECD8;
+    --paper:        #FFFCF5;
+    --postit:       #fbf3df;
+    --green:        #285C3C;
+    --green-mid:    #3D7A4F;
+    --green-deep:   #1F4632;
+    --green-soft:   rgba(40, 92, 60, 0.10);
+    --ink:          #2A1A0A;
+    --ink-secondary: #5C5246;
+    --ink-muted:    #A39686;
+    --border-light: rgba(42, 26, 10, 0.10);
+    --border-med:   rgba(42, 26, 10, 0.18);
+    --price-gold:   #FFD89B;
+    --price-dark:   #9B5D2E;
+    --photo-a: #c4a47a;
+    --photo-b: #8b7355;
+    --photo-c: #d4a76a;
+    --photo-d: #a68563;
+    --photo-e: #b8946a;
+    --photo-f: #95764a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  body { padding: 40px 20px 80px; }
+
+  .page-header {
+    max-width: 1280px;
+    margin: 0 auto 32px;
+    text-align: center;
+  }
+  .page-header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 36px;
+    margin: 0 0 8px;
+    color: var(--ink);
+  }
+  .page-header .subtitle {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ink-secondary);
+    margin: 0 0 4px;
+  }
+  .page-header .meta {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  .axis-label {
+    max-width: 1280px;
+    margin: 0 auto 32px;
+    padding: 16px 20px;
+    background: var(--paper);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--ink-secondary);
+    line-height: 1.55;
+  }
+  .axis-label strong { color: var(--ink); }
+
+  .frames {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    max-width: 1280px;
+    margin: 0 auto 64px;
+  }
+  @media (max-width: 1100px) {
+    .frames { grid-template-columns: 1fr; max-width: 480px; }
+  }
+
+  .frame {
+    background: var(--paper);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .frame-header {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 22px;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.2;
+  }
+  .frame-tag {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+    background: var(--green-soft);
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    align-self: flex-start;
+  }
+  .frame-summary {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-secondary);
+    line-height: 1.4;
+    margin: 0;
+  }
+  .brand-pct {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-secondary);
+    background: var(--warm);
+    padding: 4px 10px;
+    border-radius: 12px;
+    align-self: flex-start;
+    margin-top: -4px;
+  }
+
+  /* Card sequence — show 3 representative cards per frame */
+  .card-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 6px 0;
+    margin: 0 -6px;
+  }
+  .story-panel {
+    flex-shrink: 0;
+    width: 140px;
+    height: 248px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border: 1px solid var(--border-med);
+  }
+  .card-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* ===== FRAME i — LIGHT TREEHOUSE ===== */
+  /* Vendor identity leads; subtle Treehouse trails */
+  .light-hero {
+    background: var(--postit);
+    padding: 12px 10px;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .light-hero .eyebrow {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 8px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .light-hero .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--ink);
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .light-hero .pill {
+    font-family: 'Inter', sans-serif;
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-secondary);
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+  .light-hero .mall {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 9px;
+    color: var(--ink-secondary);
+    line-height: 1.2;
+    margin-bottom: auto;
+  }
+  .light-hero .wm-foot {
+    font-family: 'Times New Roman', serif;
+    font-size: 7px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    margin-top: 12px;
+    border-top: 1px solid var(--border-light);
+    padding-top: 6px;
+    width: 100%;
+  }
+
+  .light-find {
+    padding: 0;
+  }
+  .light-find .photo {
+    flex-grow: 1;
+    background: var(--photo-b);
+    position: relative;
+  }
+  .light-find .photo::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.5) 100%);
+  }
+  .light-find .meta {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 10px 9px;
+    color: var(--paper);
+    z-index: 1;
+  }
+  .light-find .meta .t {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+  .light-find .meta .p {
+    font-family: 'Times New Roman', serif;
+    font-size: 10px;
+    color: var(--price-gold);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .light-find .tiny-wm {
+    position: absolute; top: 6px; right: 6px;
+    z-index: 1;
+    font-family: 'Times New Roman', serif;
+    font-size: 6px;
+    color: rgba(255, 252, 245, 0.8);
+    letter-spacing: 0.04em;
+  }
+
+  .light-cta {
+    background: var(--postit);
+    padding: 14px 10px;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .light-cta .qr-mid {
+    width: 70px;
+    height: 70px;
+    background: var(--ink);
+    background-image:
+      linear-gradient(45deg, var(--paper) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--paper) 25%, transparent 25%);
+    background-size: 6px 6px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+  }
+  .light-cta .copy {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink);
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .light-cta .wm {
+    font-family: 'Times New Roman', serif;
+    font-size: 8px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    margin-top: auto;
+  }
+
+  /* ===== FRAME ii — BALANCED CO-BRAND ===== */
+  .balanced-hero {
+    background: linear-gradient(160deg, var(--green) 0%, var(--green-mid) 100%);
+    color: var(--paper);
+    padding: 12px 10px;
+    text-align: center;
+    justify-content: space-between;
+  }
+  .balanced-hero .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 252, 245, 0.85);
+    margin-bottom: 8px;
+    margin-top: 8px;
+  }
+  .balanced-hero .leaf-glyph {
+    font-size: 32px;
+    color: rgba(255, 252, 245, 0.22);
+    margin: 10px 0;
+  }
+  .balanced-hero .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 20px;
+    color: var(--paper);
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .balanced-hero .pill {
+    font-family: 'Inter', sans-serif;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 252, 245, 0.85);
+  }
+  .balanced-hero .mall {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 9px;
+    color: rgba(255, 252, 245, 0.75);
+    line-height: 1.2;
+    margin-top: 6px;
+  }
+  .balanced-hero .hook {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: var(--paper);
+    line-height: 1.3;
+    border-top: 1px solid rgba(255, 252, 245, 0.25);
+    padding-top: 8px;
+    margin-top: 12px;
+  }
+
+  .balanced-find {
+    padding: 0;
+  }
+  .balanced-find .photo {
+    flex-grow: 1;
+    background: var(--photo-b);
+    position: relative;
+  }
+  .balanced-find .photo::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%);
+  }
+  .balanced-find .booth-tag {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: rgba(255, 252, 245, 0.92);
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-family: 'Inter', sans-serif;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--green);
+    z-index: 1;
+  }
+  .balanced-find .meta {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 10px 9px;
+    color: var(--paper);
+    z-index: 1;
+  }
+  .balanced-find .meta .t {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+  .balanced-find .meta .p {
+    font-family: 'Times New Roman', serif;
+    font-size: 10px;
+    color: var(--price-gold);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .balanced-find .leaf-corner {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 14px; height: 14px;
+    background: rgba(255, 252, 245, 0.92);
+    border-radius: 7px;
+    font-family: serif;
+    font-size: 9px;
+    line-height: 14px;
+    text-align: center;
+    color: var(--green);
+    z-index: 1;
+  }
+
+  .balanced-cta {
+    background: var(--postit);
+    padding: 14px 10px;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    border: 2px dashed var(--green);
+  }
+  .balanced-cta .header {
+    font-family: 'Inter', sans-serif;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .balanced-cta .qr-mid {
+    width: 80px;
+    height: 80px;
+    background: var(--green);
+    background-image:
+      linear-gradient(45deg, var(--postit) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--postit) 25%, transparent 25%);
+    background-size: 7px 7px;
+    border-radius: 4px;
+  }
+  .balanced-cta .copy {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .balanced-cta .wm {
+    font-family: 'Times New Roman', serif;
+    font-size: 8px;
+    color: var(--green);
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+
+  /* ===== FRAME iii — HEAVY TREEHOUSE ===== */
+  .heavy-hero {
+    background: var(--green-deep);
+    padding: 12px 10px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .heavy-hero::before {
+    content: '❋';
+    position: absolute;
+    top: -30px; left: -30px;
+    font-size: 180px;
+    color: rgba(255, 252, 245, 0.06);
+    z-index: 0;
+  }
+  .heavy-hero::after {
+    content: '❋';
+    position: absolute;
+    bottom: -50px; right: -30px;
+    font-size: 140px;
+    color: rgba(255, 252, 245, 0.06);
+    z-index: 0;
+  }
+  .heavy-hero > * { position: relative; z-index: 1; }
+  .heavy-hero .brand-line {
+    font-family: 'Inter', sans-serif;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.28em;
+    color: var(--postit);
+    margin-top: 6px;
+    margin-bottom: 10px;
+  }
+  .heavy-hero .treehouse-mark {
+    font-family: 'Times New Roman', serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--postit);
+    letter-spacing: 0.06em;
+    line-height: 1;
+  }
+  .heavy-hero .at-line {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 9px;
+    color: rgba(255, 252, 245, 0.7);
+    margin: 16px 0 6px;
+  }
+  .heavy-hero .vendor-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 20px;
+    color: var(--postit);
+    line-height: 1.05;
+  }
+  .heavy-hero .mall-line {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 9px;
+    color: rgba(255, 252, 245, 0.7);
+    margin-top: 8px;
+    margin-bottom: auto;
+  }
+  .heavy-hero .pill-treehouse {
+    background: var(--postit);
+    color: var(--green-deep);
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-top: 8px;
+  }
+  .heavy-hero .closing {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 9px;
+    color: var(--postit);
+    border-top: 1px solid rgba(251, 243, 223, 0.25);
+    padding-top: 8px;
+    margin-top: 12px;
+  }
+
+  .heavy-find {
+    background: var(--postit);
+    padding: 8px;
+    flex-direction: column;
+  }
+  .heavy-find .photo-frame {
+    width: 100%;
+    flex-grow: 1;
+    background: var(--photo-b);
+    border-radius: 4px;
+    position: relative;
+    border: 3px solid var(--paper);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .heavy-find .photo-frame::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 80%, rgba(0,0,0,0.3) 100%);
+    border-radius: 4px;
+  }
+  .heavy-find .leaf-mark {
+    position: absolute; top: 4px; right: 4px;
+    width: 14px; height: 14px;
+    background: var(--green);
+    border-radius: 7px;
+    color: var(--postit);
+    font-size: 9px;
+    line-height: 14px;
+    text-align: center;
+    z-index: 1;
+  }
+  .heavy-find .below {
+    padding: 8px 4px 2px;
+    text-align: center;
+    background: var(--postit);
+  }
+  .heavy-find .t {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 11px;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .heavy-find .p {
+    font-family: 'Times New Roman', serif;
+    font-size: 11px;
+    color: var(--green-deep);
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .heavy-find .booth-band {
+    background: var(--green-deep);
+    color: var(--postit);
+    text-align: center;
+    padding: 3px 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 6px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 6px;
+    border-radius: 2px;
+  }
+
+  .heavy-cta {
+    background: var(--postit);
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .heavy-cta::before {
+    content: '❋';
+    position: absolute;
+    top: -10px; right: -10px;
+    font-size: 70px;
+    color: var(--green-soft);
+    z-index: 0;
+  }
+  .heavy-cta > * { position: relative; z-index: 1; }
+  .heavy-cta .header {
+    font-family: 'Inter', sans-serif;
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    color: var(--green-deep);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .heavy-cta .treehouse-mark {
+    font-family: 'Times New Roman', serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--green-deep);
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+  }
+  .heavy-cta .qr-mid {
+    width: 78px;
+    height: 78px;
+    background: var(--green-deep);
+    background-image:
+      linear-gradient(45deg, var(--postit) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--postit) 25%, transparent 25%);
+    background-size: 7px 7px;
+    border-radius: 4px;
+    margin: 0 auto 10px;
+  }
+  .heavy-cta .url {
+    font-family: 'Inter', sans-serif;
+    font-size: 7px;
+    color: var(--ink-secondary);
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .heavy-cta .closing {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: var(--green-deep);
+    line-height: 1.2;
+  }
+
+  .pros-cons {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+  }
+  .pros-cons h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-secondary);
+    margin: 0 0 8px;
+  }
+  .pros-cons ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .pros-cons li {
+    padding: 2px 0;
+    padding-left: 14px;
+    position: relative;
+  }
+  .pros-cons li::before {
+    content: '·';
+    position: absolute;
+    left: 4px;
+    color: var(--ink-muted);
+    font-weight: 700;
+  }
+
+  .recommend-note {
+    max-width: 1280px;
+    margin: 32px auto 0;
+    padding: 18px 22px;
+    background: var(--green-soft);
+    border-left: 3px solid var(--green);
+    border-radius: 4px;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.55;
+  }
+  .recommend-note strong {
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--green);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .matrix {
+    max-width: 1280px;
+    margin: 40px auto 0;
+    padding: 24px;
+    background: var(--paper);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+  }
+  .matrix h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 16px;
+    color: var(--ink);
+  }
+  .matrix table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+  }
+  .matrix th {
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--warm);
+    border-bottom: 1px solid var(--border-med);
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 12px;
+  }
+  .matrix td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--ink-secondary);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  .matrix td strong { color: var(--ink); }
+  .matrix tr:last-child td { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Share My Shelf — Enrichment V2</h1>
+  <p class="subtitle">Axis B: Brand identity depth (within Frame β multi-card Story sequence)</p>
+  <p class="meta">Session 196 · V1 locked Frame β · V2 spans how strongly Treehouse chrome composes against vendor content</p>
+</div>
+
+<div class="axis-label">
+  <strong>V2 spans Axis B only.</strong> Three frames demonstrate the brand-chrome spectrum, each showing 3 representative cards from the Frame β multi-card sequence (booth hero / find card / CTA card). Trade-off: vendor content room vs Treehouse brand recognition payoff. Pre-beta context matters — Treehouse brand isn't yet established enough to be visually compelling AS chrome the way Spotify/Strava are. Axis C (Feed↔Story relationship) and Q1-Q3 (caption / regenerate / capture) batch as prose questions alongside this pick.
+</div>
+
+<div class="frames">
+
+  <!-- ====== FRAME i — LIGHT TREEHOUSE ====== -->
+  <div class="frame">
+    <span class="frame-tag">Frame i</span>
+    <h3 class="frame-header">Light Treehouse</h3>
+    <p class="frame-summary">Vendor identity leads. Cream paper backgrounds; minimal Treehouse chrome; subtle wordmark trails. Treehouse recedes so the vendor's booth + finds feel like the cards.</p>
+    <span class="brand-pct">~15% brand chrome</span>
+
+    <div class="card-row">
+      <div class="story-panel light-hero">
+        <div class="eyebrow">From Treehouse Finds</div>
+        <div class="name">Yesterday's<br>Memories</div>
+        <div class="pill">BOOTH 47</div>
+        <div class="mall">America's Antique Mall<br>Lexington</div>
+        <div class="wm-foot">Treehouse Finds</div>
+      </div>
+      <div class="story-panel light-find">
+        <span class="tiny-wm">treehouse</span>
+        <div class="photo"></div>
+        <div class="meta">
+          <div class="t">Brass<br>candlesticks</div>
+          <div class="p">$48</div>
+        </div>
+      </div>
+      <div class="story-panel light-cta">
+        <div class="qr-mid"></div>
+        <div class="copy">See the shelf<br>before you visit</div>
+        <div class="wm">Treehouse Finds</div>
+      </div>
+    </div>
+    <div class="card-row" style="overflow: visible; padding: 0; margin: -6px 0 0;">
+      <span class="card-label" style="width: 140px;">Booth hero</span>
+      <span class="card-label" style="width: 140px;">Find card</span>
+      <span class="card-label" style="width: 140px;">CTA</span>
+    </div>
+
+    <div class="pros-cons">
+      <h4>Strengths</h4>
+      <ul>
+        <li>Vendor content gets the most visual room</li>
+        <li>Reads as "from the vendor" — relationship-first</li>
+        <li>Doesn't compete with shopper's existing Story aesthetic</li>
+        <li>Honest about Treehouse's pre-beta brand recognition</li>
+      </ul>
+      <h4 style="margin-top: 10px;">Trade-offs</h4>
+      <ul>
+        <li>Lower brand recall ("who made this?")</li>
+        <li>Less share-worthy as a coherent Treehouse signature</li>
+        <li>Underbid vs Spotify/Strava canonical bar</li>
+        <li>Future brand-recognition payoff is weakest</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ====== FRAME ii — BALANCED ====== -->
+  <div class="frame">
+    <span class="frame-tag">Frame ii · Recommended</span>
+    <h3 class="frame-header">Balanced co-brand</h3>
+    <p class="frame-summary">Vendor + Treehouse compose with equal weight. Booth hero uses green-gradient chrome; find cards keep vendor photos dominant with Treehouse leaf-bubble accent; CTA card balances QR + Treehouse identity. Pre-beta-stage-appropriate.</p>
+    <span class="brand-pct">~40% brand chrome</span>
+
+    <div class="card-row">
+      <div class="story-panel balanced-hero">
+        <div class="eyebrow">This week at</div>
+        <div class="leaf-glyph">❋</div>
+        <div class="name">Yesterday's<br>Memories</div>
+        <div class="pill">BOOTH 47</div>
+        <div class="mall">America's Antique Mall<br>Lexington</div>
+        <div class="hook">3 new finds →</div>
+      </div>
+      <div class="story-panel balanced-find">
+        <div class="booth-tag">Booth 47</div>
+        <div class="leaf-corner">❋</div>
+        <div class="photo"></div>
+        <div class="meta">
+          <div class="t">Brass<br>candlesticks</div>
+          <div class="p">$48</div>
+        </div>
+      </div>
+      <div class="story-panel balanced-cta">
+        <div class="header">Visit Booth 47</div>
+        <div class="qr-mid"></div>
+        <div class="copy">See the shelf<br>before you visit</div>
+        <div class="wm">Treehouse Finds</div>
+      </div>
+    </div>
+    <div class="card-row" style="overflow: visible; padding: 0; margin: -6px 0 0;">
+      <span class="card-label" style="width: 140px;">Booth hero</span>
+      <span class="card-label" style="width: 140px;">Find card</span>
+      <span class="card-label" style="width: 140px;">CTA</span>
+    </div>
+
+    <div class="pros-cons">
+      <h4>Strengths</h4>
+      <ul>
+        <li>Best-of-both: vendor content readable + Treehouse signature recognizable</li>
+        <li>Leaf glyph + green chrome accumulates brand recognition over time</li>
+        <li>Pre-beta-stage-appropriate (brand grows WITH usage; not asserted prematurely)</li>
+        <li>Closest to the V1 frame β mockup baseline (least implementation drift)</li>
+        <li>Each tier (hero / find / CTA) carries Treehouse cue without crowding</li>
+      </ul>
+      <h4 style="margin-top: 10px;">Trade-offs</h4>
+      <ul>
+        <li>Less viral than heavy-chrome canonical (Spotify-Wrapped-style)</li>
+        <li>Requires careful balance — easy to drift toward light or heavy</li>
+        <li>Brand recall slower than Frame iii (chrome accumulates not asserts)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ====== FRAME iii — HEAVY TREEHOUSE ====== -->
+  <div class="frame">
+    <span class="frame-tag">Frame iii</span>
+    <h3 class="frame-header">Heavy Treehouse</h3>
+    <p class="frame-summary">Treehouse aesthetic IS the chrome — leaf glyph as compositional motif throughout, deep-green palette dominant, vendor content slotted INTO Treehouse signature framing. Spotify-Wrapped-style "brand asserts presence."</p>
+    <span class="brand-pct">~65% brand chrome</span>
+
+    <div class="card-row">
+      <div class="story-panel heavy-hero">
+        <div class="brand-line">FROM</div>
+        <div class="treehouse-mark">TREEHOUSE FINDS</div>
+        <div class="at-line">— this week at —</div>
+        <div class="vendor-name">Yesterday's<br>Memories</div>
+        <div class="pill-treehouse">BOOTH 47</div>
+        <div class="mall-line">America's Antique Mall</div>
+        <div class="closing">3 new finds<br>on the shelf →</div>
+      </div>
+      <div class="story-panel heavy-find">
+        <div class="photo-frame">
+          <div class="leaf-mark">❋</div>
+        </div>
+        <div class="below">
+          <div class="t">Brass candlesticks</div>
+          <div class="p">$48</div>
+          <div class="booth-band">YESTERDAY'S MEMORIES · BOOTH 47</div>
+        </div>
+      </div>
+      <div class="story-panel heavy-cta">
+        <div class="header">FOUND IT?</div>
+        <div class="treehouse-mark">TREEHOUSE FINDS</div>
+        <div class="qr-mid"></div>
+        <div class="url">treehouse.app/shelf/...</div>
+        <div class="closing">See the shelf<br>before you visit</div>
+      </div>
+    </div>
+    <div class="card-row" style="overflow: visible; padding: 0; margin: -6px 0 0;">
+      <span class="card-label" style="width: 140px;">Booth hero</span>
+      <span class="card-label" style="width: 140px;">Find card</span>
+      <span class="card-label" style="width: 140px;">CTA</span>
+    </div>
+
+    <div class="pros-cons">
+      <h4>Strengths</h4>
+      <ul>
+        <li>Closest to Spotify/Strava canonical share-worthy bar</li>
+        <li>Highest brand recall — viewers WILL remember Treehouse</li>
+        <li>Most distinctive visual signature (unmistakable on a feed)</li>
+        <li>Best future brand-recognition payoff (when brand established)</li>
+      </ul>
+      <h4 style="margin-top: 10px;">Trade-offs</h4>
+      <ul>
+        <li>Pre-beta brand recognition is THIN — chrome reads as "shouted at" not "earned"</li>
+        <li>Vendor content compressed; some vendors will dislike the framing</li>
+        <li>Reads as "Treehouse's content with vendor stamp" not "vendor's content amplified"</li>
+        <li>Highest implementation cost — full chrome system across 5 card variants</li>
+        <li>Hardest to walk back if vendors push back ("our voice gets lost")</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="recommend-note">
+  <strong>Recommendation</strong>
+  Frame ii balanced co-brand. The reference scan strongly suggests Frame iii canonical (Spotify Wrapped / Strava lead with heavy chrome) — but those references are post-recognition brands where the chrome IS the value. Treehouse Finds is pre-beta; the chrome doesn't yet carry brand equity to spend. Frame ii honors the share-worthy bar (leaf glyph, green palette, signature aesthetic visible) while giving vendor content the room it needs to feel like the vendor's voice amplified, not Treehouse's content with vendor stamp. As brand recognition grows post-beta (via volume of these shares accumulating), the chrome itself becomes more share-worthy and the path to Frame iii becomes natural. Frame iii is a "next-year decision" the project earns into.
+</div>
+
+<div class="matrix">
+  <h2>Trade-off matrix</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>i Light</th>
+        <th>ii Balanced (Recommended)</th>
+        <th>iii Heavy</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Brand chrome % of frame</strong></td>
+        <td>~15%</td>
+        <td>~40%</td>
+        <td>~65%</td>
+      </tr>
+      <tr>
+        <td><strong>Vendor content visual room</strong></td>
+        <td>Highest</td>
+        <td>Balanced</td>
+        <td>Compressed</td>
+      </tr>
+      <tr>
+        <td><strong>Treehouse brand recall per view</strong></td>
+        <td>Low</td>
+        <td>Med (accumulates)</td>
+        <td>High</td>
+      </tr>
+      <tr>
+        <td><strong>Pre-beta brand-recognition fit</strong></td>
+        <td>Honest (understates)</td>
+        <td>Earned (matches stage)</td>
+        <td>Asserted (overstates)</td>
+      </tr>
+      <tr>
+        <td><strong>Reference scan canonical match</strong></td>
+        <td>Off-canon</td>
+        <td>Mid-canon</td>
+        <td>Canon (Spotify/Strava)</td>
+      </tr>
+      <tr>
+        <td><strong>Vendor reception (predicted)</strong></td>
+        <td>Strong ("my booth")</td>
+        <td>Good ("our partnership")</td>
+        <td>Mixed ("their content")</td>
+      </tr>
+      <tr>
+        <td><strong>Walk-back if vendor pushback</strong></td>
+        <td>N/A (already light)</td>
+        <td>Easy (dial chrome down)</td>
+        <td>Hard (chrome is the design)</td>
+      </tr>
+      <tr>
+        <td><strong>Future brand payoff (post-recognition)</strong></td>
+        <td>Limited</td>
+        <td>Growing</td>
+        <td>Highest</td>
+      </tr>
+      <tr>
+        <td><strong>Implementation cost</strong></td>
+        <td>Lowest</td>
+        <td>Medium</td>
+        <td>Highest</td>
+      </tr>
+      <tr>
+        <td><strong>Distance from V1 frame β baseline</strong></td>
+        <td>Small dial-down</td>
+        <td>Minimal (closest)</td>
+        <td>Large redesign</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
