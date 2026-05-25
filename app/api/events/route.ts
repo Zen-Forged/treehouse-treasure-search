@@ -93,6 +93,12 @@ const CLIENT_EVENT_TYPES = [
   // (vendor_profile_enriched + vendor_avatar_*) fire server-side and don't
   // ride this whitelist.
   "vendor_social_tapped",
+  // Session 194 Ask #2 — Visitor tracking. visitor_engaged fires from
+  // lib/visitorTracker.ts via direct fetch (bypasses lib/clientEvents.ts
+  // track() to avoid circular import). Once per browser session;
+  // sessionStorage guard prevents duplicate fires. Migration 024 adds the
+  // matching enum value.
+  "visitor_engaged",
 ] as const;
 type ClientEventType = (typeof CLIENT_EVENT_TYPES)[number];
 

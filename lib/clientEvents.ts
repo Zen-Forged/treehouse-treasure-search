@@ -91,7 +91,14 @@ export type ClientEventType =
   // Facebook or Instagram icon bubble). The other three enrichment events
   // (vendor_profile_enriched + vendor_avatar_uploaded + vendor_avatar_removed)
   // fire server-side via recordEvent and don't ride this path.
-  | "vendor_social_tapped";
+  | "vendor_social_tapped"
+  // ── Session 194 Ask #2 — Visitor tracking ─────────────────────────────
+  // Fires once per browser session from lib/visitorTracker.ts (NOT from this
+  // module's track() — visitorTracker.ts POSTs directly to /api/events to
+  // avoid circular import). Declared in ClientEventType for whitelist parity
+  // + so future enrichment of the visitor signal (e.g. a follow-on
+  // visitor_returned event) composes onto the same shape.
+  | "visitor_engaged";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";

@@ -133,7 +133,17 @@ export type EventType =
   // components/ShelfImageShareScreen.tsx has no consumer today; including
   // here so the revive contract stays clean when ShareSheet wires it back.
   | "share_shelf_image_viewed"
-  | "share_shelf_image_downloaded";
+  | "share_shelf_image_downloaded"
+  // ── Session 194 Ask #2 — Visitor tracking ─────────────────────────────
+  // Sole substrate for new-visitor metrics after Vercel Analytics deferred.
+  // Fires once per browser session via sessionStorage guard. Trigger = first
+  // meaningful interaction OR 10s dwell, whichever first. visitor_id minted
+  // at engagement moment (Design B — bot filtering); persists in localStorage
+  // forever. Payload: { visitor_id, is_first_session, trigger,
+  //                     time_to_engage_ms, page_path, mall_scope,
+  //                     first_event_type? }. Source: lib/visitorTracker.ts.
+  // Migration 024 adds the matching enum value.
+  | "visitor_engaged";
 
 export interface RecordEventOptions {
   user_id?:    string | null;
