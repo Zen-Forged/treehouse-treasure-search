@@ -32,7 +32,7 @@ The front door is the **Discovery Feed** (`/`). Shoppers browse without an accou
 
 | Layer | Front door | Theme | Data | Auth |
 |---|---|---|---|---|
-| **Ecosystem** (vendors, malls, posts) | `/` Discovery Feed | Warm parchment (`#e8ddc7`) | Supabase Postgres + Storage | Supabase Auth (magic-link OTP + admin PIN) |
+| **Ecosystem** (vendors, malls, posts) | `/` Discovery Feed | Warm parchment (`#e8ddc7`) | Supabase Postgres + Storage | Supabase Auth (magic-link OTP) |
 | **Reseller intel** (identify, comps, decide) | `/scan` | Dark forest (`#050f05`) | sessionStorage + localStorage | None |
 
 **Operator note:** David Butler (Zen Forged LLC) is an **online reseller**, not a physical mall booth operator. ZenForged Finds (Booth 369 at America's Antique Mall) exists in the data model as a test vendor / operator persona. In-person vendor onboarding is a deliberate scheduled activity, not incidental. This matters for scoping.
@@ -79,7 +79,10 @@ SUPABASE_SERVICE_ROLE_KEY        sb_secret_...  (new secret-key format, session 
 
 # Identity / admin
 NEXT_PUBLIC_ADMIN_EMAIL          david@zenforged.com
-ADMIN_PIN                        Server-only. Used by /api/auth/admin-pin.
+                                 Email-match against this value gates /admin
+                                 (lib/auth.ts isAdmin). Admin signs in via
+                                 /login email-first OTP like everyone else
+                                 (session 195 retired the parallel-auth PIN).
 
 # Site
 NEXT_PUBLIC_SITE_URL             https://app.kentuckytreehouse.com
@@ -263,7 +266,7 @@ Keyed-row table with jsonb values. Holds admin-editable hero banner image URLs.
 
 | Route | Purpose |
 |---|---|
-| `/login` | Curator sign-in. Email → OTP 6-digit code → `safeRedirect(next)`. Accepts both `?redirect=` (approval email CTA) and `?next=` (magic-link round trip) — unified in session-9 KI-003 fix. Admin PIN tab retired v1.1k. |
+| `/login` | Email-first sign-in (session 115 Shape A consolidation). Email → magic-link OTP 6-digit code → `pickDest(user)` server-side role detection (session 93) routes admin → `/`, vendor → `/my-shelf`, pending_vendor → `/vendor-request?state=pending` (session 195), shopper → `/me`, none → `/welcome`. Accepts both `?redirect=` (approval email CTA) and `?next=` (magic-link round trip) — unified in session-9 KI-003 fix. Session 195 retired the parallel `/admin/login` PIN entry; admin now uses the same email-first OTP flow + masthead Profile bubble routes admin → `/admin` per session 160. |
 | `/setup` | Post-approval link step. Calls `POST /api/setup/lookup-vendor` (retries once on 401 with 800ms backoff — session 10 fix). Consumes the array response shape (session 35): `{ ok, vendors: Vendor[], alreadyLinked? }`. Writes `LOCAL_VENDOR_KEY` for `vendors[0]`, writes active-booth id to `safeStorage.treehouse_active_vendor_id`, auto-redirects to `/my-shelf` after 3s. Copy adapts to singular ("your shelf") vs plural ("your shelves"). |
 | `/my-shelf` | Signed-in vendor's own shelf. Uses `<BoothPage>` primitive. List-aware via `getVendorsByUserId` + `resolveActiveBooth` (session 35). When a vendor owns > 1 booth, masthead renders the picker variant and `<BoothPickerSheet>` is instantiated. Self-heals via `/api/setup/lookup-vendor` on every non-admin load — merges its results with the direct `getVendorsByUserId` read to pick up newly-approved unlinked booths without requiring sign-out/in. |
 | `/post` | Shim route. Redirects to `/my-shelf?openAdd=1` for AddFindSheet entry. |
@@ -275,8 +278,7 @@ Keyed-row table with jsonb values. Holds admin-editable hero banner image URLs.
 
 | Route | Purpose |
 |---|---|
-| `/admin/login` | Dedicated PIN entry (v1.1k, session 23; file orphan resolved session 25). POST `/api/auth/admin-pin` → OTP verify → `/admin`. Shield glyph differentiates audience from curator `/login`. |
-| `/admin` | Three tabs: Requests · Posts · Banners (Banners added v1.1l session 24). Approval UX includes inline Diagnose links for collision triage (session 13). Unauth gate redirects to `/admin/login`. |
+| `/admin` | Tabs: Requests · Posts · Banners · Vendors · Malls · Events (session 91+ additions). Approval UX includes inline Diagnose links for collision triage (session 13). Unauth gate redirects to `/login` (session 195 — parallel PIN auth retired). Email-match against `NEXT_PUBLIC_ADMIN_EMAIL` via `isAdmin(user)` is the canonical gate. |
 
 ### Reseller intel (dark theme — untouched)
 
@@ -295,8 +297,8 @@ Keyed-row table with jsonb values. Holds admin-editable hero banner image URLs.
 
 | Route | Purpose | Auth |
 |---|---|---|
-| `POST /api/auth/admin-pin` | PIN → server verify → returns `{ otp, email }` for client `verifyOtp`. Rate-limited 5/min per IP. | Public (PIN-gated) |
-| `POST /api/vendor-request` | Insert vendor_requests row + upload booth-proof photo + fire receipt email. Rate-limited 3/10min per IP. Composite-key dedup on `(email, mall_id, booth_number)` (session 35 widening). | Public |
+| `POST /api/vendor-request` | Insert vendor_requests row + upload booth-proof photo + fire receipt email + fire admin alert email (session 193). Rate-limited 3/10min per IP. Composite-key dedup on `(email, mall_id, booth_number)` (session 35 widening). | Public |
+| `POST /api/vendor-request/check-pending` | Returns `{ ok, hasPending }` for the authed user's email. Powers the session-195 pending-vendor routing branch (signed-in vendor with `vendor_requests.status='pending'` routes to `/vendor-request?state=pending` instead of `/welcome`). | `requireAuth` |
 | `GET /api/admin/vendor-requests` | List pending/approved requests. | `requireAdmin` |
 | `POST /api/admin/vendor-requests` | `{ action: "approve", requestId }` — constraint-aware vendor creation + fire approval email. Handles slug and booth collisions with diagnosis payload (session-13 KI-004 fix). | `requireAdmin` |
 | `POST /api/admin/diagnose-request` | Full collision diagnosis for a `requestId`. Returns structured `diagnosis` code + `conflict` object for admin UI rendering. (Session 13, NEW.) | `requireAdmin` |
@@ -448,12 +450,13 @@ The `POST /api/admin/vendor-requests { action: "approve" }` handler performs pre
 
 `display_name` is computed at approval time as the first non-empty of: `booth_name`, `first_name + ' ' + last_name`, legacy `name` (session 32). Slug collisions auto-resolve via suffix loop (`-2`, `-3`, … up to 20 attempts). All error responses include `diagnosis` code + `conflict` object for admin UI rendering. All recovery paths use `.maybeSingle()` (not `.single()`) so zero-row results return null rather than throwing "Cannot coerce...".
 
-### Admin sign-in pattern (v1.1k session 23 + orphan fix session 25)
+### Admin sign-in pattern (session 195 — parallel PIN auth retired)
 
-- `/admin/login` dedicated route, PIN entry UI.
-- `POST /api/auth/admin-pin { pin }` → server checks PIN, generates OTP, sends email, returns `{ otp, email }`.
-- Client calls `supabase.auth.verifyOtp({ email, token, type: "email" })` → `router.replace("/admin")`.
-- `/admin` unauth gate redirects to `/admin/login` (one-line session-23 edit; target finally on disk session 25).
+- Admin signs in via `/login` email-first OTP like every other user.
+- `pickDest(user)` (session 93) detects `isAdmin(user)` via email-match against `NEXT_PUBLIC_ADMIN_EMAIL` → routes admin → `/`.
+- Masthead Profile bubble routes admin → `/admin` (session 160 admin-Profile-to-/admin routing branch).
+- `/admin` unauth gate (`app/admin/page.tsx:552`) redirects to `/login`. Email-match continues to enforce admin access.
+- Historical: `/admin/login` + `POST /api/auth/admin-pin` shipped at v1.1k session 23; retired session 195 because the PIN was parallel auth bypassing the email-OTP security boundary (anyone with the static PIN could request + verify an admin OTP without controlling the admin email inbox).
 
 ### Featured banner pattern (v1.1l session 24)
 
@@ -679,8 +682,7 @@ pass        everything else
 ### Working ✅
 
 - Discovery feed (paper masonry + `<MallSheet>` + `<FeaturedBanner>` eyebrow + `<StickyMasthead>`)
-- Magic link auth (6-digit OTP primary path)
-- Admin PIN sign-in at `/admin/login`
+- Magic link auth (6-digit OTP primary path — admin uses the same flow per session 195)
 - Magic link `?redirect=` + `?next=` preserved across round trip
 - My Shelf (multi-booth aware, session 35), Public Shelf, Post flow v1.2, Find detail (v1.1d + 3B sold state), Public shelf
 - Find Map (`/flagged`) v1.1g + v1.1l polish
@@ -688,7 +690,7 @@ pass        everything else
 - **Multi-booth vendor ownership (session 35)** — one auth user can own N vendor rows; `<BoothPickerSheet>` on `/my-shelf` when N > 1; post flow inherits active booth; self-heal via `/api/setup/lookup-vendor` picks up newly-approved booths on every visit
 - **KI-006 resolved (session 35)** — Flow 3 vendors with `booth_name` set now link cleanly
 - RLS — 12 policies + vendor_requests locked to service-role + site_settings intentionally public-read
-- Rate limiting — `/api/post-caption` 10/60s, `/api/vendor-request` 3/10min, `/api/auth/admin-pin` 5/min
+- Rate limiting — `/api/post-caption` 10/60s, `/api/vendor-request` 3/10min
 - Custom domain `app.kentuckytreehouse.com`
 - Branded email templates (Magic Link + Confirm Signup)
 - Transactional email receipt + approval via `lib/email.ts`
@@ -767,7 +769,7 @@ pass        everything else
 | Custom domain | ✅ `app.kentuckytreehouse.com` |
 | Transactional emails (receipt + approval) | ✅ via Resend REST |
 | Admin-editable hero banners | ✅ v1.1l |
-| Dedicated `/admin/login` | ✅ v1.1k |
+| Dedicated `/admin/login` | ⛔ Retired session 195 (parallel-auth PIN bypassed email-OTP security boundary) |
 | Supabase RLS | ✅ 12 policies |
 | v1.2 post-flow trilogy (AddFindSheet + Review + Edit Listing) | ✅ session 29 |
 | `<MallSheet>` migration to remaining consumers | 🔄 Sprint 5 |
