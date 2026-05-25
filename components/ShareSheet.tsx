@@ -249,10 +249,12 @@ function BoothShareBody({
     setScreen("qr");
   }
 
-  // Session 152 → revived session 196 — Share My Shelf 4th channel.
-  // Opens the image-generator sub-screen which composes ShelfImageTemplate
-  // (off-screen 1080×1350) with html2canvas-pro capture + native-share /
-  // download / clipboard. Vendor-targeted affordance for Facebook posts.
+  // Session 152 → revived session 196 → evolved session 197 Arc 2 —
+  // Share My Shelf 4th channel. Opens the image-generator sub-screen which
+  // composes the 5-card Story sequence (StoryHeroCard + 3× StoryFindCard +
+  // StoryCtaCard) off-screen with html2canvas-pro multi-card capture +
+  // native-share multi-file payload + caption clipboard auto-copy. Vendor-
+  // targeted affordance for Facebook posts.
   function handleShelfImageTap() {
     track("share_booth_channel_tapped", { ...trackPayload, channel: "shelf_image" });
     setScreen("shelf-image");

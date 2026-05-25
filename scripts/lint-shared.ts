@@ -70,10 +70,6 @@ export const EXCLUDED_PREFIXES = [
   // Dev tooling
   "components/DevAuthPanel.tsx",
 
-  // Parked code (session 152 within-session retirement; revive contract
-  // documented in each file's top comment)
-  "components/ShelfImageTemplate.tsx",
-  "components/ShelfImageShareScreen.tsx",
 ];
 
 export interface Violation {

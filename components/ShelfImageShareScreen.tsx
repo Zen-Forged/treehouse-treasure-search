@@ -1,171 +1,133 @@
 // components/ShelfImageShareScreen.tsx
 //
-// ⚠️ PARKED — session 152 within-session retirement.
-//   See ShelfImageTemplate.tsx file-top comment for full context.
-//   Wrapper preserved for future refinement; no consumer wires this today.
-//   Per feedback_within_session_design_record_reversal ✅ Promoted at session 128.
+// Session 197 Arc 2 C3 — refactored to multi-card Story sequence wrapper.
 //
-// Session 152 — Share My Shelf wrapper screen.
+// Replaces session-152's single-card 1080×1350 monolith with the 5-card
+// Story sequence (StoryHeroCard + 3× StoryFindCard + StoryCtaCard) per
+// session-196 design record §3.5 D4 (Frame β multi-card Story) + §6 Arc 2.
 //
-// Composes <ShelfImageTemplate> (off-screen 1080×1350 capture node) with
-// html2canvas-pro capture, a visible preview <img>, and 3 action buttons
-// (Share / Download / Copy caption / Copy booth link).
+// Composition:
+//   1. SlimHeader — vendor identity (session-152 path preserved)
+//   2. Eyebrow line — "5-card Story sequence · Tap Share to post"
+//   3. Carousel preview — horizontal scroll-snap of 5 captured-card <img>s
+//      + position indicator ("Card N of 5")
+//   4. Action row — Share (primary) / Download / Copy caption / Copy link
+//   5. Caption echo (read-only) for vendor preview
+//   6. Footer disclaimer
+//   7. Off-screen capture container (5 Arc 1 cards mounted at full 1080×N
+//      with position:fixed left:-99999)
 //
-// Lifecycle:
-//   1. Mount → fetch 6 most-recent available posts via getVendorWindowPosts
-//   2. Posts loaded + template mounted off-screen → html2canvas-pro runs
-//      → blob URL stored in state → preview <img> renders
-//   3. User taps an action → respective handler runs from the cached blob
-//   4. Cleanup blob URL on unmount
+// State machine combines two domains:
+//   - posts: null (loading) → Post[] (loaded; empty array → no-posts branch)
+//   - capture (from useShelfCapture): idle → rendering → ready | error
 //
-// Mobile vs desktop share handoff:
-//   - navigator.canShare({ files }) supported (iOS Safari 16+ / Android
-//     Chrome 75+) → "Share" button uses navigator.share({ files, text, url })
-//     → opens native share sheet with Facebook + Instagram + Messages + ...
-//   - Otherwise (desktop) → "Open Facebook" button opens facebook.com/sharer
-//     in new tab pre-filled with booth URL; user manually attaches the
-//     downloaded image.
+// C3 ships single-card share path (find:0 strongest card; session-152 parity)
+// to keep main functional between commits. C4 swaps to navigator.share
+// multi-file payload (all 5 cards in sequence). C5 + C6 add regenerate +
+// reorder affordances against the same capture pipeline.
 //
-// Caption auto-copied to clipboard when user taps Share OR Download, so
-// they paste-after when their target composer (Facebook/Insta/etc) opens.
+// ShelfImageTemplate.tsx retired as scope-adjacent byproduct per
+// feedback_dead_code_cleanup_as_byproduct ✅ Promoted — no consumer remains
+// after this refactor.
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import html2canvas from "html2canvas-pro";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PiDownloadSimple, PiShareFat, PiCopySimple, PiLinkSimple } from "react-icons/pi";
 import { track } from "@/lib/clientEvents";
 import { getVendorWindowPosts } from "@/lib/posts";
+import { generateShelfCaption, placeholderHeroHook } from "@/lib/aiShelfCaption";
+import { useShelfCapture } from "@/lib/useShelfCapture";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 import { SlimHeader } from "@/components/ui/SlimHeader";
-import { ShelfImageTemplate } from "@/components/ShelfImageTemplate";
+import { StoryHeroCard } from "@/components/share-shelf/StoryHeroCard";
+import { StoryFindCard } from "@/components/share-shelf/StoryFindCard";
+import { StoryCtaCard } from "@/components/share-shelf/StoryCtaCard";
 import type { Mall, Post, Vendor } from "@/types/treehouse";
 
 export interface ShelfImageShareScreenProps {
-  vendor: Vendor;
-  mall:   Mall | null;
+  vendor:   Vendor;
+  mall:     Mall | null;
   /** Public-facing /shelf/<slug> URL — embedded in QR + share payload. */
   boothUrl: string;
 }
-
-type RenderState =
-  | { kind: "loading-posts" }
-  | { kind: "no-posts" }
-  | { kind: "rendering" }
-  | { kind: "ready"; blobUrl: string; blob: Blob }
-  | { kind: "error"; message: string };
 
 export function ShelfImageShareScreen({
   vendor,
   mall,
   boothUrl,
 }: ShelfImageShareScreenProps) {
-  const [posts, setPosts]     = useState<Post[] | null>(null);
-  const [render, setRender]   = useState<RenderState>({ kind: "loading-posts" });
+  const [posts, setPosts]         = useState<Post[] | null>(null);
+  const [picks, setPicks]         = useState<Post[]>([]);
+  const [captureKey]              = useState(0); // C5 will wire setter for regenerate
+  const [aiHookSeed]              = useState(0); // C5 will cycle this on regenerate
   const [copyToast, setCopyToast] = useState<"caption" | "link" | null>(null);
-  const captureRef = useRef<HTMLDivElement>(null);
+  const containerRef              = useRef<HTMLDivElement>(null);
 
-  const boothName = vendor.display_name;
-  const mallName  = mall?.name ?? vendor.mall?.name ?? "";
-  const boothNo   = vendor.booth_number;
-  const mallAddress = mall?.address ?? [mall?.city, mall?.state].filter(Boolean).join(", ");
-
-  const caption = buildCaption(boothName, mallName, boothNo);
-  const trackPayload = {
+  // ─── Mount: fire view event + fetch posts ────────────────────────────
+  const trackPayload = useMemo(() => ({
     vendor_slug: vendor.slug,
     mall_id:     mall?.id ?? vendor.mall?.id ?? null,
-  };
+  }), [vendor.slug, mall?.id, vendor.mall?.id]);
 
-  // 1. Mount-time analytics fire + load posts
   useEffect(() => {
     track("share_shelf_image_viewed", trackPayload);
     let alive = true;
     getVendorWindowPosts(vendor.id).then(fetched => {
       if (!alive) return;
       setPosts(fetched);
-      if (fetched.length === 0) {
-        setRender({ kind: "no-posts" });
-      } else {
-        setRender({ kind: "rendering" });
+      if (fetched.length > 0) {
+        // Default picks per D10 — top 3 most-recent available posts.
+        setPicks(fetched.slice(0, 3));
       }
     });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendor.id]);
 
-  // 2. Capture the off-screen template once posts are loaded + template mounted
-  useEffect(() => {
-    if (render.kind !== "rendering") return;
-    if (!captureRef.current) return;
-    let alive = true;
+  // ─── Capture pipeline gate ───────────────────────────────────────────
+  const captureReady = picks.length === 3;
+  const capture = useShelfCapture({
+    containerRef,
+    captureKey,
+    enabled: captureReady,
+  });
 
-    // Short delay so any final image decode completes before capture. The
-    // crossOrigin="anonymous" img tags on Supabase CDN URLs trigger native
-    // image loading on mount; ~250ms covers the longest decode tail on
-    // mid-range mobile.
-    const t = window.setTimeout(async () => {
-      if (!alive || !captureRef.current) return;
-      try {
-        const canvas = await html2canvas(captureRef.current, {
-          // 1080 native — node renders at 1080×1350 fixed; scale 1 preserves.
-          scale: 1,
-          // Render bg explicitly; default is white which would replace v2.bg.main.
-          backgroundColor: "#F7F3EB",
-          // Respect crossOrigin on img tags. Some forks default to false here.
-          useCORS: true,
-          // Skip iframes — we have none in the capture path.
-          allowTaint: false,
-          // Avoid logging noise in production.
-          logging:    false,
-        });
+  // ─── Caption + hook gen (placeholder per Arc 4 swap-target) ──────────
+  const caption = useMemo(() => {
+    if (picks.length === 0) return "";
+    return generateShelfCaption({
+      vendor,
+      mall,
+      posts:  picks,
+      format: "story",
+      boothUrl,
+    });
+  }, [vendor, mall, picks, boothUrl]);
 
-        canvas.toBlob(blob => {
-          if (!alive) return;
-          if (!blob) {
-            setRender({ kind: "error", message: "Couldn't render the image. Please try again." });
-            return;
-          }
-          const blobUrl = URL.createObjectURL(blob);
-          setRender({ kind: "ready", blobUrl, blob });
-        }, "image/png", 0.95);
-      } catch (err) {
-        if (!alive) return;
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        setRender({ kind: "error", message: `Render failed: ${msg.slice(0, 80)}` });
-      }
-    }, 250);
+  const aiHook = useMemo(
+    () => placeholderHeroHook(picks.length, aiHookSeed),
+    [picks.length, aiHookSeed],
+  );
 
-    return () => { alive = false; window.clearTimeout(t); };
-  }, [render.kind]);
-
-  // 3. Cleanup blob URL on unmount or re-render
-  useEffect(() => {
-    return () => {
-      if (render.kind === "ready") {
-        URL.revokeObjectURL(render.blobUrl);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Auto-clear copy toast after 1.8s
+  // ─── Auto-clear copy toast after 1.8s ────────────────────────────────
   useEffect(() => {
     if (!copyToast) return;
     const t = window.setTimeout(() => setCopyToast(null), 1800);
     return () => window.clearTimeout(t);
   }, [copyToast]);
 
-  // ─── Actions ───────────────────────────────────────────────────────────
+  // ─── Actions (C3: single-card via find:0 for session-152 parity) ─────
+  // C4 swaps these to navigator.share({ files: [...] }) multi-file payload.
   const handleNativeShare = useCallback(async () => {
-    if (render.kind !== "ready") return;
-    const file = new File([render.blob], buildFilename(vendor), { type: "image/png" });
+    if (capture.status !== "ready") return;
+    const card = capture.cards.get("find:0");
+    if (!card) return;
+    const file = new File([card.blob], buildFilename(vendor, "preview"), { type: "image/png" });
 
-    // Auto-copy caption first so vendor can paste it after the share-sheet
-    // close in their target composer.
-    try { await navigator.clipboard.writeText(caption); } catch { /* clipboard blocked is non-fatal */ }
+    // Auto-copy caption FIRST so vendor pastes it into their composer.
+    try { await navigator.clipboard.writeText(caption); } catch { /* non-fatal */ }
 
-    // navigator.canShare with files is the supported-check; navigator.share
-    // alone exists on desktops where files aren't supported. Guard both.
     const canShareFiles = typeof navigator !== "undefined"
       && typeof navigator.canShare === "function"
       && navigator.canShare({ files: [file] });
@@ -175,31 +137,28 @@ export function ShelfImageShareScreen({
         await navigator.share({ files: [file], text: caption, url: boothUrl });
         track("share_shelf_image_downloaded", { ...trackPayload, method: "native_share" });
       } catch (err) {
-        // AbortError when user dismisses — silent. Other errors are
-        // non-fatal too; vendor can retry or use Download.
         const isAbort = err instanceof Error && err.name === "AbortError";
-        if (!isAbort) {
-          console.error("[share-my-shelf] navigator.share failed:", err);
-        }
+        if (!isAbort) console.error("[share-my-shelf] navigator.share failed:", err);
       }
     } else {
-      // Desktop fallback: download the image + open Facebook sharer in a new tab.
-      // Open the new tab FIRST (browser-blocked otherwise if not in user-gesture).
+      // Desktop fallback — open FB sharer FIRST (must be inside user gesture)
       const fbHref = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(boothUrl)}`;
       window.open(fbHref, "_blank", "noopener,noreferrer");
-      downloadBlob(render.blob, buildFilename(vendor));
+      downloadBlob(card.blob, buildFilename(vendor, "preview"));
       track("share_shelf_image_downloaded", { ...trackPayload, method: "desktop_fallback" });
       setCopyToast("caption");
     }
-  }, [render, caption, boothUrl, vendor, trackPayload]);
+  }, [capture, caption, boothUrl, vendor, trackPayload]);
 
   const handleDownload = useCallback(async () => {
-    if (render.kind !== "ready") return;
+    if (capture.status !== "ready") return;
+    const card = capture.cards.get("find:0");
+    if (!card) return;
     try { await navigator.clipboard.writeText(caption); } catch { /* */ }
-    downloadBlob(render.blob, buildFilename(vendor));
+    downloadBlob(card.blob, buildFilename(vendor, "preview"));
     track("share_shelf_image_downloaded", { ...trackPayload, method: "download" });
     setCopyToast("caption");
-  }, [render, caption, vendor, trackPayload]);
+  }, [capture, caption, vendor, trackPayload]);
 
   const handleCopyCaption = useCallback(async () => {
     try {
@@ -215,7 +174,24 @@ export function ShelfImageShareScreen({
     } catch { /* */ }
   }, [boothUrl]);
 
-  // ─── Render ────────────────────────────────────────────────────────────
+  // ─── Derived strings for SlimHeader ──────────────────────────────────
+  const boothName   = vendor.display_name;
+  const mallName    = mall?.name ?? vendor.mall?.name ?? "";
+  const boothNo     = vendor.booth_number;
+  const mallAddress = mall?.address ?? [mall?.city, mall?.state].filter(Boolean).join(", ");
+
+  // Overall wrapper render state — combines posts fetch + capture status
+  const wrapperState: "loading-posts" | "no-posts" | "rendering" | "ready" | "error" = (() => {
+    if (posts === null) return "loading-posts";
+    if (posts.length === 0) return "no-posts";
+    if (capture.status === "error") return "error";
+    if (capture.status === "ready") return "ready";
+    return "rendering";
+  })();
+
+  const cards = capture.status === "ready" ? capture.cards : null;
+
+  // ─── Render ──────────────────────────────────────────────────────────
   return (
     <>
       <SlimHeader
@@ -236,59 +212,30 @@ export function ShelfImageShareScreen({
           textTransform: "uppercase",
           letterSpacing: "0.16em",
           color:         v2.text.muted,
+          textAlign:     "center",
         }}
       >
-        Share My Shelf · Image preview
+        Share My Shelf · 5-card Story sequence
       </div>
 
-      {/* Preview area — fixed aspect 4:5 (1080×1350) container */}
-      <div
-        style={{
-          width:         "100%",
-          aspectRatio:   "1080 / 1350",
-          background:    v2.surface.warm,
-          border:        `1px solid ${v2.border.light}`,
-          borderRadius:  10,
-          overflow:      "hidden",
-          display:       "flex",
-          alignItems:    "center",
-          justifyContent: "center",
-          marginBottom:  16,
-          boxShadow:     "0 1px 2px rgba(43,33,26,0.04)",
-        }}
-      >
-        {render.kind === "ready" ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={render.blobUrl}
-            alt="Generated Share My Shelf image preview"
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
-        ) : (
-          <PreviewStatus render={render} />
-        )}
-      </div>
+      {/* Carousel preview — horizontal scroll-snap */}
+      <CarouselPreview state={wrapperState} cards={cards} errorMessage={capture.status === "error" ? capture.message : undefined} />
 
       {/* Action buttons */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {/* Primary — Share */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18 }}>
         <ActionButton
           primary
-          disabled={render.kind !== "ready"}
-          icon={<PiShareFat size={18} color="#FBF6EA" />}
-          label={mobileShareLabel()}
+          disabled={wrapperState !== "ready"}
+          icon={<PiShareFat size={18} color={v2.surface.card} />}
+          label="Share"
           onClick={handleNativeShare}
         />
-
-        {/* Secondary — Download */}
         <ActionButton
-          disabled={render.kind !== "ready"}
+          disabled={wrapperState !== "ready"}
           icon={<PiDownloadSimple size={18} color={v2.text.primary} />}
           label="Download image"
           onClick={handleDownload}
         />
-
-        {/* Tertiary row — Copy caption + Copy booth link side-by-side */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <ActionButton
             small
@@ -305,92 +252,227 @@ export function ShelfImageShareScreen({
         </div>
       </div>
 
-      {/* Caption echo — vendor can read what's been queued for their post */}
-      <div
-        style={{
-          marginTop:    16,
-          padding:      "10px 12px",
-          background:   v2.surface.warm,
-          border:       `1px solid ${v2.border.light}`,
-          borderRadius: 8,
-          fontFamily:   FONT_INTER,
-          fontSize:     12,
-          lineHeight:   1.5,
-          color:        v2.text.secondary,
-        }}
-      >
+      {/* Caption echo */}
+      {caption && (
         <div
           style={{
-            fontSize:      10,
-            fontWeight:    600,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color:         v2.text.muted,
-            marginBottom:  4,
+            marginTop:    16,
+            padding:      "10px 12px",
+            background:   v2.surface.warm,
+            border:       `1px solid ${v2.border.light}`,
+            borderRadius: 8,
+            fontFamily:   FONT_INTER,
+            fontSize:     12,
+            lineHeight:   1.5,
+            color:        v2.text.secondary,
+            whiteSpace:   "pre-line",
           }}
         >
-          Caption
+          <div
+            style={{
+              fontSize:      10,
+              fontWeight:    600,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color:         v2.text.muted,
+              marginBottom:  4,
+            }}
+          >
+            Caption
+          </div>
+          {caption}
         </div>
-        {caption}
-      </div>
+      )}
 
       {/* Footer disclaimer */}
       <div
         style={{
-          marginTop:    14,
-          fontFamily:   FONT_CORMORANT,
-          fontStyle:    "italic",
-          fontSize:     12,
-          color:        v2.text.muted,
-          textAlign:    "center",
-          lineHeight:   1.5,
+          marginTop:  14,
+          fontFamily: FONT_CORMORANT,
+          fontStyle:  "italic",
+          fontSize:   12,
+          color:      v2.text.muted,
+          textAlign:  "center",
+          lineHeight: 1.5,
         }}
       >
         Tap Share to post directly on Facebook, Instagram, or anywhere else.
       </div>
 
-      {/* Off-screen capture node — actual image source for html2canvas-pro.
-          Mounted only while we have posts to render; otherwise omitted to
-          skip wasted DOM weight when vendor has zero available finds. */}
-      {posts && posts.length > 0 && (
-        <ShelfImageTemplate
-          domRef={captureRef}
-          vendor={vendor}
-          mall={mall}
-          posts={posts}
-          boothUrl={boothUrl}
-        />
+      {/* ─── Off-screen capture container ─────────────────────────────
+          Mounts the 5 Arc 1 cards at full 1080×N for html2canvas-pro.
+          Positioned off-screen (left: -99999) so capture sees painted
+          DOM without occupying viewport. pointerEvents: none keeps
+          accidental interaction out. Mounted only after picks settle so
+          we don't capture a half-rendered state. */}
+      {captureReady && (
+        <div
+          ref={containerRef}
+          aria-hidden="true"
+          style={{
+            position:      "fixed",
+            left:          -99999,
+            top:           0,
+            width:         1080,
+            pointerEvents: "none",
+          }}
+        >
+          <div data-shelf-card="hero">
+            <StoryHeroCard
+              vendor={vendor}
+              mall={mall}
+              findCount={picks.length}
+              aiHook={aiHook}
+            />
+          </div>
+          <div data-shelf-card="find:0">
+            <StoryFindCard post={picks[0]} vendor={vendor} index={1} />
+          </div>
+          <div data-shelf-card="find:1">
+            <StoryFindCard post={picks[1]} vendor={vendor} index={2} />
+          </div>
+          <div data-shelf-card="find:2">
+            <StoryFindCard post={picks[2]} vendor={vendor} index={3} />
+          </div>
+          <div data-shelf-card="cta">
+            <StoryCtaCard vendor={vendor} boothUrl={boothUrl} />
+          </div>
+        </div>
       )}
     </>
   );
 }
 
-// ─── PreviewStatus ─────────────────────────────────────────────────────────
-function PreviewStatus({ render }: { render: RenderState }) {
-  if (render.kind === "loading-posts") {
-    return <StatusCopy>Loading your shelf…</StatusCopy>;
-  }
-  if (render.kind === "rendering") {
-    return <StatusCopy>Generating preview…</StatusCopy>;
-  }
-  if (render.kind === "no-posts") {
+// ─── CarouselPreview ──────────────────────────────────────────────────────
+// Horizontal scroll-snap carousel of 5 captured-card <img>s. Each card
+// preview ~240px wide (9:16 → ~427px tall). When wrapperState !== "ready",
+// shows a single status message inside a placeholder slot.
+function CarouselPreview({
+  state,
+  cards,
+  errorMessage,
+}: {
+  state:        "loading-posts" | "no-posts" | "rendering" | "ready" | "error";
+  cards:        Map<import("@/lib/useShelfCapture").ShelfCardId, import("@/lib/useShelfCapture").CapturedCard> | null;
+  errorMessage?: string;
+}) {
+  const PREVIEW_WIDTH  = 240;
+  const STORY_HEIGHT   = Math.round(PREVIEW_WIDTH * (1920 / 1080)); // ~427
+
+  if (state !== "ready" || !cards) {
     return (
-      <StatusCopy>
-        Add at least one find to your shelf to share it.
-      </StatusCopy>
+      <div
+        style={{
+          width:         "100%",
+          height:        STORY_HEIGHT,
+          background:    v2.surface.warm,
+          border:        `1px solid ${v2.border.light}`,
+          borderRadius:  10,
+          overflow:      "hidden",
+          display:       "flex",
+          alignItems:    "center",
+          justifyContent: "center",
+          padding:       "0 24px",
+          boxShadow:     "0 1px 2px rgba(43,33,26,0.04)",
+        }}
+      >
+        <StatusCopy isError={state === "error"}>
+          {captureStatusCopy(state, errorMessage)}
+        </StatusCopy>
+      </div>
     );
   }
-  if (render.kind === "error") {
-    return <StatusCopy isError>{render.message}</StatusCopy>;
+
+  // Ready — render 5 captured cards in scroll-snap carousel
+  const order: Array<{ id: import("@/lib/useShelfCapture").ShelfCardId; label: string }> = [
+    { id: "hero",   label: "1 · Hero" },
+    { id: "find:0", label: "2 · Find" },
+    { id: "find:1", label: "3 · Find" },
+    { id: "find:2", label: "4 · Find" },
+    { id: "cta",    label: "5 · CTA" },
+  ];
+
+  return (
+    <div
+      style={{
+        display:            "flex",
+        gap:                12,
+        overflowX:          "auto",
+        scrollSnapType:     "x mandatory",
+        WebkitOverflowScrolling: "touch",
+        paddingBottom:      6,
+        // Soft scrollbar on desktop; hidden on mobile via webkit
+        scrollbarWidth:     "thin",
+      }}
+    >
+      {order.map(({ id, label }) => {
+        const card = cards.get(id);
+        if (!card) return null;
+        return (
+          <div
+            key={id}
+            style={{
+              flexShrink:        0,
+              scrollSnapAlign:   "center",
+              display:           "flex",
+              flexDirection:     "column",
+              alignItems:        "center",
+            }}
+          >
+            <div
+              style={{
+                width:        PREVIEW_WIDTH,
+                height:       STORY_HEIGHT,
+                borderRadius: 8,
+                overflow:     "hidden",
+                border:       `1px solid ${v2.border.light}`,
+                boxShadow:    "0 2px 6px rgba(43,33,26,0.08)",
+                background:   v2.surface.warm,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={card.url}
+                alt={`Card preview — ${label}`}
+                style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
+              />
+            </div>
+            <div
+              style={{
+                marginTop:     6,
+                fontSize:      10,
+                fontWeight:    700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color:         v2.text.muted,
+              }}
+            >
+              {label}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function captureStatusCopy(
+  state: "loading-posts" | "no-posts" | "rendering" | "ready" | "error",
+  errorMessage?: string,
+): string {
+  switch (state) {
+    case "loading-posts": return "Loading your shelf…";
+    case "no-posts":      return "Add at least one find to your shelf to share it.";
+    case "rendering":     return "Generating your 5-card Story…";
+    case "error":         return errorMessage ?? "Couldn't render. Please try again.";
+    case "ready":         return ""; // unreachable; caller branches on ready
   }
-  return null;
 }
 
 function StatusCopy({ children, isError = false }: { children: React.ReactNode; isError?: boolean }) {
   return (
     <div
       style={{
-        padding:    "0 24px",
         textAlign:  "center",
         fontFamily: FONT_CORMORANT,
         fontStyle:  "italic",
@@ -420,30 +502,29 @@ function ActionButton({
   primary?:  boolean;
   small?:    boolean;
 }) {
-  const isPrimary = primary;
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       style={{
-        display:       "flex",
-        alignItems:    "center",
+        display:        "flex",
+        alignItems:     "center",
         justifyContent: "center",
-        gap:           8,
-        width:         "100%",
-        padding:       small ? "10px 12px" : "14px 16px",
-        border:        isPrimary ? "none" : `1px solid ${v2.border.light}`,
-        borderRadius:  999,
-        background:    isPrimary ? v2.accent.green : v2.surface.card,
-        color:         isPrimary ? "#FBF6EA" : v2.text.primary,
-        fontFamily:    FONT_CORMORANT,
-        fontWeight:    isPrimary ? 600 : 500,
-        fontSize:      small ? 14 : 16,
-        letterSpacing: "-0.005em",
-        cursor:        disabled ? "default" : "pointer",
-        opacity:       disabled ? 0.5 : 1,
-        transition:    "opacity 0.15s ease",
+        gap:            8,
+        width:          "100%",
+        padding:        small ? "10px 12px" : "14px 16px",
+        border:         primary ? "none" : `1px solid ${v2.border.light}`,
+        borderRadius:   999,
+        background:     primary ? v2.accent.green : v2.surface.card,
+        color:          primary ? v2.surface.card : v2.text.primary,
+        fontFamily:     FONT_CORMORANT,
+        fontWeight:     primary ? 600 : 500,
+        fontSize:       small ? 14 : 16,
+        letterSpacing:  "-0.005em",
+        cursor:         disabled ? "default" : "pointer",
+        opacity:        disabled ? 0.5 : 1,
+        transition:     "opacity 0.15s ease",
         WebkitTapHighlightColor: "transparent",
       }}
     >
@@ -454,19 +535,9 @@ function ActionButton({
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
-function buildCaption(boothName: string, mallName: string, boothNo: string | null): string {
-  const parts: string[] = [];
-  parts.push(mallName
-    ? `Fresh finds are waiting at ${boothName} in ${mallName}.`
-    : `Fresh finds are waiting at ${boothName}.`);
-  parts.push("Preview the shelf before you visit.");
-  if (boothNo) parts.push(`Booth ${boothNo}.`);
-  return parts.join(" ");
-}
-
-function buildFilename(vendor: Vendor): string {
+function buildFilename(vendor: Vendor, slot: string): string {
   const slug = vendor.slug || "booth";
-  return `treehouse-finds-${slug}.png`;
+  return `treehouse-finds-${slug}-${slot}.png`;
 }
 
 function downloadBlob(blob: Blob, filename: string): void {
@@ -477,14 +548,5 @@ function downloadBlob(blob: Blob, filename: string): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  // Defer revoke so the download has time to register the URL.
   setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-
-function mobileShareLabel(): string {
-  // Match the OS-native share affordance language. iOS uses "Share";
-  // Android also uses "Share". Generic copy works across both. Falls back
-  // to "Open Facebook" semantically on desktop but the button label stays
-  // "Share" so the affordance reads consistently.
-  return "Share";
 }
