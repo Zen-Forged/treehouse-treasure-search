@@ -33,7 +33,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PiDownloadSimple, PiShareFat, PiCopySimple, PiLinkSimple, PiShuffle } from "react-icons/pi";
+import { Reorder } from "framer-motion";
+import { PiDownloadSimple, PiShareFat, PiCopySimple, PiLinkSimple, PiShuffle, PiDotsSixVertical } from "react-icons/pi";
 import { track } from "@/lib/clientEvents";
 import { getVendorWindowPosts } from "@/lib/posts";
 import { generateShelfCaption, placeholderHeroHook } from "@/lib/aiShelfCaption";
@@ -223,16 +224,34 @@ export function ShelfImageShareScreen({
     setCaptureKey(k => k + 1);
   }, [posts]);
 
+  // ─── Reorder (D3) — drag-rearrange the 3 finds within Story sequence ──
+  // Per D3 (vendor input depth: zero-input + regenerate + reorder).
+  // Hero (slot 0) + CTA (slot 4) stay fixed; only the 3 find slots
+  // rearrange. framer-motion Reorder.Group on a separate compact chip row
+  // below the carousel avoids touch-action conflict with the horizontal
+  // scroll-snap carousel above.
+  const handleReorder = useCallback((newOrder: Post[]) => {
+    setPicks(newOrder);
+    setCaptureKey(k => k + 1);
+  }, []);
+
   // ─── Derived strings for SlimHeader ──────────────────────────────────
   const boothName   = vendor.display_name;
   const mallName    = mall?.name ?? vendor.mall?.name ?? "";
   const boothNo     = vendor.booth_number;
   const mallAddress = mall?.address ?? [mall?.city, mall?.state].filter(Boolean).join(", ");
 
-  // Overall wrapper render state — combines posts fetch + capture status
-  const wrapperState: "loading-posts" | "no-posts" | "rendering" | "ready" | "error" = (() => {
+  // Overall wrapper render state — combines posts fetch + capture status.
+  // "insufficient-posts" branch is a schema-forced extension per
+  // feedback_schema_forced_deviation_not_design_reversal ✅ Promoted —
+  // D9 froze 5-card sequence (1 hero + 3 finds + 1 CTA) but didn't
+  // enumerate the <3-posts case. The 3-find floor is structural for
+  // MVP per D9; Tier B6 (pre-capture vendor inputs) would unblock 1-2
+  // post vendors via variable card counts.
+  const wrapperState: "loading-posts" | "no-posts" | "insufficient-posts" | "rendering" | "ready" | "error" = (() => {
     if (posts === null) return "loading-posts";
     if (posts.length === 0) return "no-posts";
+    if (posts.length < 3) return "insufficient-posts";
     if (capture.status === "error") return "error";
     if (capture.status === "ready") return "ready";
     return "rendering";
@@ -270,9 +289,18 @@ export function ShelfImageShareScreen({
       {/* Carousel preview — horizontal scroll-snap */}
       <CarouselPreview state={wrapperState} cards={cards} errorMessage={capture.status === "error" ? capture.message : undefined} />
 
+      {/* Reorder strip (D3) — drag-rearrange the 3 finds within Story sequence.
+          Hero + CTA stay fixed at slots 0 + 4. Compact chip row below the
+          carousel; framer-motion Reorder.Group avoids touch-action conflict
+          with the horizontal scroll-snap carousel above. Only renders when
+          ready + picks settled (3 finds present). */}
+      {wrapperState === "ready" && picks.length === 3 && (
+        <ReorderStrip picks={picks} onReorder={handleReorder} />
+      )}
+
       {/* Regenerate affordance — D8 single-affordance re-rolls finds + hook.
-          Always-visible (cycles hook variant even when picks can't change
-          on vendors with ≤3 posts). Reorder ships in C6 alongside this row. */}
+          Always-visible when posts loaded (cycles hook variant even when
+          picks can't change on vendors with ≤3 posts). */}
       <button
         type="button"
         onClick={handleRegenerate}
@@ -433,7 +461,7 @@ function CarouselPreview({
   cards,
   errorMessage,
 }: {
-  state:        "loading-posts" | "no-posts" | "rendering" | "ready" | "error";
+  state:        "loading-posts" | "no-posts" | "insufficient-posts" | "rendering" | "ready" | "error";
   cards:        Map<import("@/lib/useShelfCapture").ShelfCardId, import("@/lib/useShelfCapture").CapturedCard> | null;
   errorMessage?: string;
 }) {
@@ -538,15 +566,16 @@ function CarouselPreview({
 }
 
 function captureStatusCopy(
-  state: "loading-posts" | "no-posts" | "rendering" | "ready" | "error",
+  state: "loading-posts" | "no-posts" | "insufficient-posts" | "rendering" | "ready" | "error",
   errorMessage?: string,
 ): string {
   switch (state) {
-    case "loading-posts": return "Loading your shelf…";
-    case "no-posts":      return "Add at least one find to your shelf to share it.";
-    case "rendering":     return "Generating your 5-card Story…";
-    case "error":         return errorMessage ?? "Couldn't render. Please try again.";
-    case "ready":         return ""; // unreachable; caller branches on ready
+    case "loading-posts":       return "Loading your shelf…";
+    case "no-posts":            return "Add at least one find to your shelf to share it.";
+    case "insufficient-posts":  return "Add at least 3 finds to your shelf to share a 5-card Story sequence.";
+    case "rendering":           return "Generating your 5-card Story…";
+    case "error":               return errorMessage ?? "Couldn't render. Please try again.";
+    case "ready":               return ""; // unreachable; caller branches on ready
   }
 }
 
@@ -563,6 +592,113 @@ function StatusCopy({ children, isError = false }: { children: React.ReactNode; 
       }}
     >
       {children}
+    </div>
+  );
+}
+
+// ─── ReorderStrip ──────────────────────────────────────────────────────────
+// framer-motion Reorder.Group on the 3 picked finds. Drag a chip to
+// rearrange; onReorder fires with the new Post[] order. Bumping captureKey
+// in the caller's handler re-triggers useShelfCapture against the new
+// off-screen DOM mount order.
+//
+// Hero (slot 0) + CTA (slot 4) stay fixed — they're NOT inside the Reorder
+// group; only the 3 find slots reorder among themselves.
+//
+// touch-action: none on Reorder.Item lets framer-motion own the drag
+// gesture without the browser's scroll-pan interfering. Safe here because
+// the strip sits in vertical-stack layout (no parent horizontal scroll).
+function ReorderStrip({
+  picks,
+  onReorder,
+}: {
+  picks:     Post[];
+  onReorder: (newOrder: Post[]) => void;
+}) {
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div
+        style={{
+          fontFamily:    FONT_INTER,
+          fontSize:      10,
+          fontWeight:    600,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color:         v2.text.muted,
+          marginBottom:  6,
+          textAlign:     "center",
+        }}
+      >
+        Drag to reorder finds
+      </div>
+      <Reorder.Group
+        axis="x"
+        values={picks}
+        onReorder={onReorder}
+        style={{
+          display:     "flex",
+          gap:         8,
+          listStyle:   "none",
+          padding:     0,
+          margin:      0,
+        }}
+      >
+        {picks.map((post, i) => (
+          <Reorder.Item
+            key={post.id}
+            value={post}
+            style={{
+              flex:           1,
+              minWidth:       0, // allow shrink for ellipsis on long titles
+              touchAction:    "none",
+              display:        "flex",
+              alignItems:     "center",
+              gap:            6,
+              padding:        "8px 10px",
+              background:     v2.surface.card,
+              border:         `1px solid ${v2.border.light}`,
+              borderRadius:   8,
+              cursor:         "grab",
+              fontFamily:     FONT_CORMORANT,
+              fontStyle:      "italic",
+              fontSize:       12,
+              color:          v2.text.primary,
+              WebkitTapHighlightColor: "transparent",
+            }}
+            whileDrag={{
+              scale:     1.05,
+              boxShadow: "0 6px 14px rgba(43,33,26,0.18)",
+              cursor:    "grabbing",
+              zIndex:    10,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                fontFamily:    FONT_INTER,
+                fontWeight:    700,
+                fontSize:      10,
+                color:         v2.accent.green,
+                flexShrink:    0,
+              }}
+            >
+              {i + 1}
+            </span>
+            <span
+              style={{
+                flex:         1,
+                minWidth:     0,
+                overflow:     "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace:   "nowrap",
+              }}
+            >
+              {post.title}
+            </span>
+            <PiDotsSixVertical size={14} color={v2.text.muted} style={{ flexShrink: 0 }} />
+          </Reorder.Item>
+        ))}
+      </Reorder.Group>
     </div>
   );
 }
