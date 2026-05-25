@@ -33,7 +33,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PiDownloadSimple, PiShareFat, PiCopySimple, PiLinkSimple } from "react-icons/pi";
+import { PiDownloadSimple, PiShareFat, PiCopySimple, PiLinkSimple, PiShuffle } from "react-icons/pi";
 import { track } from "@/lib/clientEvents";
 import { getVendorWindowPosts } from "@/lib/posts";
 import { generateShelfCaption, placeholderHeroHook } from "@/lib/aiShelfCaption";
@@ -57,12 +57,12 @@ export function ShelfImageShareScreen({
   mall,
   boothUrl,
 }: ShelfImageShareScreenProps) {
-  const [posts, setPosts]         = useState<Post[] | null>(null);
-  const [picks, setPicks]         = useState<Post[]>([]);
-  const [captureKey]              = useState(0); // C5 will wire setter for regenerate
-  const [aiHookSeed]              = useState(0); // C5 will cycle this on regenerate
-  const [copyToast, setCopyToast] = useState<"caption" | "link" | null>(null);
-  const containerRef              = useRef<HTMLDivElement>(null);
+  const [posts, setPosts]               = useState<Post[] | null>(null);
+  const [picks, setPicks]               = useState<Post[]>([]);
+  const [captureKey, setCaptureKey]     = useState(0);
+  const [aiHookSeed, setAiHookSeed]     = useState(0);
+  const [copyToast, setCopyToast]       = useState<"caption" | "link" | null>(null);
+  const containerRef                    = useRef<HTMLDivElement>(null);
 
   // ─── Mount: fire view event + fetch posts ────────────────────────────
   const trackPayload = useMemo(() => ({
@@ -202,6 +202,27 @@ export function ShelfImageShareScreen({
     } catch { /* */ }
   }, [boothUrl]);
 
+  // ─── Regenerate (D8) — re-rolls finds + cycles placeholder hook ───────
+  // Per D8 (single affordance re-rolls finds + AI caption together) + D10
+  // (regenerate re-rolls which 3 picks; random shuffle if vendor has >3
+  // posts). Always bumps aiHookSeed so the hero hook visibly changes even
+  // when picks can't change (vendor ≤3 posts), and bumps captureKey so
+  // useShelfCapture re-runs against the new off-screen DOM.
+  //
+  // Real AI caption gen lands in Arc 4; until then placeholder cycles
+  // through 5 hook variants per placeholderHeroHook (lib/aiShelfCaption).
+  const handleRegenerate = useCallback(() => {
+    if (!posts || posts.length === 0) return;
+    if (posts.length > 3) {
+      // Fisher-Yates-equivalent shuffle via Math.random sort — sufficient
+      // for the 6-post window. Take first 3 after shuffle.
+      const shuffled = [...posts].sort(() => Math.random() - 0.5);
+      setPicks(shuffled.slice(0, 3));
+    }
+    setAiHookSeed(s => s + 1);
+    setCaptureKey(k => k + 1);
+  }, [posts]);
+
   // ─── Derived strings for SlimHeader ──────────────────────────────────
   const boothName   = vendor.display_name;
   const mallName    = mall?.name ?? vendor.mall?.name ?? "";
@@ -249,8 +270,40 @@ export function ShelfImageShareScreen({
       {/* Carousel preview — horizontal scroll-snap */}
       <CarouselPreview state={wrapperState} cards={cards} errorMessage={capture.status === "error" ? capture.message : undefined} />
 
+      {/* Regenerate affordance — D8 single-affordance re-rolls finds + hook.
+          Always-visible (cycles hook variant even when picks can't change
+          on vendors with ≤3 posts). Reorder ships in C6 alongside this row. */}
+      <button
+        type="button"
+        onClick={handleRegenerate}
+        disabled={wrapperState !== "ready" || posts === null || posts.length === 0}
+        style={{
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "center",
+          gap:            8,
+          width:          "100%",
+          marginTop:      14,
+          padding:        "10px 14px",
+          border:         `1px dashed ${v2.border.medium}`,
+          borderRadius:   999,
+          background:     "transparent",
+          color:          v2.text.secondary,
+          fontFamily:     FONT_CORMORANT,
+          fontStyle:      "italic",
+          fontSize:       14,
+          cursor:         (wrapperState !== "ready" || posts === null || posts.length === 0) ? "default" : "pointer",
+          opacity:        (wrapperState !== "ready" || posts === null || posts.length === 0) ? 0.45 : 1,
+          transition:     "opacity 0.15s ease",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <PiShuffle size={16} color={v2.text.secondary} />
+        <span>Regenerate</span>
+      </button>
+
       {/* Action buttons */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
         <ActionButton
           primary
           disabled={wrapperState !== "ready"}
