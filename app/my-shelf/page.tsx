@@ -1075,7 +1075,12 @@ function MyBoothInner() {
           // /my-shelf is the canonical owner-view surface so showQr opts in.
           // /shelf/[slug] callsite stays default (showQr undefined → false) so
           // shoppers AND admin viewing /shelf see Email + SMS only.
-          entity={{ kind: "booth", vendor: activeVendor, mall, showQr: true }}
+          //
+          // Session 196 C2 — Shelf Image follows the same owner-only pattern.
+          // /my-shelf opts both flags in; /shelf default keeps both false.
+          // Both surfaces gate independently so a future product split needs
+          // no refactor.
+          entity={{ kind: "booth", vendor: activeVendor, mall, showQr: true, showShelfImage: true }}
         />
       )}
 

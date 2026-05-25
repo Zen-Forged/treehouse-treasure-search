@@ -72,13 +72,21 @@ type EmailStatus =
  *   - Channel handlers (entity-specific URLs, SMS body templates, analytics)
  */
 export type ShareSheetEntity =
-  | { kind: "booth"; vendor: Vendor; mall: Mall | null; showQr?: boolean }
+  | { kind: "booth"; vendor: Vendor; mall: Mall | null; showQr?: boolean; showShelfImage?: boolean }
   | { kind: "mall";  mall: Mall | "all-kentucky" }
   | { kind: "find";  post: Post; vendor: Vendor; mall: Mall | null };
 // Session 192 F3 — `showQr` on booth entity gates the QR channel + screen.
 // QR is owner/booth-admin affordance only (vendor prints + posts in physical
 // booth space); /my-shelf passes showQr: true; /shelf callsite stays default
 // (false) so shoppers AND admin viewing /shelf see Email + SMS only.
+//
+// Session 196 C2 — `showShelfImage` parallel additive flag with same semantic
+// (owner-only): Shelf Image is a vendor/admin promotional asset for Facebook,
+// not a shopper-share affordance. /my-shelf passes showShelfImage: true;
+// /shelf default (false) keeps shoppers + vendor-not-owners + admin-on-/shelf
+// scoped to Email + SMS. Kept as a separate flag (not dual-purposing showQr)
+// per session 192's per-affordance gating precedent — if a future product
+// call splits them, no refactor needed.
 
 export interface ShareSheetProps {
   open:    boolean;
@@ -258,6 +266,9 @@ function BoothShareBody({
   // /my-shelf passes showQr: true; /shelf default = false (no QR for
   // shoppers OR admin viewing /shelf).
   const showQr = entity.showQr === true;
+  // Session 196 C2 — Shelf Image channel + screen gated on entity.showShelfImage
+  // opt-in. Same owner-only semantic as showQr but kept as a separate flag.
+  const showShelfImage = entity.showShelfImage === true;
 
   return (
     <BottomSheet
@@ -277,7 +288,7 @@ function BoothShareBody({
           onEmailTap={handleEmailTap}
           onSmsTap={handleSmsTap}
           onQrTap={showQr ? handleQrTap : undefined}
-          onShelfImageTap={handleShelfImageTap}
+          onShelfImageTap={showShelfImage ? handleShelfImageTap : undefined}
         />
       )}
 
@@ -310,7 +321,7 @@ function BoothShareBody({
         />
       )}
 
-      {screen === "shelf-image" && (
+      {showShelfImage && screen === "shelf-image" && (
         <ShelfImageShareScreen
           vendor={vendor}
           mall={mall}
@@ -504,28 +515,35 @@ function GridScreen({
   onQrTap,
   onShelfImageTap,
 }: {
+  // onQrTap + onShelfImageTap both optional + spread-conditional in tiles
+  // array — owner-only affordances absent for shoppers + vendor-not-owners
+  // + admin-on-/shelf (session 192 F3 + session 196 C2).
   boothName:   string;
   boothNo:     string | null;
   mallName:    string;
-  mallAddress:     string;
-  onEmailTap:      () => void;
-  onSmsTap:        () => void;
-  onQrTap?:        () => void;
-  onShelfImageTap: () => void;
+  mallAddress:      string;
+  onEmailTap:       () => void;
+  onSmsTap:         () => void;
+  onQrTap?:         () => void;
+  onShelfImageTap?: () => void;
 }) {
-  // Session 152 → revived session 196 — Shelf Image is the 4th channel.
-  // Visual order Email / SMS / (QR if showQr) / Shelf Image. ChannelGrid
-  // renders gridTemplateColumns: repeat(N, 1fr) so 3-tile (/shelf showQr=false)
-  // and 4-tile (/my-shelf showQr=true) layouts both fit the 430px max-width
-  // sheet cleanly. Shelf Image is unconditional per session 152 contract;
-  // dial-gating on showQr is a one-line follow-on if iPhone QA surfaces it.
+  // Session 152 → revived + gated session 196 — Shelf Image is owner-only.
+  // Visual order Email / SMS / (QR if owner) / (Shelf Image if owner).
+  // ChannelGrid renders gridTemplateColumns: repeat(N, 1fr) so tile-count
+  // variants fit the 430px max-width sheet cleanly:
+  //   - public /shelf (anon shopper, vendor-not-owner, admin-on-/shelf):
+  //       [Email, SMS] = 2 tiles
+  //   - /my-shelf (vendor-self OR admin-managing-vendor via ?vendor=<id>):
+  //       [Email, SMS, QR, Shelf Image] = 4 tiles
   const tiles: ChannelGridTile[] = [
-    { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email",       onClick: onEmailTap },
-    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",         onClick: onSmsTap },
+    { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email", onClick: onEmailTap },
+    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",   onClick: onSmsTap },
     ...(onQrTap
       ? [{ kind: "channel" as const, icon: <PiQrCode size={22} color={v2.text.primary} />, label: "QR Code", onClick: onQrTap }]
       : []),
-    { kind: "channel", icon: <PiImageSquare    size={22} color={v2.text.primary} />, label: "Shelf Image", onClick: onShelfImageTap },
+    ...(onShelfImageTap
+      ? [{ kind: "channel" as const, icon: <PiImageSquare size={22} color={v2.text.primary} />, label: "Shelf Image", onClick: onShelfImageTap }]
+      : []),
   ];
 
   return (
