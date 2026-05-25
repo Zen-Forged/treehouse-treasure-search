@@ -120,6 +120,20 @@ export function isAdmin(user: User | null): boolean {
 export type UserRole = "admin" | "vendor" | "shopper" | "none";
 
 /**
+ * Extended role surface used by routing-only helpers (pickDest, /welcome
+ * mount). The "pending_vendor" variant exists ONLY on the routing seam —
+ * pure `detectUserRole` (consumed by chrome like BottomNav via
+ * `lib/useUserRole.ts`) stays on the canonical UserRole union so chrome
+ * consumers don't have to handle the pending state.
+ *
+ * Session 195 — closes the routing gap surfaced during session 193
+ * admin-email-test: a vendor who submitted /vendor-request then signed
+ * in before admin approval was landing on /welcome's "Just exploring vs
+ * Set up booth" disambiguation, inviting a duplicate submission.
+ */
+export type ExtendedUserRole = UserRole | "pending_vendor";
+
+/**
  * Resolve the user's primary role for post-sign-in routing decisions.
  *
  * Precedence: admin → vendor → shopper → none. Admin precedence wins because
@@ -184,10 +198,41 @@ export async function tryAutoClaimVendorRows(): Promise<boolean> {
 }
 
 /**
- * detectUserRole with first-sign-in auto-claim retry.
+ * Check whether the authed user has a pending vendor_request matching
+ * their email. Used to surface "pending_vendor" intermediate state at
+ * the routing seam (per `feedback_enumerate_states_in_self_heal_helpers`
+ * ✅ Promoted — 2nd cumulative firing post-promotion this session).
  *
- * Routing surfaces (/login pickDest, /welcome mount) call this so an
- * approved-but-unclaimed vendor lands on /my-shelf instead of /welcome.
+ * Server-side endpoint required because vendor_requests is service-role-
+ * gated; matches by email (vendor_requests has no user_id column per
+ * `feedback_schema_forced_deviation_not_design_reversal` ✅ Promoted).
+ */
+export async function hasPendingVendorRequest(): Promise<boolean> {
+  try {
+    const res = await authFetch("/api/vendor-request/check-pending", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => null) as
+      | { ok?: boolean; hasPending?: boolean }
+      | null;
+    return Boolean(data?.ok && data.hasPending);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * detectUserRole with first-sign-in auto-claim retry + pending-vendor-request
+ * intermediate-state detection.
+ *
+ * Routing surfaces (/login pickDest, /welcome mount) call this so:
+ *   - an approved-but-unclaimed vendor lands on /my-shelf (auto-claim path)
+ *   - a vendor with a pending vendor_request lands on /vendor-request?state=pending
+ *     (existing DoneScreen already_pending — session 195 new branch)
+ *   - everyone else routes per pure detectUserRole
+ *
  * Pure `detectUserRole` (used by chrome like BottomNav) stays side-effect
  * free — it fires on every mount and shouldn't trigger network claims.
  *
@@ -195,14 +240,22 @@ export async function tryAutoClaimVendorRows(): Promise<boolean> {
  * handle at /login/email/handle in a prior session and was later approved
  * as a vendor must still get linked. Vendor precedence over shopper is
  * already encoded in detectUserRole's contract.
+ *
+ * Pending check fires AFTER auto-claim with the same "none" OR "shopper"
+ * gate — a shopper-with-pending-vendor-approval is still pending-vendor
+ * for routing purposes until admin approval converts the row to vendor.
  */
-export async function detectUserRoleWithAutoClaim(user: User | null): Promise<UserRole> {
+export async function detectUserRoleWithAutoClaim(user: User | null): Promise<ExtendedUserRole> {
   if (!user) return "none";
   const role = await detectUserRole(user);
   if (role === "admin" || role === "vendor") return role;
   const claimed = await tryAutoClaimVendorRows();
-  if (!claimed) return role;
-  return await detectUserRole(user);
+  if (claimed) return await detectUserRole(user);
+  // Auto-claim didn't link any rows. Check for pending vendor_request.
+  // If found, surface as "pending_vendor" so routing lands the user on
+  // the existing already_pending DoneScreen instead of /welcome.
+  if (await hasPendingVendorRequest()) return "pending_vendor";
+  return role;
 }
 
 // ── Sync helpers (for owner detection without async) ─────────────────────────
