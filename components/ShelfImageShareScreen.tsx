@@ -117,46 +117,74 @@ export function ShelfImageShareScreen({
     return () => window.clearTimeout(t);
   }, [copyToast]);
 
-  // ─── Actions (C3: single-card via find:0 for session-152 parity) ─────
-  // C4 swaps these to navigator.share({ files: [...] }) multi-file payload.
+  // ─── Actions (C4: multi-file native share + download-all) ────────────
+  // D14 navigator.share({ files: [...] }) with 5 PNG File objects in
+  // sequence order. iOS Safari 16+ / Android Chrome 75+ support multi-file
+  // payload. Defensive fallback ladder per design record risk register:
+  //   1. canShare({ files: all 5 }) → native multi-file share
+  //   2. canShare({ files: [hero] }) → native single-card share (degrade
+  //      gracefully if device rejects multi-file)
+  //   3. Desktop fallback → open FB sharer + download all 5 in sequence
   const handleNativeShare = useCallback(async () => {
     if (capture.status !== "ready") return;
-    const card = capture.cards.get("find:0");
-    if (!card) return;
-    const file = new File([card.blob], buildFilename(vendor, "preview"), { type: "image/png" });
+    const files = buildOrderedFiles(capture.cards, vendor);
+    if (files.length === 0) return;
 
     // Auto-copy caption FIRST so vendor pastes it into their composer.
     try { await navigator.clipboard.writeText(caption); } catch { /* non-fatal */ }
 
-    const canShareFiles = typeof navigator !== "undefined"
+    const canMulti = typeof navigator !== "undefined"
       && typeof navigator.canShare === "function"
-      && navigator.canShare({ files: [file] });
+      && navigator.canShare({ files });
 
-    if (canShareFiles && typeof navigator.share === "function") {
+    if (canMulti && typeof navigator.share === "function") {
       try {
-        await navigator.share({ files: [file], text: caption, url: boothUrl });
-        track("share_shelf_image_downloaded", { ...trackPayload, method: "native_share" });
+        await navigator.share({ files, text: caption, url: boothUrl });
+        track("share_shelf_image_downloaded", { ...trackPayload, method: "native_share_multi", file_count: files.length });
+        return;
       } catch (err) {
         const isAbort = err instanceof Error && err.name === "AbortError";
-        if (!isAbort) console.error("[share-my-shelf] navigator.share failed:", err);
+        if (!isAbort) console.error("[share-my-shelf] navigator.share multi-file failed:", err);
+        if (isAbort) return; // user canceled — don't fall through to fallback
       }
-    } else {
-      // Desktop fallback — open FB sharer FIRST (must be inside user gesture)
-      const fbHref = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(boothUrl)}`;
-      window.open(fbHref, "_blank", "noopener,noreferrer");
-      downloadBlob(card.blob, buildFilename(vendor, "preview"));
-      track("share_shelf_image_downloaded", { ...trackPayload, method: "desktop_fallback" });
-      setCopyToast("caption");
     }
+
+    // Fallback to single-card if multi-file rejected/unsupported but
+    // single-file is. Mirrors session-152 path; vendor gets the hero card
+    // they can post manually + subsequent cards via separate share/download.
+    const single = files[0];
+    const canSingle = typeof navigator !== "undefined"
+      && typeof navigator.canShare === "function"
+      && navigator.canShare({ files: [single] });
+
+    if (canSingle && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ files: [single], text: caption, url: boothUrl });
+        track("share_shelf_image_downloaded", { ...trackPayload, method: "native_share_single", file_count: 1 });
+        return;
+      } catch (err) {
+        const isAbort = err instanceof Error && err.name === "AbortError";
+        if (!isAbort) console.error("[share-my-shelf] navigator.share single failed:", err);
+        if (isAbort) return;
+      }
+    }
+
+    // Desktop fallback — open FB sharer FIRST (must be inside user gesture)
+    // + download all 5 in sequence so vendor can attach manually.
+    const fbHref = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(boothUrl)}`;
+    window.open(fbHref, "_blank", "noopener,noreferrer");
+    downloadFilesSequentially(files);
+    track("share_shelf_image_downloaded", { ...trackPayload, method: "desktop_fallback", file_count: files.length });
+    setCopyToast("caption");
   }, [capture, caption, boothUrl, vendor, trackPayload]);
 
   const handleDownload = useCallback(async () => {
     if (capture.status !== "ready") return;
-    const card = capture.cards.get("find:0");
-    if (!card) return;
+    const files = buildOrderedFiles(capture.cards, vendor);
+    if (files.length === 0) return;
     try { await navigator.clipboard.writeText(caption); } catch { /* */ }
-    downloadBlob(card.blob, buildFilename(vendor, "preview"));
-    track("share_shelf_image_downloaded", { ...trackPayload, method: "download" });
+    downloadFilesSequentially(files);
+    track("share_shelf_image_downloaded", { ...trackPayload, method: "download", file_count: files.length });
     setCopyToast("caption");
   }, [capture, caption, vendor, trackPayload]);
 
@@ -233,7 +261,7 @@ export function ShelfImageShareScreen({
         <ActionButton
           disabled={wrapperState !== "ready"}
           icon={<PiDownloadSimple size={18} color={v2.text.primary} />}
-          label="Download image"
+          label="Download all 5 cards"
           onClick={handleDownload}
         />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -535,16 +563,52 @@ function ActionButton({
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
+
+// Sequence order matches the Story flow: hero → 3 finds → CTA. Filename
+// prefixed with "1-" through "5-" so when the vendor downloads + picks
+// them in FB's photo picker, the OS-default alphabetical sort puts them
+// in the right order.
+const SHELF_FILE_ORDER: Array<{ id: import("@/lib/useShelfCapture").ShelfCardId; suffix: string }> = [
+  { id: "hero",   suffix: "1-hero" },
+  { id: "find:0", suffix: "2-find-1" },
+  { id: "find:1", suffix: "3-find-2" },
+  { id: "find:2", suffix: "4-find-3" },
+  { id: "cta",    suffix: "5-cta" },
+];
+
+function buildOrderedFiles(
+  cards: Map<import("@/lib/useShelfCapture").ShelfCardId, import("@/lib/useShelfCapture").CapturedCard>,
+  vendor: Vendor,
+): File[] {
+  const files: File[] = [];
+  for (const { id, suffix } of SHELF_FILE_ORDER) {
+    const card = cards.get(id);
+    if (!card) continue;
+    files.push(new File([card.blob], buildFilename(vendor, suffix), { type: "image/png" }));
+  }
+  return files;
+}
+
 function buildFilename(vendor: Vendor, slot: string): string {
   const slug = vendor.slug || "booth";
   return `treehouse-finds-${slug}-${slot}.png`;
 }
 
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
+// Sequential download with a small stagger between files so the browser
+// doesn't suppress them as a single pop-up burst. Chrome allows ~10
+// programmatic downloads in quick succession; 5 with 200ms stagger is
+// well inside the safe zone on all major browsers.
+function downloadFilesSequentially(files: File[]): void {
+  files.forEach((file, i) => {
+    window.setTimeout(() => downloadFile(file), i * 200);
+  });
+}
+
+function downloadFile(file: File): void {
+  const url = URL.createObjectURL(file);
   const a   = document.createElement("a");
   a.href     = url;
-  a.download = filename;
+  a.download = file.name;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
