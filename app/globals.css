@@ -236,6 +236,12 @@
   --th-v2-brown:      #6A513E;
   --th-v2-brown-soft: #B8A996;
 
+  /* Session 196 — Share My Shelf brand chrome. priceGold reads against
+     dark photo-overlay gradient on captured Story/Feed cards (1080×1920
+     + 1080×1350). Adopt-on-2nd-consumer trigger met (StoryFindCard +
+     FeedCard). Specific to social-asset capture; not used on app chrome. */
+  --th-v2-price-gold: #FFD89B;
+
   --th-v2-border-light:  #E5DED2;
   --th-v2-border-medium: #D6CCBC;
 

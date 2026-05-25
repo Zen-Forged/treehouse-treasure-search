@@ -351,6 +351,10 @@ export const v2 = {
   // Brand brown — wordmark + secondary brand color.
   brown:     "var(--th-v2-brown)",
   brownSoft: "var(--th-v2-brown-soft)",
+  // Session 196 — Share My Shelf brand chrome. priceGold reads against
+  // dark photo-overlay gradient on captured Story/Feed cards.
+  // Used by StoryFindCard + FeedCard; 2nd-consumer extraction trigger.
+  priceGold: "var(--th-v2-price-gold)",
 
   // Hairline borders — light canonical 1px (cards/rows/dividers); medium
   // stronger hairline (dashed flankers around eyebrow + ✓ Found unchecked).
