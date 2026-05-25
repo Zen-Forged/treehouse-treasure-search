@@ -1,0 +1,43 @@
+-- Migration 024 — Add 'visitor_engaged' to event_type for visitor tracking.
+--
+-- Design context: session 194 Ask #2 — visitor tracking design pass.
+-- Companion to migration 023 (R3 instrumentation completeness, same session).
+--
+-- BACKGROUND
+-- ──────────
+-- Session 193 raised Ask #2: "track new visitors (currently no page-view
+-- event tracked anywhere)". Vercel Analytics was surfaced as the
+-- platform-native primitive; David chose to defer it entirely and build the
+-- visitor signal directly on R3 events.
+--
+-- Session 194 design pass locked the shape:
+--   • Single event type: `visitor_engaged`
+--   • Fires once per browser session (sessionStorage guard)
+--   • Trigger = first meaningful interaction OR 10s dwell, whichever first
+--   • visitor_id minted at engagement moment (Design B — bot filtering by
+--     design; bots that bounce in <10s without tapping never receive an ID)
+--   • visitor_id persists in localStorage forever (key: th_visitor_id)
+--   • is_first_session boolean in payload signals new-vs-returning visitor
+--   • Payload: { visitor_id, is_first_session, trigger, time_to_engage_ms,
+--               page_path, mall_scope, first_event_type? }
+--
+-- This is the SOLE substrate for the "how many unique engaged visitors do
+-- we have" question after David deferred Vercel Analytics. Pairs with the
+-- Ask #4 visual analytics admin tab (deferred to a future session) which
+-- will pull from this event exclusively for visitor metrics.
+--
+-- ALTER TYPE ADD VALUE is additive + IF NOT EXISTS makes re-runnable.
+-- Runs outside a transaction in the Supabase SQL editor by default (per
+-- migration 012 + 023 precedent).
+--
+-- 🖐️ HITL APPLY (run for BOTH projects in sequence):
+--   Staging: ⟨staging Supabase SQL editor — see .env.staging.local⟩
+--   Prod:    https://supabase.com/dashboard/project/zogxkarpwlaqmamfzceb/sql/new
+--
+-- VERIFICATION (paste after the ALTER above):
+--   SELECT COUNT(*) AS enum_value_count FROM (
+--     SELECT unnest(enum_range(NULL::event_type))
+--   ) AS t;
+--   -- Expect: 55 rows (14 from 010+012 + 40 from migration 023 + 1 from this)
+
+ALTER TYPE event_type ADD VALUE IF NOT EXISTS 'visitor_engaged';
