@@ -24,8 +24,12 @@ export type ClientEventType =
   | "find_shared"
   | "tag_extracted"
   | "tag_skipped"
-  // ── Session 99 — /flagged destination redesign ────────────────────────
-  | "flagged_booth_explored"
+  // ── Session 99 — flagged_booth_explored RETIRED at session 194 ──────
+  // Declared but never wired (0 callsites in any consumer; confirmed via
+  // session-194 audit-first grep). Dead-declaration cleanup per
+  // `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted; also retired
+  // from app/api/events/route.ts CLIENT_EVENT_TYPES whitelist (it was
+  // never present there either, so the route 400'd it silently anyway).
   // ── Session 100 — /find/[id] swipe-between-finds nav ─────────────────
   | "find_swiped"
   // ── R17 (session 117 design / 118+ impl) — geolocation-aware discovery

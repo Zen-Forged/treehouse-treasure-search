@@ -104,7 +104,36 @@ export type EventType =
   | "vendor_profile_enriched"
   | "vendor_avatar_uploaded"
   | "vendor_avatar_removed"
-  | "vendor_social_tapped";
+  | "vendor_social_tapped"
+  // ── Client-only event types added via /api/events ingest path ───────────
+  // Session 194 audit (R3 write-path investigation): these were declared in
+  // lib/clientEvents.ts ClientEventType union as each feature shipped, but
+  // were never added here. The cast at /api/events route.ts line 162
+  // (`eventType as EventType`) widens silently from string — so tsc never
+  // caught the drift. Adding here for single-source-of-truth completeness
+  // + so future audits localize cleanly. Migration 023 (companion C1)
+  // adds the matching enum values to event_type on the DB side.
+  //
+  // Session 100 — /find/[id] swipe-between-finds nav.
+  | "find_swiped"
+  // R17 (sessions 117 → 118+) — Geolocation-aware discovery.
+  | "location_prompted"
+  | "location_granted"
+  | "location_denied"
+  | "find_navigate_tapped"
+  | "find_view_on_map_tapped"
+  // R18 (session 121) — Saved per-mall restructure.
+  | "flagged_directions_tapped"
+  // Session 135 — Share Booth redesign (3-channel grid). Counterpart to
+  // share_mall_* + share_find_* trios above; rides the same client path.
+  | "share_booth_channel_tapped"
+  | "share_booth_qr_viewed"
+  | "share_booth_sms_initiated"
+  // Session 152 — Share My Shelf (PARKED — defensive include). Wrapper at
+  // components/ShelfImageShareScreen.tsx has no consumer today; including
+  // here so the revive contract stays clean when ShareSheet wires it back.
+  | "share_shelf_image_viewed"
+  | "share_shelf_image_downloaded";
 
 export interface RecordEventOptions {
   user_id?:    string | null;
