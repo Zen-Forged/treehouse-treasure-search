@@ -157,8 +157,20 @@ function VendorRequestInner() {
     // edit if they want a different email on the booth than their auth
     // identity. Functional setState guards against overwriting any input
     // the user has already typed in a race.
+    //
+    // Session 195 — also honor ?state=pending: if the user arrived via
+    // pickDest's "pending_vendor" routing branch (vendor submitted form,
+    // signed in before admin approval), pre-render the existing
+    // DoneScreen already_pending state on mount instead of showing the
+    // form (which would invite a duplicate submission). Authed-gate
+    // ensures unauth'd users hitting the URL directly still see the
+    // form (they need to submit fresh; can't claim a row that may not
+    // be theirs without an auth match).
     getUser().then(user => {
       if (user?.email) setEmail(prev => prev || user.email!);
+      if (user?.email && searchParams.get("state") === "pending") {
+        setDone("already_pending");
+      }
     });
   }, []);
 
