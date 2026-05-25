@@ -8,6 +8,47 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.195.0] — 2026-05-25
+
+### Session 195 — Pending-vendor-request routing landing closes session-193 admin-email-test bug + admin PIN gate retired (security fix, parallel-auth bypass of email-OTP boundary) — 4 runtime commits + 1 close
+
+David opened with `/session-open`; standup recommended Ask #4 visual analytics admin tab design pass + 8-tag batched walk. David redirected with a bug noticed during the session-193 admin email test: a user who submits `/vendor-request` then signs in via `/login` OTP before admin approval was landing on `/welcome`'s "Just exploring vs Set up booth" disambiguation, inviting a duplicate submission. Audit-first per `feedback_visibility_tools_first` ✅ Promoted localized the existing v1.1k `<DoneScreen state="already_pending">` sub-state inside `/vendor-request` — never reachable from /login post-OTP today, only from a duplicate form re-submission. Per `feedback_enumerate_states_in_self_heal_helpers` ✅ Promoted (2nd cumulative firing post-promotion — session 123 was 1st), session-123's self-heal short-circuit assumed `"none"` was terminal; pending vendor_request is the un-enumerated intermediate state between truly-new and approved-and-linked.
+
+Shape A picked: query param + routing seam. 3 runtime commits sequenced smallest→largest closed the routing gap. After David's clean iPhone QA walk on the pending-vendor fix, David surfaced a 2nd bug — the admin PIN gate at `/admin/login` is an insecure parallel-auth path. Audit confirmed: PIN bypasses email-OTP's security boundary (anyone with the static `ADMIN_PIN` env var could request + verify an admin OTP without proving inbox control). C4 retired it end-to-end. Net runtime change across the session: **+147 / −538 LOC = −391 LOC overall** — codebase shrinks while shipping 1 routing-gap fix + 1 security-gate retire.
+
+### Added
+
+- **`app/api/vendor-request/check-pending/route.ts`** — POST with `requireAuth` + service-role lookup of `vendor_requests` by `lower(email)` WHERE `status='pending'`. Mirrors `/api/setup/lookup-vendor` auth shape. Returns `{ ok, hasPending }`. Single-row indexed lookup via existing `vendor_requests_email_pending_idx` (migration 005).
+- **`ExtendedUserRole` type** in `lib/auth.ts` — `UserRole | "pending_vendor"` surfaced on routing-only wrapper. Pure `UserRole` stays untouched so chrome consumers (`lib/useUserRole.ts` → BottomNav) don't have to handle pending state.
+- **`hasPendingVendorRequest()` helper** in `lib/auth.ts` — client-side helper that POSTs to `/api/vendor-request/check-pending` via `authFetch`. Defensive try/catch returns `false` on any failure.
+- **`?state=pending` query param** on `/vendor-request` — when authed user lands with this param, pre-renders the existing `DoneScreen` "already_pending" state on mount instead of the empty form. Authed-gate guards against direct URL access by unauth'd users.
+
+### Changed
+
+- **`lib/auth.ts` `detectUserRoleWithAutoClaim`** return type widens to `Promise<ExtendedUserRole>`. After auto-claim doesn't link any rows, checks for pending vendor_request — if found, returns `"pending_vendor"` so routing surfaces land the user on the existing DoneScreen instead of /welcome.
+- **`app/login/page.tsx` `pickDest`** + **`app/welcome/page.tsx` mount-time role-detect** — single coupled commit (C3) adds the `"pending_vendor"` routing branch (`router.replace("/vendor-request?state=pending")`) BEFORE the shopper branch (shopper-with-pending-vendor-approval is still pending-vendor for routing purposes).
+- **`app/admin/page.tsx:559` unauth redirect** — `/admin/login` → `/login` (session 195 admin PIN retire). Admin now signs in via the same email-first OTP flow as every other user; `isAdmin(user)` email-match against `NEXT_PUBLIC_ADMIN_EMAIL` continues to enforce /admin access.
+- **`CONTEXT.md`** — scrubbed 7 current-state references to `/admin/login` + `/api/auth/admin-pin` + `ADMIN_PIN` as scope-adjacent dead-code byproduct per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted (route table + API table + sign-in pattern section + env var table + working-features list + rate-limit list + sprint-status table). Historical CHANGELOG references preserved (audit trail).
+
+### Removed
+
+- **`app/admin/login/page.tsx`** (-340 LOC) — Dedicated PIN entry UI. Parallel-auth shortcut that bypassed email-OTP's security boundary; retired session 195. Admin signs in via `/login` like everyone else.
+- **`app/api/auth/admin-pin/route.ts`** (-85 LOC) — Server PIN verify + service-role `generateLink` + email_otp extraction. Static-shared-secret risk (anyone with `ADMIN_PIN` value could request + verify admin OTP without inbox proof). Retired session 195.
+
+### Fixed
+
+- **Pending-vendor-request post-OTP routing** — vendor who submitted `/vendor-request` then signed in before admin approval was landing on `/welcome` disambiguation (inviting duplicate submission). Now routes to existing `DoneScreen` "already_pending" via new `"pending_vendor"` role. Closes bug surfaced during session-193 admin-email-test.
+- **Parallel-auth security gap** — admin PIN entry at `/admin/login` allowed sign-in as admin via static-shared-secret without proving control of the admin email inbox. Retired via C4; canonical email-OTP flow is now the only admin sign-in path.
+
+### iPhone QA watch-items
+
+- **Pending-vendor landing** — QA'd clean this session on Vercel preview. Sign in with the email used during session-193 admin-email-test → route to `/vendor-request?state=pending` showing Clock glyph + "We already have you." + "Your request is in the queue..." copy.
+- **Admin PIN retire** — production QA owed after merge. Sign in via `/login` with admin email → magic-link OTP → routes to `/` → tap masthead Profile bubble → `/admin` loads (admin gate enforced by `isAdmin(user)` email-match). 🖐️ HITL: remove `ADMIN_PIN` from Vercel project env (Production + Preview + Development scopes) — cleanup hygiene post-retire.
+
+[v0.195.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.195.0
+
+---
+
 ## [v0.194.0] — 2026-05-25
 
 ### Session 194 — R3 events write-path investigation closes substrate-healthy + Ask #2 visitor tracking shipped end-to-end (Shape C aggressive cadence) + R3 instrumentation completeness ship + latent session-58 staging migration-012 gap surfaced + closed — 6 runtime commits + 3 HITL pastes + 2 smoke tests + 1 close
