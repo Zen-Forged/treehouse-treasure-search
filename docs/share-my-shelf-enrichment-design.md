@@ -2,7 +2,7 @@
 
 > Session 196 — multi-session arc design pass for Share My Shelf vendor marketing toolkit.
 > Cost-shape: **Shape C** (Multi-format vendor marketing toolkit, 4-6 session arc).
-> Status: 🟢 Design pass in progress (V1 mockup shipped; pre-V2 scoping pending).
+> Status: 🟢 **Ready for Arc 1 implementation.** V1 + V2 picked; D1-D16 frozen; component contracts + commit-level Arc 1 sequencing locked.
 >
 > **Strategic framing (David verbatim session 196):** *"This is a huge selling feature for vendors to promote their booth on social without a lot of effort on their part. The interface should feel intuitive but equally important is that the end result needs to be share worthy."*
 >
@@ -49,6 +49,54 @@ Share My Shelf carries three load-bearing roles in the project's strategic postu
 3. **Zero-input baseline; optional regenerate.** None of the canonical share-worthy products ask the user anything. The user reviews, optionally regenerates, ships.
 
 Canva/Etsy patterns (vendor-edit-rich) inform the rarer customization-edge cases but NOT the canonical baseline.
+
+---
+
+## 3.5 Frozen decisions D1-D16 (post V1 + V2 + prose pass)
+
+| # | Decision | Rationale |
+|---|---|---|
+| **D1** | Cost shape: Shape C — Multi-format vendor marketing toolkit, 4-6 session arc | David verbatim: "huge selling feature for vendors to promote their booth on social without a lot of effort on their part." Vendor-value gate + Booth-tier Outbound lattice both anticipate heavy curated-experience load. |
+| **D2** | Format set: Story (1080×1920) primary + Feed (1080×1350) secondary | Story leads (5× vendor reach per Spotify/Strava benchmark). Feed retains session 152 baseline + serves vendors who don't post Stories. |
+| **D3** | Vendor input depth: Zero-input baseline + regenerate + reorder | Effort floor critical. Matches Spotify Wrapped pattern. Optional dials surface on demand. |
+| **D4** | Axis A Story composition: Frame β — Multi-card Story sequence | 5 cards: booth hero + 3 individual finds + CTA card. Canonical Spotify Wrapped pattern. 4-6× more brand impressions per share. |
+| **D5** | Axis B Brand identity: Frame ii — Balanced co-brand (~40% chrome) | Green-gradient hero card + leaf-bubble accent on find cards + dashed-pill CTA. Pre-beta-stage-appropriate. Vendor content room + Treehouse signature recognizable. Frame iii heavy is a "next-year decision" earned via accumulated shares. |
+| **D6** | Axis C Feed↔Story relationship: Single-card-repurposed | Feed format = strongest individual find card from Story sequence (typically card #2 — first find card) repurposed as standalone Feed post. Adapts existing Story card via aspect adaptation; no separate design system. |
+| **D7** | Caption strategy: AI-generated per format | Sonnet call generates Story-sequence-caption (multi-line narrative) AND Feed-single-caption (single hook line). Format-aware prompts. Auto-copied to clipboard for paste-after. |
+| **D8** | Regenerate scope: Single affordance re-rolls finds + AI caption together | One mental model. Vendor can tap multiple times to find composition they like. Reorder is separate (drag-rearrange picked finds within the Story sequence). |
+| **D9** | Card count in Story sequence: 5 cards (1 hero + 3 finds + 1 CTA) | Fixed for MVP. Configurable in Tier B (B6 pre-capture inputs). |
+| **D10** | Finds featured: top 3 most-recent available posts | Vendor inventory may exceed 3; the "this week" framing favors recency. Reorder lets vendor adjust ordering of the 3 picks. Regenerate re-rolls which 3 picks (random shuffle if vendor has >3 posts). |
+| **D11** | Hero card "hook" copy: Template intro + AI-gen hook | "This week at {vendor_name}" template intro. AI-gen hook (e.g. "3 new finds on the shelf →" or "Fresh inventory dropped this week →"). |
+| **D12** | CTA card composition: QR + Cormorant italic copy + URL + wordmark | QR (Treehouse-cream + green palette mosaic) + "See the shelf before you visit" italic Cormorant + booth URL preview + "Treehouse Finds" wordmark in Times New Roman. Dashed-pill chrome matches V2 mockup. |
+| **D13** | Capture trigger: Q3 deferred to Arc 1-2 implementation | Likely progressive (1st card immediate, subsequent on-demand) to keep capture latency under 4s on iPhone 12+. Final call in Arc 2 after device benchmark. |
+| **D14** | Native share path: navigator.share multi-file payload (5 files) | iOS 16+ / Android Chrome 75+ supported. Validation in Arc 2 risk-register-driven. Fallback: download all 5 + open share sheet sequentially OR per-card share-each (sequence loses but works everywhere). |
+| **D15** | Caption clipboard auto-copy: fires on Share or Download tap | Caption is Story-sequence-aware. Example: "🍃 This week at Yesterday's Memories — 3 new finds on the shelf. Visit Booth 47 at America's Antique Mall, Lexington. treehousefinds.app/shelf/yesterdays-memories" |
+| **D16** | Booth tag on find cards | Each find card includes "Booth 47" tag in upper-left corner. Cream-bg pill with green text per V2 frame ii. Survives screenshot/repost so viewers see booth number even if they don't click the QR. |
+
+### Component contracts (Arc 1 substrate)
+
+| Component | Location | Props |
+|---|---|---|
+| `<StoryHeroCard>` | `components/share-shelf/StoryHeroCard.tsx` | `{ vendor, mall, findCount: number, aiHook: string }` |
+| `<StoryFindCard>` | `components/share-shelf/StoryFindCard.tsx` | `{ post, vendor, index: 1 \| 2 \| 3 }` |
+| `<StoryCtaCard>` | `components/share-shelf/StoryCtaCard.tsx` | `{ vendor, boothUrl }` |
+| `<FeedCard>` | `components/share-shelf/FeedCard.tsx` | `{ post, vendor, boothUrl }` (aspect-adapted from StoryFindCard) |
+| `<ShelfImageShareScreen>` | `components/ShelfImageShareScreen.tsx` (refactor) | `{ vendor, mall, boothUrl }` — preserves session 152 contract |
+| `lib/aiShelfCaption.ts` | new | `generateShelfCaption({ vendor, mall, posts, format: "story" \| "feed" })` returns `string` |
+| `/share-shelf-test` | `app/share-shelf-test/page.tsx` | smoke route per `feedback_testbed_first_for_ai_unknowns` ✅ Promoted |
+
+### Arc 1 commit-level sequencing (smallest→largest per `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory)
+
+| Commit | Scope |
+|---|---|
+| 1.1 | Token additions for Story brand chrome (extend `v2.brand.*` if needed; verify v2.accent.green/v2.surface.postit cover D5 frame ii palette) |
+| 1.2 | `<StoryHeroCard>` in isolation (off-screen-capture-ready DOM) + JSDoc + fixture data via lib/fixtures.ts |
+| 1.3 | `<StoryFindCard>` in isolation |
+| 1.4 | `<StoryCtaCard>` in isolation (QR via existing `react-qr-code` dep) |
+| 1.5 | `<FeedCard>` in isolation (aspect-adapted StoryFindCard) |
+| 1.6 | `/share-shelf-test` smoke route mounts all 4 components with mock vendor + mall + 3 posts |
+
+After Arc 1 ships clean against this sequencing, Arc 2 (wrapper UX + html2canvas-pro multi-card capture + regenerate + reorder + native share) begins.
 
 ---
 
@@ -146,4 +194,11 @@ Per `feedback_design_record_as_execution_spec` Tier B explicit headroom pattern 
 
 ## 10. Next step
 
-Surface [V1 mockup](mockups/share-my-shelf-enrichment-v1.html) → David picks Frame α/β/γ → V2 mockup (or prose) spans next-highest axis (Brand depth OR Feed↔Story relationship) → freeze D1-D? decisions → Arc 1 implementation begins next session.
+✅ V1 picked Frame β multi-card Story sequence.
+✅ V2 picked Frame ii balanced co-brand (~40% chrome).
+✅ Axis C, Q1, Q2 prose-locked.
+✅ D1-D16 frozen + component contracts spelled out + Arc 1 commit-level sequencing locked.
+
+**Session 197 opens with Arc 1 implementation.** Pure execution against this design record per `feedback_design_record_as_execution_spec` ✅ Promoted (34th cumulative firing if Arc 1 ships clean without re-scoping — load-bearing operating mode at scale).
+
+Arc 1 ships substrate only (per-card components in isolation + smoke route); ShareSheet consumer wiring waits for Arc 2.
