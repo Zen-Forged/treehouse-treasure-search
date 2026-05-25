@@ -10,6 +10,10 @@
 // session_id rooted in sessionStorage (D3) so it auto-clears when the tab
 // closes. No localStorage persistence — that would be PII-adjacent. No IP,
 // email, or user-agent capture.
+//
+// Session 194 — track() hooks visitor tracker. See lib/visitorTracker.ts.
+
+import { notifyVisitorInteraction } from "./visitorTracker";
 
 const SESSION_KEY = "th_event_session";
 
@@ -147,6 +151,16 @@ export function track(
   payload: Record<string, unknown> = {},
 ): void {
   if (typeof window === "undefined") return;
+
+  // Session 194 — Hook the visitor tracker BEFORE the existing flow so the
+  // visitor_engaged event fires on the first meaningful interaction. The
+  // tracker has its own session-scoped guard (only fires once per session)
+  // + skips visitor_engaged itself to avoid recursion. Defensive try/catch
+  // ensures any tracker bug never disrupts the original track() flow.
+  if (event_type !== "visitor_engaged") {
+    try { notifyVisitorInteraction(event_type); } catch { /* never block */ }
+  }
+
   const session_id = getSessionId();
 
   // Debug overlay — only when explicitly enabled via localStorage flag.
