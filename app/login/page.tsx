@@ -97,10 +97,18 @@ async function pickDest(user: User | null, searchParams: ReadonlyURLSearchParams
   // (vendors row inserted with user_id=NULL by admin approval; linked
   // here on first sign-in via /api/setup/lookup-vendor). Falls through
   // to "none" → /welcome only when there's nothing claimable.
+  //
+  // Session 195 — new "pending_vendor" branch routes vendors whose
+  // /vendor-request is still pending admin approval to the existing
+  // DoneScreen "already_pending" state instead of /welcome (which
+  // invited duplicate submissions). Routes BEFORE the shopper branch
+  // because shopper-with-pending-vendor-approval is still pending-vendor
+  // for routing purposes.
   const role = await detectUserRoleWithAutoClaim(user);
-  if (role === "admin")   return "/";
-  if (role === "vendor")  return "/my-shelf";
-  if (role === "shopper") return "/me";
+  if (role === "admin")          return "/";
+  if (role === "vendor")         return "/my-shelf";
+  if (role === "pending_vendor") return "/vendor-request?state=pending";
+  if (role === "shopper")        return "/me";
   return "/welcome";
 }
 

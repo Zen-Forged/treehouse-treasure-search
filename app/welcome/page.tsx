@@ -61,11 +61,18 @@ function WelcomeInner() {
       // Auto-claim variant — defensive against direct nav to /welcome
       // by an approved-but-unlinked vendor (e.g. a session restored from
       // PWA cold-start before they ever hit /login). Same self-heal.
+      //
+      // Session 195 — also handle "pending_vendor": a vendor whose
+      // /vendor-request is still pending admin approval should land on
+      // the existing DoneScreen "already_pending" state, not see
+      // /welcome's "Just exploring vs Set up booth" disambiguation
+      // (which invited a duplicate vendor-request submission).
       const role = await detectUserRoleWithAutoClaim(session.user);
       if (cancelled) return;
-      if (role === "admin")   { router.replace("/");          return; }
-      if (role === "vendor")  { router.replace("/my-shelf");  return; }
-      if (role === "shopper") { router.replace("/me");        return; }
+      if (role === "admin")          { router.replace("/");                          return; }
+      if (role === "vendor")         { router.replace("/my-shelf");                  return; }
+      if (role === "pending_vendor") { router.replace("/vendor-request?state=pending"); return; }
+      if (role === "shopper")        { router.replace("/me");                        return; }
       setRenderState("ready");
     });
     return () => { cancelled = true; };
