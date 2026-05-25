@@ -44,19 +44,20 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
-import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLeafBold } from "react-icons/pi";
+import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLeafBold, PiImageSquare } from "react-icons/pi";
 import { authFetch } from "@/lib/authFetch";
 import { track } from "@/lib/clientEvents";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { SlimHeader } from "@/components/ui/SlimHeader";
 import { ChannelGrid, type ChannelGridTile } from "@/components/ui/ChannelGrid";
+import { ShelfImageShareScreen } from "@/components/ShelfImageShareScreen";
 import type { Mall, Post, Vendor } from "@/types/treehouse";
 
 // Same shape as the two server routes (/api/share-booth, /api/vendor-request).
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Screen = "grid" | "email" | "qr";
+type Screen = "grid" | "email" | "qr" | "shelf-image";
 
 type EmailStatus =
   | { kind: "compose" }
@@ -240,6 +241,15 @@ function BoothShareBody({
     setScreen("qr");
   }
 
+  // Session 152 → revived session 196 — Share My Shelf 4th channel.
+  // Opens the image-generator sub-screen which composes ShelfImageTemplate
+  // (off-screen 1080×1350) with html2canvas-pro capture + native-share /
+  // download / clipboard. Vendor-targeted affordance for Facebook posts.
+  function handleShelfImageTap() {
+    track("share_booth_channel_tapped", { ...trackPayload, channel: "shelf_image" });
+    setScreen("shelf-image");
+  }
+
   function handleBack() {
     setScreen("grid");
   }
@@ -267,6 +277,7 @@ function BoothShareBody({
           onEmailTap={handleEmailTap}
           onSmsTap={handleSmsTap}
           onQrTap={showQr ? handleQrTap : undefined}
+          onShelfImageTap={handleShelfImageTap}
         />
       )}
 
@@ -296,6 +307,14 @@ function BoothShareBody({
           mallAddress={mallAddress}
           boothUrl={boothUrl}
           trackPayload={trackPayload}
+        />
+      )}
+
+      {screen === "shelf-image" && (
+        <ShelfImageShareScreen
+          vendor={vendor}
+          mall={mall}
+          boothUrl={boothUrl}
         />
       )}
     </BottomSheet>
@@ -483,21 +502,30 @@ function GridScreen({
   onEmailTap,
   onSmsTap,
   onQrTap,
+  onShelfImageTap,
 }: {
   boothName:   string;
   boothNo:     string | null;
   mallName:    string;
-  mallAddress: string;
-  onEmailTap:  () => void;
-  onSmsTap:    () => void;
-  onQrTap?:    () => void;
+  mallAddress:     string;
+  onEmailTap:      () => void;
+  onSmsTap:        () => void;
+  onQrTap?:        () => void;
+  onShelfImageTap: () => void;
 }) {
+  // Session 152 → revived session 196 — Shelf Image is the 4th channel.
+  // Visual order Email / SMS / (QR if showQr) / Shelf Image. ChannelGrid
+  // renders gridTemplateColumns: repeat(N, 1fr) so 3-tile (/shelf showQr=false)
+  // and 4-tile (/my-shelf showQr=true) layouts both fit the 430px max-width
+  // sheet cleanly. Shelf Image is unconditional per session 152 contract;
+  // dial-gating on showQr is a one-line follow-on if iPhone QA surfaces it.
   const tiles: ChannelGridTile[] = [
-    { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email", onClick: onEmailTap },
-    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",   onClick: onSmsTap },
+    { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email",       onClick: onEmailTap },
+    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",         onClick: onSmsTap },
     ...(onQrTap
       ? [{ kind: "channel" as const, icon: <PiQrCode size={22} color={v2.text.primary} />, label: "QR Code", onClick: onQrTap }]
       : []),
+    { kind: "channel", icon: <PiImageSquare    size={22} color={v2.text.primary} />, label: "Shelf Image", onClick: onShelfImageTap },
   ];
 
   return (
