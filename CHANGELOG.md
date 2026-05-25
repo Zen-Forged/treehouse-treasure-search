@@ -8,6 +8,56 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.194.0] — 2026-05-25
+
+### Session 194 — R3 events write-path investigation closes substrate-healthy + Ask #2 visitor tracking shipped end-to-end (Shape C aggressive cadence) + R3 instrumentation completeness ship + latent session-58 staging migration-012 gap surfaced + closed — 6 runtime commits + 3 HITL pastes + 2 smoke tests + 1 close
+
+David opened with `/session-open`; standup recommended the session-193-prefilled primary (R3 events write-path investigation + admin email QA + 7-tag batched walk). David: *"yes."* The R3 substrate question (`rows_before = 0` on session-193 prod TRUNCATE) was the load-bearing primary — visual-analytics tab design (Ask #4 Shape B) is moot if events isn't writing.
+
+Probe 3 audit-first investigation (vendor_request_submitted end-to-end via /vendor-request POST → recordEvent → events table) verified **R3 substrate is healthy** in single round-trip. SQL probe returned `vendor_requests` insert at 18:02:38.015 + `events.vendor_request_submitted` row at 18:02:38.285 (270ms gap = exactly the code flow). `rows_before = 0` at session 193 was real-traffic-low (pre-beta organic activity essentially zero), not write-failure. Inverted finding: substrate is healthy + the enum has a 40-value gap — every `recordEvent()` for one of the newer 28 server-side EventType + 10 actively-wired client-side ClientEventType + 2 dormant share_shelf_image_* declared since session 91 had been silently failing with `invalid input value for enum event_type`.
+
+Per cost-shape Shape C aggressive-cadence triage, shipped R3 instrumentation completeness (migration 023 + EventType + whitelist + `flagged_booth_explored` dead-declaration retirement) + Ask #2 visitor tracking end-to-end (migration 024 + `lib/visitorTracker.ts` ~210 LOC + VisitorTrackerMount client component + root layout adoption + `clientEvents.ts` track() hook + 3 HITL pastes + 2 smoke tests) same session.
+
+Ask #2 design pass via two batched AskUserQuestion rounds (6 axes locked, all Recommended picks): Defer Vercel Analytics entirely · First interaction OR 10s dwell · localStorage forever · UUID minted at engagement moment (Design B — bot filtering by design) · `is_first_session` boolean in payload · Ship same session.
+
+HITL paste on staging surfaced **session-58 latent gap**: 50≠55 math diagnostic → missing migration 012 (session-73 R3 v1.1 amendment 5 enum values). Fix applied in 1 round-trip per `feedback_cap_speculative_patching_at_3_rounds` round-0 escalation. Session 162 carry was framed as "migration 010+011 staging gap" — corrected: actual missing was 012. Prod paste clean at 55 on first verification.
+
+Both smoke tests validated visitor_engaged end-to-end on prod (Run 1 incognito fresh visitor → `is_first=true, trigger="interaction", time_to_engage_ms=10, first_event_type="page_viewed"`; Run 2 refresh same tab → same visitor_id, `is_first=false`). Discovery: page_viewed IS instrumented on 5 surfaces (Home / /flagged / /shelf/[slug] / /my-shelf / /find/[id]) via existing useEffect-on-mount calls from prior sessions — session 193 framing was off. Session-193 admin alert email QA closed during Probe 3 (both emails landed).
+
+### Added
+
+- **`supabase/migrations/023_events_enum_completeness.sql`** — 40 idempotent `ALTER TYPE event_type ADD VALUE IF NOT EXISTS` statements covering all server-side + client-side event types added across sessions 91-186. Closes ~3-4 sessions of latent silent-no-op declarations.
+- **`supabase/migrations/024_events_visitor_engaged.sql`** — Single `ALTER TYPE ADD VALUE IF NOT EXISTS 'visitor_engaged'`. Companion to Ask #2 visitor tracking.
+- **`lib/visitorTracker.ts`** (~210 LOC) — Module-scope state machine that fires `visitor_engaged` once per browser session when the engagement threshold is met (first meaningful interaction OR 10s dwell). UUID minted at engagement moment (Design B — bots that bounce in <10s without tapping never receive a visitor_id). Persists in localStorage `th_visitor_id` forever; sessionStorage `th_visitor_engaged_fired` guard prevents duplicate fires per browser session. Posts directly to `/api/events` to avoid circular import with `lib/clientEvents.ts`.
+- **`components/VisitorTrackerMount.tsx`** — Tiny "use client" wrapper that calls `initVisitorTracker()` on app boot. Mounts via `app/layout.tsx` body so the tracker fires across every surface (shopper + vendor + admin).
+- **`visitor_engaged` event type** — Added to `lib/events.ts` EventType + `lib/clientEvents.ts` ClientEventType + `/api/events` route CLIENT_EVENT_TYPES whitelist + event_type enum on both staging + prod. Payload shape: `{ visitor_id, is_first_session, trigger: "interaction" | "dwell_10s", time_to_engage_ms, page_path, mall_scope, first_event_type? }`.
+- **12 EventType union entries** in `lib/events.ts` — client-side types previously declared only in ClientEventType (session 100 find_swiped / R17 location_* + find_navigate_tapped + find_view_on_map_tapped / R18 flagged_directions_tapped / session 135 share_booth_* / session 152 dormant share_shelf_image_*). Single-source-of-truth completeness.
+- **13 CLIENT_EVENT_TYPES whitelist entries** in `app/api/events/route.ts` — closes the long-standing drift gap acknowledged at session 137 commit body. Without these, route returned 400 silently for the affected client events.
+- **`notifyVisitorInteraction()` hook** called from `lib/clientEvents.ts` track() — fires the visitor tracker on first meaningful interaction; defensive try/catch ensures tracker bugs never disrupt the original track() flow.
+
+### Changed
+
+- **`app/layout.tsx`** — VisitorTrackerMount mounts as the first child of `<FindSessionProvider>` (sibling-before-{children} so the tracker initializes before any page-level content fires interactions on first paint).
+- **`lib/clientEvents.ts` track()** — gains `notifyVisitorInteraction(event_type)` hook before the existing flow. Guard skips visitor_engaged itself to avoid recursion (tracker also guards internally — belt-and-suspenders).
+
+### Removed
+
+- **`flagged_booth_explored`** ClientEventType declaration (dead-declaration cleanup per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted). Declared at session 99, **0 callsites in any consumer** confirmed via session-194 audit-first grep. Pattern extends dead-code-cleanup to dead-type-declarations.
+
+### Fixed
+
+- **Latent session-58 staging migration-012 gap closed** during HITL paste — `booth_bookmarked`, `booth_unbookmarked`, `find_shared`, `tag_extracted`, `tag_skipped` enum values backfilled on staging. Surfaced via 50≠55 math diagnostic before any speculative patching.
+- **R3 instrumentation silent-no-op for 28 newer server-side event types** — closes ~3-4 sessions of latent failure mode. `recordEvent()` for booth_*_by_admin, mall_hero_*_by_admin, share_mall_*, share_find_*, vendor_force_*_by_admin, home_strip_tapped, map_carousel_*, vendor_profile_enriched, etc. now writes cleanly post-paste.
+
+### iPhone QA watch-items
+
+- **8 production tags** awaiting batched iPhone PWA walk (v0.187.0 → v0.194.0) — combinable with future production-touching work.
+- **Visitor tracking strictness** — current behavior counts `page_viewed` as engagement (because lib/clientEvents.ts track() hooks any non-`visitor_engaged` event). Looser than session-193 framing ("first tap or 10s") implied. Tier B headroom captured in `lib/visitorTracker.ts` module header: filter `page_viewed` from `notifyVisitorInteraction` for stricter beta-grade bot filtering. Watch real-content behavior on /flagged + /shelf/[slug] + /find/[id] for any cohort-skew oddness.
+
+[v0.194.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.194.0
+
+---
+
 ## [v0.193.0] — 2026-05-21
 
 ### Session 193 — Strategic analytics conversation + Ask #1 events reset (HITL prod) + Ask #3 admin alert email on new booth request — 1 runtime commit + 1 HITL + 1 close
