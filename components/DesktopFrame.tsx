@@ -191,16 +191,22 @@ const rootStyle: React.CSSProperties = {
   fontFamily: "var(--font-inter), system-ui, sans-serif",
 };
 
-// Placeholder bg — CSS-rendered approximation of warm-cream paper texture
-// per D8. Arc 3.1 swaps backgroundImage url for final Midjourney photo.
+// Session 199 Arc 3.1 — photo swap-in. Final hero photographed flatlay
+// landed at public/desktop-hero.png (1672×941, optimized via pngquant
+// 3.1MB → 780KB / 75% reduction). Decorations at all 4 corners (botanical
+// TL, treehouse sketch TR, postcard BL, brass key + dried botanicals BR);
+// empty cream center frames the brand chrome + phone composition.
+// background-size: cover + position: center keeps decorations near
+// viewport corners at any aspect ratio; cream center always centered.
+// #e8ddc7 (v1.paperCream) fallback before photo loads.
 const bgStyle: React.CSSProperties = {
   position: "absolute",
   inset: 0,
-  background: `
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(255, 248, 228, 0.55) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 85% 75%, rgba(220, 200, 160, 0.45) 0%, transparent 65%),
-    linear-gradient(135deg, #f5ecd6 0%, #e8d8b8 50%, #ddc89e 100%)
-  `,
+  backgroundColor: "#e8ddc7",
+  backgroundImage: "url(/desktop-hero.png)",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundRepeat: "no-repeat",
   zIndex: 0,
 };
 
