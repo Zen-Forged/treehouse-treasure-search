@@ -85,6 +85,8 @@ import MastheadProfileButton from "@/components/MastheadProfileButton";
 import AddFindSheet from "@/components/AddFindSheet";
 import BoothPickerSheet from "@/components/BoothPickerSheet";
 import ShareSheet from "@/components/ShareSheet";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { ShelfImageShareScreen } from "@/components/ShelfImageShareScreen";
 import EditBoothSheet from "@/components/EditBoothSheet";
 import AboutBoothSection from "@/components/AboutBoothSection";
 import {
@@ -96,7 +98,7 @@ import {
   BoothPageStyles,
 } from "@/components/BoothPage";
 import { v1, v2, radius, FONT_CORMORANT, FONT_INTER, MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
-import { PiCamera } from "react-icons/pi";
+import { PiCamera, PiShareFat } from "react-icons/pi";
 import type { User } from "@supabase/supabase-js";
 
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
@@ -352,6 +354,11 @@ function MyBoothInner() {
 
   // Session 40 — Window share sheet state.
   const [shareOpen,     setShareOpen]     = useState(false);
+  // Session 198 — Share on Social CTA opens ShelfImageShareScreen in its
+  // own BottomSheet (relocated from the 4-tile ShareSheet popup). Per
+  // David's session 198 QA, the Shelf Image flow deserves a dedicated
+  // entry point separate from the messaging-channel share sheet.
+  const [showShelfShare, setShowShelfShare] = useState(false);
 
   // Hydrate posts from module-scope cache. The active vendor isn't yet
   // resolved on initial render (resolution happens async below), but if a
@@ -948,6 +955,45 @@ function MyBoothInner() {
                 <PiCamera size={14} aria-hidden />
                 Add a Find
               </button>
+              {/* Session 198 — Share on Social. Relocated from the 4-tile
+                  ShareSheet popup (where it competed with messaging channels
+                  conceptually) per David's QA: "move the 'Shelf Image'
+                  share functionality out of the share-card pop-up and
+                  relocate to a button under 'Add a find'." Opens
+                  ShelfImageShareScreen in its own BottomSheet below.
+                  Secondary outlined style matches Edit Booth — both are
+                  non-create actions on the booth (maintain + promote);
+                  Add a Find stays primary for create-value action. Stack
+                  order Add a Find → Share on Social → Edit Booth matches
+                  expected use frequency. */}
+              <button
+                type="button"
+                onClick={() => setShowShelfShare(true)}
+                aria-label="Share on Social"
+                style={{
+                  width:          "100%",
+                  background:     v2.surface.card,
+                  color:          v2.accent.greenMid,
+                  border:         `1px solid ${v2.accent.greenMid}`,
+                  borderRadius:   10,
+                  padding:        9,
+                  fontFamily:     FONT_INTER,
+                  fontSize:       11,
+                  fontWeight:     600,
+                  letterSpacing:  "0.12em",
+                  textTransform:  "uppercase",
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  gap:            8,
+                  cursor:         "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  transition:     "background 0.15s ease",
+                }}
+              >
+                <PiShareFat size={13} aria-hidden />
+                Share on Social
+              </button>
               <button
                 type="button"
                 onClick={() => setShowEditSheet(true)}
@@ -1076,12 +1122,37 @@ function MyBoothInner() {
           // /shelf/[slug] callsite stays default (showQr undefined → false) so
           // shoppers AND admin viewing /shelf see Email + SMS only.
           //
-          // Session 196 C2 — Shelf Image follows the same owner-only pattern.
-          // /my-shelf opts both flags in; /shelf default keeps both false.
-          // Both surfaces gate independently so a future product split needs
-          // no refactor.
-          entity={{ kind: "booth", vendor: activeVendor, mall, showQr: true, showShelfImage: true }}
+          // Session 198 — showShelfImage flag retired. Shelf Image flow
+          // relocated to the dedicated "Share on Social" CTA below + its
+          // own BottomSheet wrapper.
+          entity={{ kind: "booth", vendor: activeVendor, mall, showQr: true }}
         />
+      )}
+
+      {/* Session 198 — Share on Social dedicated entry point. Hosts
+          ShelfImageShareScreen in its own BottomSheet, separate from the
+          messaging-channel ShareSheet above. ShelfImageShareScreen renders
+          content-only (no sheet chrome of its own), so the BottomSheet
+          primitive owns the TopBar + backdrop + scroll-lock + slide
+          animation. boothUrl computed inline at mount-time per the same
+          shape ShareSheet uses (window guard for SSR safety; the wrapper
+          is conditionally mounted client-side via showShelfShare, but the
+          guard preserves the pattern across any future SSR-render path). */}
+      {activeVendor && showShelfShare && (
+        <BottomSheet
+          open={showShelfShare}
+          onClose={() => setShowShelfShare(false)}
+          ariaLabel="Share on social"
+        >
+          <ShelfImageShareScreen
+            vendor={activeVendor}
+            mall={mall}
+            boothUrl={
+              (typeof window !== "undefined" ? window.location.origin : "")
+              + `/shelf/${activeVendor.slug}`
+            }
+          />
+        </BottomSheet>
       )}
 
       <BoothPageStyles />

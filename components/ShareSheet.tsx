@@ -44,20 +44,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
-import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLeafBold, PiImageSquare } from "react-icons/pi";
+import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLeafBold } from "react-icons/pi";
 import { authFetch } from "@/lib/authFetch";
 import { track } from "@/lib/clientEvents";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { SlimHeader } from "@/components/ui/SlimHeader";
 import { ChannelGrid, type ChannelGridTile } from "@/components/ui/ChannelGrid";
-import { ShelfImageShareScreen } from "@/components/ShelfImageShareScreen";
 import type { Mall, Post, Vendor } from "@/types/treehouse";
 
 // Same shape as the two server routes (/api/share-booth, /api/vendor-request).
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Screen = "grid" | "email" | "qr" | "shelf-image";
+type Screen = "grid" | "email" | "qr";
 
 type EmailStatus =
   | { kind: "compose" }
@@ -72,7 +71,7 @@ type EmailStatus =
  *   - Channel handlers (entity-specific URLs, SMS body templates, analytics)
  */
 export type ShareSheetEntity =
-  | { kind: "booth"; vendor: Vendor; mall: Mall | null; showQr?: boolean; showShelfImage?: boolean }
+  | { kind: "booth"; vendor: Vendor; mall: Mall | null; showQr?: boolean }
   | { kind: "mall";  mall: Mall | "all-kentucky" }
   | { kind: "find";  post: Post; vendor: Vendor; mall: Mall | null };
 // Session 192 F3 — `showQr` on booth entity gates the QR channel + screen.
@@ -80,13 +79,14 @@ export type ShareSheetEntity =
 // booth space); /my-shelf passes showQr: true; /shelf callsite stays default
 // (false) so shoppers AND admin viewing /shelf see Email + SMS only.
 //
-// Session 196 C2 — `showShelfImage` parallel additive flag with same semantic
-// (owner-only): Shelf Image is a vendor/admin promotional asset for Facebook,
-// not a shopper-share affordance. /my-shelf passes showShelfImage: true;
-// /shelf default (false) keeps shoppers + vendor-not-owners + admin-on-/shelf
-// scoped to Email + SMS. Kept as a separate flag (not dual-purposing showQr)
-// per session 192's per-affordance gating precedent — if a future product
-// call splits them, no refactor needed.
+// Session 198 — `showShelfImage` flag + the Shelf Image 4th tile retired.
+// Per David's session 198 QA, the Shelf Image flow was relocated OUT of the
+// share sheet (where it competed with messaging channels conceptually) and
+// INTO a dedicated "Share on Social" button below "Add a Find" on /my-shelf.
+// ShelfImageShareScreen + BottomSheet wrapper now host directly from
+// app/my-shelf/page.tsx. Sub-pattern of `feedback_surface_locked_design_
+// reversals` ✅ Promoted — session 196 C2 frozen affordance reversed with
+// David's verbatim QA reasoning quoted in the C3 commit body.
 
 export interface ShareSheetProps {
   open:    boolean;
@@ -249,17 +249,6 @@ function BoothShareBody({
     setScreen("qr");
   }
 
-  // Session 152 → revived session 196 → evolved session 197 Arc 2 —
-  // Share My Shelf 4th channel. Opens the image-generator sub-screen which
-  // composes the 5-card Story sequence (StoryHeroCard + 3× StoryFindCard +
-  // StoryCtaCard) off-screen with html2canvas-pro multi-card capture +
-  // native-share multi-file payload + caption clipboard auto-copy. Vendor-
-  // targeted affordance for Facebook posts.
-  function handleShelfImageTap() {
-    track("share_booth_channel_tapped", { ...trackPayload, channel: "shelf_image" });
-    setScreen("shelf-image");
-  }
-
   function handleBack() {
     setScreen("grid");
   }
@@ -268,9 +257,6 @@ function BoothShareBody({
   // /my-shelf passes showQr: true; /shelf default = false (no QR for
   // shoppers OR admin viewing /shelf).
   const showQr = entity.showQr === true;
-  // Session 196 C2 — Shelf Image channel + screen gated on entity.showShelfImage
-  // opt-in. Same owner-only semantic as showQr but kept as a separate flag.
-  const showShelfImage = entity.showShelfImage === true;
 
   return (
     <BottomSheet
@@ -290,7 +276,6 @@ function BoothShareBody({
           onEmailTap={handleEmailTap}
           onSmsTap={handleSmsTap}
           onQrTap={showQr ? handleQrTap : undefined}
-          onShelfImageTap={showShelfImage ? handleShelfImageTap : undefined}
         />
       )}
 
@@ -320,14 +305,6 @@ function BoothShareBody({
           mallAddress={mallAddress}
           boothUrl={boothUrl}
           trackPayload={trackPayload}
-        />
-      )}
-
-      {showShelfImage && screen === "shelf-image" && (
-        <ShelfImageShareScreen
-          vendor={vendor}
-          mall={mall}
-          boothUrl={boothUrl}
         />
       )}
     </BottomSheet>
@@ -515,36 +492,34 @@ function GridScreen({
   onEmailTap,
   onSmsTap,
   onQrTap,
-  onShelfImageTap,
 }: {
-  // onQrTap + onShelfImageTap both optional + spread-conditional in tiles
-  // array — owner-only affordances absent for shoppers + vendor-not-owners
-  // + admin-on-/shelf (session 192 F3 + session 196 C2).
+  // onQrTap is optional + spread-conditional in tiles array — owner-only
+  // affordance absent for shoppers + vendor-not-owners + admin-on-/shelf
+  // (session 192 F3).
   boothName:   string;
   boothNo:     string | null;
   mallName:    string;
-  mallAddress:      string;
-  onEmailTap:       () => void;
-  onSmsTap:         () => void;
-  onQrTap?:         () => void;
-  onShelfImageTap?: () => void;
+  mallAddress: string;
+  onEmailTap:  () => void;
+  onSmsTap:    () => void;
+  onQrTap?:    () => void;
 }) {
-  // Session 152 → revived + gated session 196 — Shelf Image is owner-only.
-  // Visual order Email / SMS / (QR if owner) / (Shelf Image if owner).
-  // ChannelGrid renders gridTemplateColumns: repeat(N, 1fr) so tile-count
-  // variants fit the 430px max-width sheet cleanly:
+  // Visual order Email / SMS / (QR if owner). ChannelGrid renders
+  // gridTemplateColumns: repeat(N, 1fr) so the 2-vs-3 tile variant fits
+  // the 430px max-width sheet cleanly:
   //   - public /shelf (anon shopper, vendor-not-owner, admin-on-/shelf):
   //       [Email, SMS] = 2 tiles
   //   - /my-shelf (vendor-self OR admin-managing-vendor via ?vendor=<id>):
-  //       [Email, SMS, QR, Shelf Image] = 4 tiles
+  //       [Email, SMS, QR] = 3 tiles
+  //
+  // Session 198 — the 4th Shelf Image tile retired. Shelf Image flow
+  // relocated to a dedicated "Share on Social" button below "Add a Find"
+  // on /my-shelf (hosted via BottomSheet wrapper directly).
   const tiles: ChannelGridTile[] = [
     { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email", onClick: onEmailTap },
     { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",   onClick: onSmsTap },
     ...(onQrTap
       ? [{ kind: "channel" as const, icon: <PiQrCode size={22} color={v2.text.primary} />, label: "QR Code", onClick: onQrTap }]
-      : []),
-    ...(onShelfImageTap
-      ? [{ kind: "channel" as const, icon: <PiImageSquare size={22} color={v2.text.primary} />, label: "Shelf Image", onClick: onShelfImageTap }]
       : []),
   ];
 
