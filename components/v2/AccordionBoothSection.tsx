@@ -61,11 +61,14 @@ export default function AccordionBoothSection({
           display: "flex",
           alignItems: "center",
           gap: 10,
-          // Session 198 C6 — header bg card → warm per David's color
-          // flip: warmer on mall location AND booth sections. Booth
-          // accordion header is a "booth identity" surface, parallel
-          // to the mall section's warm wrapper above.
-          background: v2.surface.warm,
+          // Session 198 C9 — header reverts to card bg per David's
+          // iPhone QA on C6 ship: "keep the bg all one color of the
+          // card." Within-session reversal of C6 (warm) per
+          // `feedback_within_session_design_record_reversal` ✅
+          // Promoted-via-memory at session 128. Booth identity comes
+          // from PiStorefrontBold + "Booth N" small-caps + booth
+          // name Cormorant italic; no bg differentiation needed.
+          background: v2.surface.card,
           border: "none",
           cursor: "pointer",
           textAlign: "left",
@@ -146,22 +149,16 @@ export default function AccordionBoothSection({
           style={{ background: v2.surface.card }}
         >
           {children}
-          {/* Session 198 C6 — trailing empty row bg warm → card per
-              David's color flip (lighter on saved-items zone; booth
-              body is the saved-items zone). ~44px breathing-space
-              "completion row" still extends the body's bg below the
-              last saved-find entry; borderTop hairline preserved.
-              Was: warm (session 175 Review Board); now: card (matches
-              body so the trailing row reads as continuation of the
-              saved-items zone, not a contrasting strip). */}
-          <div
-            aria-hidden
-            style={{
-              height: 44,
-              background: v2.surface.card,
-              borderTop: `1px solid ${v2.border.light}`,
-            }}
-          />
+          {/* Session 198 C9 — 44px trailing empty row retired entirely
+              per David's iPhone QA on C6 ship: "remove the lighter
+              white surface color row as it's no longer needed as the
+              button at the bottom closes out the list visually." The
+              Take the Trip mall-level CTA at the bottom of
+              SavedMallCardV2 (session 198 C6 relocation) is now what
+              closes the list visually; the per-booth decorative
+              completion-row is redundant chrome. Was: warm 44px
+              (session 175 Review Board) → card 44px (session 198 C6
+              color flip) → retired (session 198 C9). */}
         </div>
       )}
     </div>

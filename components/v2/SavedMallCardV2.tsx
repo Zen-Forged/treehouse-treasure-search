@@ -102,13 +102,15 @@ export default function SavedMallCardV2({
         overflow: "hidden",
       }}
     >
-      {/* Session 198 C6 — Mall section warm-bg wrapper. Flipped from
-          card to warm to highlight the mall identity zone. Encloses the
-          top portion (mall name + address + DistancePill + finds-
-          waiting eyebrow); Take the Trip relocated OUT of this section
-          and into the new bottom row after {children} below per David's
-          #7 ask. */}
-      <div style={{ background: v2.surface.warm }}>
+      {/* Session 198 C9 — Mall section reverts to card bg per David's
+          iPhone QA on C6 ship: "For simplicity, lets just keep the bg
+          all one color of the card." Within-session reversal of C6
+          (warm) per `feedback_within_session_design_record_reversal`
+          ✅ Promoted-via-memory at session 128. Mall section identity
+          comes from typography + content (mall name + address + pill +
+          finds-waiting eyebrow with leaf glyph + dashed flankers); no
+          bg differentiation needed. */}
+      <div style={{ background: v2.surface.card }}>
       {/* head-δ — CSS grid: name + DistancePill on row 1; address spans row 2.
           Session 144 iPhone QA: alignItems "center" → "start" so the
           DistancePill anchors to the top of row 1 (= top of head-δ content
@@ -244,23 +246,20 @@ export default function SavedMallCardV2({
         />
       </div>
       </div>
-      {/* /Mall-section warm-bg wrapper (session 198 C6 — was card; flipped) */}
+      {/* /Mall-section card-bg wrapper */}
 
       {/* Accordion sections (children) */}
       {children}
 
-      {/* Session 198 C6 — Take the Trip relocated to mall-card footer row.
-          Per David's session 198 QA: "Move Take the Trip button to the
-          bottom row of that saved mall card/list where there is currently
-          an empty row." Warm bg matches the top mall section so the
-          article reads as warm-mall-identity → card-saved-items →
-          warm-mall-action sandwich. Mall-level CTA always-visible
-          regardless of accordion expand state (the per-booth trailing
-          empty rows inside AccordionBoothSection are decoration, not
-          actionable). Vocabulary unified with LocationActions canonical
-          across /find/[id] + /shelf/[slug] + /map PinCallout per session
-          169 Review Board Saved #1. */}
-      <div style={{ background: v2.surface.warm, padding: "12px 20px" }}>
+      {/* Session 198 C9 — Take the Trip footer row reverts to card bg
+          per David's iPhone QA: "keep the bg all one color of the card."
+          Within-session reversal of C6's warm-bg footer. Card is the
+          single bg throughout the article; mall-level CTA closes the
+          list visually without needing a bg differentiation. Vocabulary
+          unified with LocationActions canonical across /find/[id] +
+          /shelf/[slug] + /map PinCallout per session 169 Review Board
+          Saved #1. */}
+      <div style={{ background: v2.surface.card, padding: "12px 20px" }}>
         <button
           type="button"
           onClick={onGetDirections}
