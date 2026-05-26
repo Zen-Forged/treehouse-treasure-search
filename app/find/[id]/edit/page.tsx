@@ -396,24 +396,15 @@ export default function EditFindPage() {
             >
               Status
             </label>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-              }}
-            >
-              <StatusPill
-                label="Available"
-                active={status === "available"}
-                onClick={() => setStatus("available")}
-              />
-              <StatusPill
-                label="Sold"
-                active={status === "sold"}
-                onClick={() => setStatus("sold")}
-              />
-            </div>
+            {/* Session 198 C5 — segmented-pill toggle replaces the previous
+                2-separate-pill grid (StatusPill × 2 with 8px gap). One
+                unified rounded-pill chrome; selected half gets filled
+                greenMid bg + white text; unselected stays transparent +
+                ink-secondary. Per David's session 198 QA: "Change status
+                into a toggle instead of two separate buttons for
+                available/sold." Matches iOS-canonical segmented-control
+                vocabulary for binary equal-weight-labels. */}
+            <StatusToggle status={status} onChange={setStatus} />
           </div>
         </div>
 
@@ -629,33 +620,76 @@ function FieldGroup({
   );
 }
 
-function StatusPill({
+// Session 198 C5 — replaces the previous StatusPill (2 separate pills
+// with their own borders + 8px gap) with a unified segmented-pill
+// toggle. Container holds both halves with a single rounded-pill
+// chrome + inkHairline border; selected segment fills greenMid + white
+// text; unselected stays transparent + ink-secondary. radioGroup role
+// for a11y so screen readers announce as a single picker, not two
+// independent buttons.
+function StatusToggle({
+  status,
+  onChange,
+}: {
+  status:   PostStatus;
+  onChange: (next: PostStatus) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Listing status"
+      style={{
+        display:            "grid",
+        gridTemplateColumns: "1fr 1fr",
+        background:         v1.inkWash,
+        border:             `1.5px solid ${v1.inkHairline}`,
+        borderRadius:       999,
+        padding:            3,
+      }}
+    >
+      <StatusSegment
+        label="Available"
+        active={status === "available"}
+        onClick={() => onChange("available")}
+      />
+      <StatusSegment
+        label="Sold"
+        active={status === "sold"}
+        onClick={() => onChange("sold")}
+      />
+    </div>
+  );
+}
+
+function StatusSegment({
   label,
   active,
   onClick,
 }: {
-  label: string;
-  active: boolean;
+  label:   string;
+  active:  boolean;
   onClick: () => void;
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      aria-pressed={active}
+      role="radio"
+      aria-checked={active}
       style={{
-        padding: "12px 14px",
-        borderRadius: 999,
-        fontFamily: FONT_CORMORANT,
-        fontSize: 16,
-        color: active ? v2.text.primary : v2.text.secondary,
-        fontWeight: active ? 500 : 400,
-        background: v1.inkWash,
-        border: active ? `1.5px solid ${v2.text.primary}` : "1.5px solid transparent",
-        textAlign: "center",
-        lineHeight: 1.2,
-        cursor: "pointer",
+        padding:        "10px 14px",
+        borderRadius:   999,
+        fontFamily:     FONT_CORMORANT,
+        fontSize:       16,
+        color:          active ? "#fff" : v2.text.secondary,
+        fontWeight:     active ? 600 : 400,
+        background:     active ? v2.accent.greenMid : "transparent",
+        border:         "none",
+        textAlign:      "center",
+        lineHeight:     1.2,
+        cursor:         "pointer",
         WebkitTapHighlightColor: "transparent",
-        transition: "border-color 0.18s ease, color 0.18s ease",
+        transition:     "background-color 0.18s ease, color 0.18s ease",
       }}
     >
       {label}
