@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
 import VisitorTrackerMount from "@/components/VisitorTrackerMount";
+import DesktopFrame from "@/components/DesktopFrame";
 // Session 178 F2 Arc 3.2 — MapDrawerProvider retired alongside MallMapDrawer.
 // The (tabs)/ scope-picker moved to dedicated /map route at Arc 1; cross-
 // component drawer-open state no longer needed since /map is a route, not
@@ -151,7 +152,19 @@ export default function RootLayout({
       <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#E6DECF" }}>
         <FindSessionProvider>
           <VisitorTrackerMount />
-          {children}
+          {/* Session 199 — DesktopFrame wraps children with branded
+              chrome (wordmark + tagline + photographed iPhone holding
+              the live app) at viewport ≥1024px per Frame A design pass
+              locked in docs/desktop-frame-design.md. At <1024px or when
+              inside the chrome's own iframe (?desktop-frame=embedded),
+              DesktopFrame is a pass-through and children render as
+              today. Auth-state visitor-only gate (D4) deferred to Arc
+              3.2; current implementation renders chrome to all desktop
+              viewers. Photo asset (D7) is CSS-rendered placeholder
+              awaiting Midjourney delivery → Arc 3.1 swap. */}
+          <DesktopFrame>
+            {children}
+          </DesktopFrame>
           <DevAuthPanel />
         </FindSessionProvider>
       </body>
