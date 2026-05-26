@@ -303,14 +303,22 @@ export default function EditFindPage() {
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              fontSize: 14,
+              // Session 198 C2 — fontSize 14 → 16 per David's session 198
+              // QA ("Make the text a bit larger as well"). Matches session
+              // 153 /login subtitle bump canonical.
+              fontSize: 16,
               color: v2.text.secondary,
               lineHeight: 1.5,
-              maxWidth: 290,
+              maxWidth: 320,
               margin: "0 auto",
             }}
           >
-            Click submit when finished
+            {/* Session 198 C2 — "Click submit when finished" → "Click post
+                changes when finished" per David's session 198 QA: "There
+                is no submit button on this page so 'click submit when
+                finished' isn't accurate." Subtitle now syncs with the
+                button label "Post changes" (sticky save bar at line ~567). */}
+            Click post changes when finished
           </div>
         </div>
 
