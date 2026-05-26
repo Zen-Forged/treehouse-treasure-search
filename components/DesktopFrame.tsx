@@ -34,23 +34,44 @@
 "use client";
 
 import * as React from "react";
+import QRCode from "react-qr-code";
 
 const DESKTOP_BREAKPOINT_PX = 1024;
 const PHONE_WIDTH_PX = 360;   // ~430 PWA column compressed to fit photographed iPhone scale
 const PHONE_HEIGHT_PX = 740;  // ~iPhone 14 Pro Max screen ratio adjusted for chrome
 const PHONE_RADIUS_PX = 44;
 
-// Session 199 QA dial — composition wrapper max-width keeps brand
-// chrome + phone centered at a fixed gap (~160px) regardless of
-// viewport width. Below 1200px the composition fills viewport with
-// 64px side padding; above 1200px it stays clamped + centered, with
-// the photographed flatlay decorations at viewport corners filling
-// any extra width.
-const COMPOSITION_MAX_WIDTH_PX = 1200;
+// Session 199 QA dial round 2 (Arc 2.5) — David's Vercel preview QA on
+// Arc 3.1 ship: "phone still needs to come center more, same with the
+// text." Dial composition geometry: justifyContent space-between →
+// center + gap 32 → 80. Brand chrome (~380 wide) + phone (360 wide)
+// now form a center-anchored ~820px block with fixed 80px gap.
+// Composition stays centered in viewport at any width; max-width 1100
+// clamps the composition box on ultra-wide viewports.
+const COMPOSITION_MAX_WIDTH_PX = 1100;
 const COMPOSITION_SIDE_PADDING_PX = 64;
+const COMPOSITION_GAP_PX = 80;
 
 const EMBED_QUERY_KEY = "desktop-frame";
 const EMBED_QUERY_VALUE = "embedded";
+
+// Session 199 QA round 2 (Arc 3.2) — David: "Replace the Treehouse and
+// lock symbol with the logo we use for the app." Canonical app
+// wordmark at public/wordmark.png is the same asset rendered by
+// <StickyMasthead> across the entire PWA. 320px width fits within
+// brand chrome max-width 380 with breathing room; aspect ratio
+// (~1875:1000) preserved via height: auto.
+const WORDMARK_WIDTH_PX = 320;
+
+// QR code encodes the app's canonical URL. Desktop visitor scans →
+// opens the PWA on phone where canonical experience lives. The
+// digital-to-physical bridge thesis applied at the marketing layer.
+const QR_CODE_VALUE = "https://app.kentuckytreehouse.com/";
+const QR_CODE_SIZE_PX = 120;
+// Brown ink matching the wordmark's printed color — reads as part of
+// the same printed brand element rather than a separate digital
+// overlay. Approximate eyeball match of wordmark's warm brown.
+const QR_CODE_INK = "#5a4a30";
 
 type DesktopFrameProps = {
   children: React.ReactNode;
@@ -144,25 +165,20 @@ export default function DesktopFrame({ children, iframeSrcOverride }: DesktopFra
 function BrandChrome() {
   return (
     <div style={brandChromeStyle}>
-      {/* Small leaf glyph above wordmark — matches Treehouse leaf brand mark */}
-      <svg
-        width="56"
-        height="64"
-        viewBox="0 0 56 64"
-        fill="#1F4A31"
-        style={{ marginBottom: 20, display: "block" }}
-        aria-hidden="true"
-      >
-        <path d="M28 4 C32 14, 44 18, 44 28 C44 34, 38 38, 36 38 L36 60 L20 60 L20 38 C18 38, 12 34, 12 28 C12 18, 24 14, 28 4 Z" />
-      </svg>
+      {/* Session 199 Arc 3.2 — canonical app wordmark image at
+          public/wordmark.png. Same asset rendered by <StickyMasthead>
+          across the entire PWA. Replaces session 199 Arc 2.1's custom
+          SVG leaf glyph + CSS-rendered "treehouse FINDS" text wordmark
+          per David's QA: "Replace the Treehouse and lock symbol with
+          the logo we use for the app." */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/wordmark.png"
+        alt="Treehouse Finds"
+        style={wordmarkImgStyle}
+      />
 
-      {/* Wordmark — 2-line lockup per D12 */}
-      <h1 style={wordmarkStyle}>
-        treehouse
-        <span style={wordmarkSubStyle}>FINDS</span>
-      </h1>
-
-      {/* Tagline — 3 stacked lines per D13 */}
+      {/* Tagline — 3 stacked lines per D13, centered per QA */}
       <p style={taglineStyle}>
         Embrace the search.<br />
         Treasure the find.<br />
@@ -174,6 +190,24 @@ function BrandChrome() {
 
       {/* Subtext */}
       <p style={subtextStyle}>Find before you visit.</p>
+
+      {/* Session 199 Arc 3.2 — QR code per David's QA. Encodes
+          canonical app URL. Brown ink matches wordmark's printed
+          color; transparent bg lets photo's cream texture show
+          through for visual integration. Caption in Cormorant italic
+          matches subtext voice. */}
+      <div style={qrContainerStyle}>
+        <div style={qrPaddingStyle}>
+          <QRCode
+            value={QR_CODE_VALUE}
+            size={QR_CODE_SIZE_PX}
+            fgColor={QR_CODE_INK}
+            bgColor="transparent"
+            level="M"
+          />
+        </div>
+        <p style={qrCaptionStyle}>Scan to take it with you</p>
+      </div>
     </div>
   );
 }
@@ -225,64 +259,83 @@ const compositionStyle: React.CSSProperties = {
   height: "100%",
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-between",
+  justifyContent: "center",
   padding: `0 ${COMPOSITION_SIDE_PADDING_PX}px`,
   boxSizing: "border-box",
   zIndex: 1,
-  gap: 32,
+  gap: COMPOSITION_GAP_PX,
 };
 
 const brandChromeStyle: React.CSSProperties = {
   // Flex item inside composition wrapper — no absolute positioning
-  // needed. Flex alignItems:center handles vertical centering.
+  // needed. Flex alignItems:center handles vertical centering. Session
+  // 199 Arc 3.2 — textAlign center per David's QA "text can be
+  // centered underneath" the wordmark; cascades to all child p/div.
   maxWidth: 380,
   flexShrink: 0,
   color: "#2a1a0a",
+  textAlign: "center",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
 };
 
-const wordmarkStyle: React.CSSProperties = {
-  fontFamily: "var(--font-cormorant), 'Cormorant Garamond', serif",
-  fontWeight: 400,
-  fontSize: 64,
-  lineHeight: 0.95,
-  margin: 0,
-  letterSpacing: "-0.01em",
-};
-
-const wordmarkSubStyle: React.CSSProperties = {
+const wordmarkImgStyle: React.CSSProperties = {
+  width: WORDMARK_WIDTH_PX,
+  height: "auto",
   display: "block",
-  fontSize: 18,
-  letterSpacing: "0.32em",
-  fontWeight: 500,
-  marginTop: 8,
-  paddingTop: 12,
-  borderTop: "1.5px solid currentColor",
-  width: "fit-content",
+  marginBottom: 8,
 };
 
 const taglineStyle: React.CSSProperties = {
   fontFamily: "var(--font-cormorant), 'Cormorant Garamond', serif",
   fontStyle: "italic",
   fontWeight: 400,
-  fontSize: 28,
+  fontSize: 26,
   lineHeight: 1.35,
-  margin: "32px 0 0",
+  margin: "24px 0 0",
   letterSpacing: "-0.005em",
 };
 
 const ornamentStyle: React.CSSProperties = {
   width: 70,
   height: 2,
-  margin: "18px 0 14px",
+  margin: "18px auto 14px",
   background: "linear-gradient(90deg, transparent, #B8945E 20%, #B8945E 80%, transparent)",
 };
 
 const subtextStyle: React.CSSProperties = {
   fontFamily: "var(--font-cormorant), 'Cormorant Garamond', serif",
   fontStyle: "italic",
-  fontSize: 16,
+  fontSize: 15,
   color: "#5c4d3a",
   margin: 0,
+};
+
+const qrContainerStyle: React.CSSProperties = {
+  marginTop: 32,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+};
+
+// QR-code quiet zone — slightly lighter cream than photo bg so scanners
+// have a clean surface but the QR still reads as integrated with the
+// brand chrome rather than a hard-edged card.
+const qrPaddingStyle: React.CSSProperties = {
+  background: "rgba(255, 252, 245, 0.55)",
+  padding: 10,
+  borderRadius: 6,
+  lineHeight: 0, // tight wrap around the QR svg
+};
+
+const qrCaptionStyle: React.CSSProperties = {
+  fontFamily: "var(--font-cormorant), 'Cormorant Garamond', serif",
+  fontStyle: "italic",
+  fontSize: 13,
+  color: "#5c4d3a",
+  margin: "10px 0 0",
+  letterSpacing: "0.02em",
 };
 
 const phoneStageStyle: React.CSSProperties = {
