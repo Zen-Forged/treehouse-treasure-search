@@ -264,7 +264,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       icon: <PiMapPinBold size={22} />,
     },
     {
-      key: "flagged", label: "Saved", href: "/flagged",
+      key: "flagged", label: "Flagged", href: "/flagged",
       icon: <PiLeafBold size={21} />, badge: true,
     },
     // Session 160 — Booth at rightmost slot per session-114 "rightmost =
