@@ -82,15 +82,19 @@ export default function SavedMallCardV2({
   return (
     <article
       style={{
-        // Session 175 Review Board finding (Saved Browse #1) — outer
-        // article bg flipped card → warm so the booth list reads as
-        // "warm container" with the mall section + booth sections still
-        // as card-stock identity layers within. Saved find rows + the
-        // trailing empty row in each booth body share this warm bg so
-        // they recede as "warm casual rows" against the booth body's
-        // card surface. Mall-section card bg now explicit (was inherited
-        // from article's old card bg).
-        background: v2.surface.warm,
+        // Session 198 C6 — color flip per David's session 198 QA:
+        // "Flip the colored sections of the saved items card to be
+        // reversed with the LIGHTER color highlighting the saved items
+        // and the WARMER color on the mall location and booth sections."
+        // Outer article: warm → card. Saved-find-rows + booth body
+        // inherit card here, becoming the "lighter highlighted saved
+        // items zone." Mall-section wrapper + AccordionBoothSection
+        // header flip to warm in coupled edits below + in
+        // AccordionBoothSection.tsx. Article reads as
+        // warm-mall-identity → card-saved-items → warm-mall-action
+        // sandwich. Reverses session 175 Review Board (Saved Browse #1)
+        // direction.
+        background: v2.surface.card,
         borderRadius: 14,
         border: `1px solid ${v2.border.light}`,
         boxShadow: "0 1px 2px rgba(43,33,26,0.04)",
@@ -98,13 +102,13 @@ export default function SavedMallCardV2({
         overflow: "hidden",
       }}
     >
-      {/* Session 175 — Mall section card-bg wrapper. Encloses the full
-          top portion (mall name + address + DistancePill + Take the Trip
-          + finds-waiting eyebrow) per David's "Full top portion" pick at
-          opener so the mall identity reads as one cohesive card before
-          booth accordions begin. Was: chunks inherited card bg from
-          article; now: outer article is warm + this wrapper holds card. */}
-      <div style={{ background: v2.surface.card }}>
+      {/* Session 198 C6 — Mall section warm-bg wrapper. Flipped from
+          card to warm to highlight the mall identity zone. Encloses the
+          top portion (mall name + address + DistancePill + finds-
+          waiting eyebrow); Take the Trip relocated OUT of this section
+          and into the new bottom row after {children} below per David's
+          #7 ask. */}
+      <div style={{ background: v2.surface.warm }}>
       {/* head-δ — CSS grid: name + DistancePill on row 1; address spans row 2.
           Session 144 iPhone QA: alignItems "center" → "start" so the
           DistancePill anchors to the top of row 1 (= top of head-δ content
@@ -188,55 +192,9 @@ export default function SavedMallCardV2({
         </div>
       </div>
 
-      {/* TAKE THE TRIP thinner full-width green CTA. Vocabulary unified
-          with LocationActions canonical at session 169 Review Board Saved
-          #1 — copy "Find Your Way" → "Take the Trip" + LocationActions
-          renames "Take Trip" → "Take the Trip" in same commit so all 4
-          consumers (LocationActions on /find/[id] + /shelf/[slug] + /map
-          PinCallout; SavedMallCardV2 on Saved) read identically. */}
-      <div style={{ padding: "0 20px 12px" }}>
-        <button
-          type="button"
-          onClick={onGetDirections}
-          style={{
-            width: "100%",
-            // Session 141 — promoted to v2.accent.greenMid token when
-            // LocationActions Take the Trip joined as second button consumer.
-            // Was an inline literal (#3e694f) at session 139.
-            background: v2.accent.greenMid,
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            padding: 10,
-            fontFamily: FONT_INTER,
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            cursor: "pointer",
-          }}
-        >
-          Take the Trip
-          <svg
-            width={12}
-            height={12}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <line x1="7" y1="17" x2="17" y2="7" />
-            <polyline points="7 7 17 7 17 17" />
-          </svg>
-        </button>
-      </div>
+      {/* Session 198 C6 — Take the Trip relocated OUT of this top mall
+          section; now renders below {children} as a dedicated mall-card
+          footer row (see end of <article>). */}
 
       {/* "X finds waiting to be discovered" with leaf glyph + dashed flankers */}
       <div
@@ -286,10 +244,62 @@ export default function SavedMallCardV2({
         />
       </div>
       </div>
-      {/* /Mall-section card-bg wrapper (session 175 Review Board) */}
+      {/* /Mall-section warm-bg wrapper (session 198 C6 — was card; flipped) */}
 
       {/* Accordion sections (children) */}
       {children}
+
+      {/* Session 198 C6 — Take the Trip relocated to mall-card footer row.
+          Per David's session 198 QA: "Move Take the Trip button to the
+          bottom row of that saved mall card/list where there is currently
+          an empty row." Warm bg matches the top mall section so the
+          article reads as warm-mall-identity → card-saved-items →
+          warm-mall-action sandwich. Mall-level CTA always-visible
+          regardless of accordion expand state (the per-booth trailing
+          empty rows inside AccordionBoothSection are decoration, not
+          actionable). Vocabulary unified with LocationActions canonical
+          across /find/[id] + /shelf/[slug] + /map PinCallout per session
+          169 Review Board Saved #1. */}
+      <div style={{ background: v2.surface.warm, padding: "12px 20px" }}>
+        <button
+          type="button"
+          onClick={onGetDirections}
+          style={{
+            width:          "100%",
+            background:     v2.accent.greenMid,
+            color:          "#fff",
+            border:         "none",
+            borderRadius:   10,
+            padding:        10,
+            fontFamily:     FONT_INTER,
+            fontSize:       11,
+            fontWeight:     600,
+            letterSpacing:  "0.12em",
+            textTransform:  "uppercase",
+            display:        "flex",
+            alignItems:     "center",
+            justifyContent: "center",
+            gap:            8,
+            cursor:         "pointer",
+          }}
+        >
+          Take the Trip
+          <svg
+            width={12}
+            height={12}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <line x1="7" y1="17" x2="17" y2="7" />
+            <polyline points="7 7 17 7 17 17" />
+          </svg>
+        </button>
+      </div>
     </article>
   );
 }

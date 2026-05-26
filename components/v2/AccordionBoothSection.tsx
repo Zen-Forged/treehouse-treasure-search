@@ -61,7 +61,11 @@ export default function AccordionBoothSection({
           display: "flex",
           alignItems: "center",
           gap: 10,
-          background: v2.surface.card,
+          // Session 198 C6 — header bg card → warm per David's color
+          // flip: warmer on mall location AND booth sections. Booth
+          // accordion header is a "booth identity" surface, parallel
+          // to the mall section's warm wrapper above.
+          background: v2.surface.warm,
           border: "none",
           cursor: "pointer",
           textAlign: "left",
@@ -142,18 +146,19 @@ export default function AccordionBoothSection({
           style={{ background: v2.surface.card }}
         >
           {children}
-          {/* Session 175 Review Board (Saved Browse #1) — trailing empty
-              row after the last saved find. Warm bg per David's spec
-              ("keep it v2.surface.warm"); ~44px = half SavedFindRow
-              height (David picked "Half-row breathing space" at opener).
-              borderTop hairline matches SavedFindRow's separator pattern
-              so the empty row reads as a "completion row" extending the
-              warm-rows zone below the last entry. */}
+          {/* Session 198 C6 — trailing empty row bg warm → card per
+              David's color flip (lighter on saved-items zone; booth
+              body is the saved-items zone). ~44px breathing-space
+              "completion row" still extends the body's bg below the
+              last saved-find entry; borderTop hairline preserved.
+              Was: warm (session 175 Review Board); now: card (matches
+              body so the trailing row reads as continuation of the
+              saved-items zone, not a contrasting strip). */}
           <div
             aria-hidden
             style={{
               height: 44,
-              background: v2.surface.warm,
+              background: v2.surface.card,
               borderTop: `1px solid ${v2.border.light}`,
             }}
           />
