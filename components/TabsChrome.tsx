@@ -102,16 +102,40 @@ export default function TabsChrome() {
           as floating overlay at top-right of viewport. Arc 3.1.3 retired
           StickyMasthead from (tabs)/ which also retired the masthead-right
           Profile slot. Session 182 — Profile overlay is Home-only since
-          Saved branch returns above with StickyMasthead. */}
+          Saved branch returns above with StickyMasthead.
+
+          Session 198 C4 — wrapped in a centered max-width:430 container
+          mirroring StickyMasthead's structure (line ~166 of
+          StickyMasthead.tsx) so the Profile bubble anchors to the right
+          of the 430px content column on desktop instead of the full
+          viewport edge. Per David's session 198 QA: "the profile button
+          on the home screen ... extends all the way to the right of the
+          screen on desktop." pointerEvents:none on the wrapper so empty
+          area to the left of the bubble passes taps through to the
+          content underneath; pointerEvents:auto on the inner positioner
+          so the bubble itself stays tappable. */}
       <div
         style={{
-          position: "fixed",
-          top:      OVERLAY_TOP,
-          right:    OVERLAY_X,
-          zIndex:   OVERLAY_Z,
+          position:      "fixed",
+          top:           OVERLAY_TOP,
+          left:          "50%",
+          transform:     "translateX(-50%)",
+          width:         "100%",
+          maxWidth:      430,
+          zIndex:        OVERLAY_Z,
+          pointerEvents: "none",
         }}
       >
-        <MastheadProfileButton />
+        <div
+          style={{
+            position:      "absolute",
+            top:           0,
+            right:         OVERLAY_X,
+            pointerEvents: "auto",
+          }}
+        >
+          <MastheadProfileButton />
+        </div>
       </div>
 
       {showChip && (
