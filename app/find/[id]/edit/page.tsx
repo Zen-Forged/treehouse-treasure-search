@@ -434,11 +434,19 @@ export default function EditFindPage() {
               style={{
                 fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
-                fontSize: 14,
+                // Session 198 C3 — fontSize 14 → 16 + fontWeight default
+                // → 500 per David's session 198 QA: "Remove from shelf
+                // text is really small and hard to read increase font
+                // weight and font size." Matches Cormorant italic 500
+                // secondary-voice canonical (session 153 /login subtitle).
+                // Bumped textDecorationColor opacity 0.38 → 0.55 so the
+                // dotted underline tracks the heavier text weight.
+                fontSize: 16,
+                fontWeight: 500,
                 color: v1.red,
                 textDecoration: "underline",
                 textDecorationStyle: "dotted",
-                textDecorationColor: "rgba(139,32,32,0.38)",
+                textDecorationColor: "rgba(139,32,32,0.55)",
                 textUnderlineOffset: 3,
                 background: "none",
                 border: "none",
