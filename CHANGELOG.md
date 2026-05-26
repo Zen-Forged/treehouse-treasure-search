@@ -8,6 +8,81 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.198.0] — 2026-05-26
+
+### Session 198 — Share My Shelf relocation + UX fixes + iPhone-QA 8-finding bundle + within-session dial — 12 runtime commits + 1 close
+
+David's session-open standup recommended Arc 2 iPhone QA + Arc 3 brand identity pass per session 197 close opener. David redirected with a 3-finding Share My Shelf bundle (iOS Download routing to Instagram instead of Photos / relocate Shelf Image out of ShareSheet popup / no instructions on what to do or how to share + FB doesn't receive multi-file payload). Audit-first localized actual failure modes; David picked Shape A (keep architecture, fix Items 1+2, add instructions overlay). Mid-session second redirect: 8-finding iPhone-QA bundle on production v0.198.0 ship (Profile button extends to viewport edge on desktop / edit pencil relocation to button / photo replace on edit page / status toggle / typography dials / saved card color flip / Take the Trip relocation / BottomNav rename). Third redirect: within-session reversal of C6 (saved card color flip) after David's iPhone QA — "for simplicity, lets just keep the bg all one color of the card."
+
+12 runtime commits sequenced smallest→largest across 3 arcs, build green at every commit boundary covering all 48 routes. **Net runtime change: +727 / -159 LOC = +568 LOC overall across 8 files.**
+
+### Added
+- **Arc 1 — Share My Shelf Shape A (3 commits)**:
+  - **`ShelfImageShareScreen` iOS save-to-Photos path** (C1 commit `023b418`, +31 LOC) — `handleDownload` UA-aware: iOS branches to `navigator.share({ files })` with NO text/url payload so iOS share sheet foregrounds "Save N Images" rather than routing to Instagram. Non-iOS keeps existing `<a download>` 5-sequential path. Analytics `method` field disambiguates `"ios_save"` from `"download"` / `"native_share_*"` / `"desktop_fallback"`.
+  - **Instructions overlay** (C2 commit `8e93a28`, +70 / -30 LOC) — replaces cryptic "Share My Shelf · 5-card Story sequence" eyebrow + bottom footer disclaimer with action-oriented "How to share your shelf" title + 3-step numbered block. New `<Step>` helper at module scope (green-circle bullet + Inter 13px body). Per David's QA: "When the user clicks the button it shows the cards but no instructions on what to do or how to share."
+  - **"Share on Social" CTA on /my-shelf** (C3 commit `e10d17e`, +103 / -57 LOC across 2 files) — single coupled commit. ShareSheet drops `showShelfImage` flag + `shelf-image` Screen variant + handler + tile + ShelfImageShareScreen import + PiImageSquare import (-48 LOC). /my-shelf gains "Share on Social" secondary outlined button between Add a Find and Edit Booth + `showShelfShare` state + BottomSheet wrapper hosting ShelfImageShareScreen directly (+75 LOC).
+- **Arc 2 — iPhone-QA 8-finding bundle (8 commits sequenced smallest→largest)**:
+  - **C1 BottomNav label** (commit `c6e98d3`, +1 / -1 LOC) — "Saved" → "Flagged" (route + key preserved per `feedback_user_facing_copy_scrub_skip_db_identifiers` ✅ Promoted).
+  - **C2 Edit-find subtitle** (commit `f1bd683`, +11 / -3 LOC) — "Click submit when finished" → "Click post changes when finished" + fontSize 14 → 16 + maxWidth 290 → 320.
+  - **C3 Remove from shelf typography** (commit `cdc4f09`, +10 / -2 LOC) — fontSize 14 → 16 + fontWeight default → 500 + textDecorationColor opacity 0.38 → 0.55 (dotted underline tracks heavier text).
+  - **C4 Profile button max-width centering** (commit `3a7e2fd`, +30 / -6 LOC) — wrap position:fixed overlay in centered max-width:430 container mirroring StickyMasthead (TabsChrome.tsx). pointerEvents:none on wrapper + pointerEvents:auto on inner so taps in empty area pass through.
+  - **C5 Status segmented-pill toggle** (commit `399ce08`, +68 / -34 LOC) — replaces 2-pill grid with unified segmented toggle. New `<StatusToggle>` + `<StatusSegment>` primitives at module scope. role="radiogroup" + role="radio" canonical a11y for binary picker. Selected half fills v2.accent.greenMid + white text; unselected stays transparent + ink-secondary.
+  - **C6 Coupled SavedMallCardV2 color flip + Take the Trip relocation** (commit `f19439a`, +90 / -75 LOC across 2 files) — color flip (outer card / mall wrapper warm / accordion header warm / trailing row card / Take the Trip footer warm) + Take the Trip relocated from top mall section to new dedicated bottom row at article level. _Within-session reversed at C9 dial below._
+  - **C7 /find Pencil → Edit Find CTA** (commit `ae6c0e9`, +59 / -21 LOC) — title-block inline pencil retired (was owner-only position:absolute bubble at right gutter). New "Edit Find" outlined secondary CTA stacked below Explore this Booth in the engagement-stack (Flag the Find → Explore this Booth → Edit Find). Mirrors session 186 Edit Booth pencil-to-CTA promotion pattern.
+  - **C8 Image REPLACE on edit page** (commit `1f3e0bd`, +167 / -1 LOC) — restores photo display at top of /find/[id]/edit (was retired session 186). Replace photo affordance: file picker → FileReader dataURL → `compressImage` → `uploadPostImageViaServer` → preview updates → PATCH body includes new image_url on submit (only when changed via `imageChanged` flag). REMOVE deferred per API constraint (validator requires non-empty http(s) URL) + entity-model decision.
+- **Arc 3 — within-session dial (1 commit)**:
+  - **C9 Saved card flatten + retire trailing row** (commit `ee27601`, +37 / -41 LOC across 2 files) — within-session reversal of C6 color flip per David's iPhone QA: "For simplicity, lets just keep the bg all one color of the card and remove the lighter white surface color row as it's no longer needed as the button at the bottom closes out the list visually." Mall section wrapper + AccordionBoothSection header + Take the Trip footer row all revert warm → card; 44px trailing empty row inside booth body retires entirely. Visual hierarchy now reads as identity-by-content (typography + icons + dividers) on a single card-bg substrate; green Take the Trip is the only saturated-color punctuation closing the read. Take the Trip relocation from C7... wait C6 relocation preserved verbatim — only the bg around it flattens.
+
+### Changed
+- **/api/post-image** — no API-side changes; existing endpoint already accepts `{ base64DataUrl, vendorId }` with service-role bypass + ownership-or-admin auth (Wave 1.5 session 92). C8 reuses verbatim.
+- **PATCH /api/my-posts/[id]** — no API-side changes; image_url validator already supported (session 92). C8 includes `image_url` in batched PATCH body when `imageChanged = imageUrl !== originalImageUrl`.
+
+### Removed
+- **Shelf Image 4th tile in ShareSheet** (-48 LOC across ShareSheet.tsx) — `showShelfImage` flag + `shelf-image` Screen variant + handler + tile + ShelfImageShareScreen import + PiImageSquare import + GridScreen 4-tile variant comment. ShareSheet now serves 2 tiles (public /shelf: Email+SMS) or 3 tiles (/my-shelf: Email+SMS+QR) — no 4-tile variant.
+- **Old eyebrow + footer disclaimer on ShelfImageShareScreen** ("Share My Shelf · 5-card Story sequence" + "Tap Share to post directly on Facebook, Instagram, or anywhere else") — retired per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted; new instructions block covers the same intent earlier in read order.
+- **Title-block inline pencil on /find/[id]** — owner-only position:absolute bubble retired (C7). Wrapper position:relative dropped since no positioned child remains; title block becomes purely centered. Pencil affordance moves to dedicated "Edit Find" CTA in the engagement-stack.
+- **Old `<StatusPill>` component on /find/[id]/edit** (C5) — single consumer replaced by `<StatusToggle>` + `<StatusSegment>`. Per `feedback_dead_code_cleanup_as_byproduct`.
+- **44px trailing empty row inside AccordionBoothSection** (C9) — was warm at session 175 (Review Board completion-row spec) → card at session 198 C6 color flip → retired entirely at C9. Take the Trip footer below {children} closes the list visually now.
+
+### Fixed
+- **iOS PWA Download routing to Instagram** (C1 Arc 1) — `<a download>` + blob URL on iOS gets intercepted as open-intent rather than save-to-disk intent; iOS routes to registered PNG handler (Instagram). Fix: feature-detect iOS UA + `navigator.canShare({ files })` → branch to `navigator.share({ files })` with no text/url payload so iOS share sheet foregrounds "Save N Images" / "Save to Files."
+- **Profile button on desktop extends to viewport edge** (C4 Arc 2) — Home-only floating overlay used `right: OVERLAY_X` against position:fixed which anchors to actual viewport right edge. On iPhone the viewport IS the 390-430 column so it rendered correctly; on desktop the bubble flew to far-right of whatever-wide-window. Wrapped in centered max-width:430 container mirroring StickyMasthead pattern.
+
+### Memory firings cumulative through session 198
+- `feedback_user_clarification_restate_interpretation` ✅ Promoted — multiple firings (3-finding Share My Shelf restate, Shape A architectural conversation restate, 8-finding bundle restate, C9 dial restate); ~55+ cumulative.
+- `feedback_triage_cost_shape_before_design_pass` ✅ Promoted-via-memory at session 132 — 3 cost-shape triages this session (Arc 1 Shape A vs B vs C for Share My Shelf relocation; Arc 2 Shape A surgical bundle implicit; #4 toggle shape + #3 image scope clarification calls).
+- `feedback_smallest_to_largest_commit_sequencing` ✅ Promoted-via-memory at session 88 — 12 firings (~618+ cumulative); each commit independently revertable.
+- `feedback_single_coupled_commit_when_must_move_together` ✅ Promoted — Arc 1 C3 (ShareSheet retire + /my-shelf relocate must move together) + Arc 2 C6 (color flip + Take the Trip relocation share visual context) + Arc 3 C9 (4 bg flips + 1 element retire must move together).
+- `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128 — C9 reverses C6 same session per David's iPhone QA finding. Pattern continues to fire load-bearingly when first-iteration interpretations need course-correction.
+- `feedback_visibility_tools_first` ✅ Promoted — audit-first localized 3 surfaces (ShelfImageShareScreen + ShareSheet + /my-shelf) in 5 parallel reads before Arc 1; 4 parallel reads (TabsChrome + edit page + SavedMallCardV2 + BottomNav) before Arc 2; identified all 8 substrate locations.
+- `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted — Arc 1 C3 ShareSheet retire byproducts + Arc 2 C5 StatusPill retire + C7 pencil retire + C9 trailing row retire all attached to replacing commits per the rule.
+- `feedback_user_facing_copy_scrub_skip_db_identifiers` ✅ Promoted — Arc 2 C1 "Saved" → "Flagged" label only; route `/flagged`, NavTab key `"flagged"`, active="flagged" callsites preserved verbatim.
+- `feedback_user_provided_verbatim_values_ship_as_is` ✅ Promoted — David's button label "Share on Social" shipped verbatim; David's "Click post changes when finished" shipped verbatim.
+- `feedback_surface_locked_design_reversals` ✅ Promoted — Arc 1 C3 reverses session 196 C2 frozen "Shelf Image as 4th tile" + Arc 2 C6 reverses session 175 Review Board Saved Browse #1 + Arc 3 C9 reverses Arc 2 C6 within same session; all 3 reversals surfaced with prior reasoning quoted in commit bodies.
+- `feedback_treehouse_no_coauthored_footer` ✅ Promoted honored on all 12 runtime commits + this close.
+
+### NEW Tech Rule candidate patterns surfaced (single firings each; all promote on 2nd firing per `feedback_tech_rule_promotion_destination` ✅ Promoted)
+1. **"iOS Safari + iOS PWA intercept `<a download>` + blob URL as open-intent"** — sub-pattern of platform-quirk-as-bug-class. Canonical iOS save path is `navigator.share({ files })` with no text/url payload; iOS share sheet then surfaces "Save N Images" / "Save to Files" rather than messaging-app routing. Generalizes to any future blob-URL download flow that needs to work on iOS PWA.
+2. **"Mobile-first fixed-positioned chrome that worked on iPhone fails on desktop without max-width centering"** — sub-pattern of `feedback_visibility_tools_first` ✅ Promoted extended to viewport-width-assumption bugs. Surfaces only when the project crosses from "iPhone PWA only" to "any user opens it on desktop." Fix shape: wrap in centered max-width container mirroring StickyMasthead's `left:50% + transform:translateX(-50%) + width:100% + maxWidth:430`.
+3. **"role='radiogroup' + role='radio' is the canonical a11y vocabulary for binary segmented-pill toggles"** — sub-pattern of `feedback_verify_primitive_contract_via_grep` ✅ Promoted extended to a11y semantic role choices. aria-pressed is for toggle-buttons (one button, on/off); aria-checked + radiogroup is for pickers (one of N).
+4. **"Visual hierarchy from bg-color tiering is over-engineered when content provides the differentiation"** — sub-pattern of `feedback_total_strip_after_iterative_refinement_fails` ✅ Promoted at first iteration. David's C9 dial: when 3+ bg tiers compete with content-based identity (typography + icons + dividers), the bg tiering becomes redundant chrome. Simplification → single bg substrate + saturated-color punctuation (Take the Trip button) closing the read.
+5. **"Bottom-row footer relocation makes per-section decorative completion-rows redundant"** — sub-pattern of `feedback_dead_code_cleanup_as_byproduct` extended from code retirement to chrome retirement. When a parent-level action row anchors the visual bottom of a card, per-section trailing rows become noise.
+
+### Roadmap delta
+18 R-rows total. 13 ✅ Shipped, 0 🟢 Ready, 5 🟡 Captured. Unchanged at row level — session 198 is iPhone-QA-driven refinement work on already-shipped surfaces (Share My Shelf vendor-value substrate + /find/[id] + /find/[id]/edit + /my-shelf + /flagged + BottomNav + Home chrome). Substrate added: `<Step>` helper + `<StatusToggle>` + `<StatusSegment>` + photo-replace pipeline on /find/[id]/edit + iOS save-to-Photos branch + centered-max-width chrome primitive on Home Profile overlay. Substrate removed: `<StatusPill>` + Shelf Image 4th tile in ShareSheet + title-block inline pencil + 44px trailing empty row in AccordionBoothSection + old eyebrow + footer disclaimer on ShelfImageShareScreen.
+
+### iPhone QA watch-items
+- **Item 1 D14 architectural concern unresolved** — Shape A keeps architecture; FB-doesn't-attach-multi-file on iOS may still surface in QA. If reads as broken at the FB step, Shape B (rearchitect around FB single-file reality — composite image OR hosted gallery URL) becomes next-session candidate.
+- **Item 1 iOS save-to-Photos** — confirm "Save 5 Images" surfaces in share sheet on iPhone PWA download tap (not Instagram routing).
+- **Item 2 Share on Social entry point** — confirm new button reads at correct visual tier on /my-shelf (secondary outlined matches Edit Booth; PiShareFat 13 size).
+- **Item 3 instructions overlay** — confirm 3-step block reads cleanly above carousel; copy verbatim per Recommended pick.
+- **Arc 2 items** — confirm all 8 dials read as intended on iPhone PWA (BottomNav label / subtitle / Remove typography / Profile button on desktop / Status toggle / Saved card flat / Edit Find CTA / Photo replace).
+- **C9 dial** — confirm saved card reads as one continuous card surface with Take the Trip green footer button as sole saturated-color punctuation.
+
+[v0.198.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.198.0
+
+---
+
 ## [v0.197.0] — 2026-05-25
 
 ### Session 197 — Share My Shelf Arc 2 wrapper UX end-to-end (multi-card carousel + capture pipeline + multi-file native share + regenerate + reorder) — 6 runtime commits + 1 close
