@@ -372,6 +372,26 @@
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { scrollbar-width: none; }
 
+/* Session 199 — When DesktopFrame mounts the PWA inside its iframe
+   (desktop visitors at ≥1024px viewport), the iframe's content may
+   show an internal scrollbar that's visually distracting against the
+   photographed iPhone bezel. Hide all scrollbars across body +
+   descendants when the iframe URL carries ?desktop-frame=embedded.
+   Body class is set by DesktopFrame's useEffect on detect-embedded.
+   Brief paint may show scrollbars before hydration; structural
+   server-side fix is Tier B per docs/desktop-frame-design.md. */
+body.desktop-frame-embedded,
+body.desktop-frame-embedded * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+body.desktop-frame-embedded::-webkit-scrollbar,
+body.desktop-frame-embedded *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position:  400px 0; }

@@ -40,6 +40,15 @@ const PHONE_WIDTH_PX = 360;   // ~430 PWA column compressed to fit photographed 
 const PHONE_HEIGHT_PX = 740;  // ~iPhone 14 Pro Max screen ratio adjusted for chrome
 const PHONE_RADIUS_PX = 44;
 
+// Session 199 QA dial — composition wrapper max-width keeps brand
+// chrome + phone centered at a fixed gap (~160px) regardless of
+// viewport width. Below 1200px the composition fills viewport with
+// 64px side padding; above 1200px it stays clamped + centered, with
+// the photographed flatlay decorations at viewport corners filling
+// any extra width.
+const COMPOSITION_MAX_WIDTH_PX = 1200;
+const COMPOSITION_SIDE_PADDING_PX = 64;
+
 const EMBED_QUERY_KEY = "desktop-frame";
 const EMBED_QUERY_VALUE = "embedded";
 
@@ -65,6 +74,12 @@ export default function DesktopFrame({ children, iframeSrcOverride }: DesktopFra
     const params = new URLSearchParams(window.location.search);
     if (params.get(EMBED_QUERY_KEY) === EMBED_QUERY_VALUE) {
       setIsEmbedded(true);
+      // Session 199 QA — add body class so globals.css scrollbar-
+      // hiding rules apply. Hides the iframe's internal scrollbar so
+      // it doesn't visually distract from the photographed iPhone
+      // bezel. Brief paint may show scrollbars before hydration
+      // completes; structural server-side fix is Tier B.
+      document.body.classList.add("desktop-frame-embedded");
       return; // No chrome inside iframe; no resize listener needed
     }
 
@@ -96,16 +111,24 @@ export default function DesktopFrame({ children, iframeSrcOverride }: DesktopFra
   return (
     <div style={rootStyle}>
       <div style={bgStyle} aria-hidden="true" />
-      <BrandChrome />
-      <div style={phoneStageStyle}>
-        <div style={phoneBezelStyle}>
-          <div style={phoneScreenStyle}>
-            <iframe
-              src={iframeSrc}
-              style={iframeStyle}
-              title="Treehouse Finds app preview"
-              loading="eager"
-            />
+      {/* Session 199 QA — composition wrapper centers brand + phone
+          with max-width clamping so the layout stays balanced at any
+          viewport width. Below 1200px composition fills viewport with
+          64px side padding; above 1200px composition stays at 1200
+          max-width centered, photographed flatlay decorations at
+          viewport corners fill any extra width. */}
+      <div style={compositionStyle}>
+        <BrandChrome />
+        <div style={phoneStageStyle}>
+          <div style={phoneBezelStyle}>
+            <div style={phoneScreenStyle}>
+              <iframe
+                src={iframeSrc}
+                style={iframeStyle}
+                title="Treehouse Finds app preview"
+                loading="eager"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -181,13 +204,33 @@ const bgStyle: React.CSSProperties = {
   zIndex: 0,
 };
 
-const brandChromeStyle: React.CSSProperties = {
+// Session 199 QA — composition wrapper containing brand chrome + phone
+// stage. Centered with max-width clamping; flexbox space-between keeps
+// the gap consistent at any viewport. Photographed flatlay decorations
+// at viewport corners (via bgStyle full-cover) frame the composition
+// on wide screens.
+const compositionStyle: React.CSSProperties = {
   position: "absolute",
-  left: "8%",
-  top: "50%",
-  transform: "translateY(-50%)",
+  top: 0,
+  left: "50%",
+  transform: "translateX(-50%)",
+  width: "100%",
+  maxWidth: COMPOSITION_MAX_WIDTH_PX,
+  height: "100%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: `0 ${COMPOSITION_SIDE_PADDING_PX}px`,
+  boxSizing: "border-box",
+  zIndex: 1,
+  gap: 32,
+};
+
+const brandChromeStyle: React.CSSProperties = {
+  // Flex item inside composition wrapper — no absolute positioning
+  // needed. Flex alignItems:center handles vertical centering.
   maxWidth: 380,
-  zIndex: 5,
+  flexShrink: 0,
   color: "#2a1a0a",
 };
 
@@ -237,11 +280,8 @@ const subtextStyle: React.CSSProperties = {
 };
 
 const phoneStageStyle: React.CSSProperties = {
-  position: "absolute",
-  right: "12%",
-  top: "50%",
-  transform: "translateY(-50%)",
-  zIndex: 4,
+  // Flex item inside composition wrapper — no absolute positioning.
+  flexShrink: 0,
 };
 
 // Phone bezel — dark titanium-ish frame per D9 (matches photographed
