@@ -300,21 +300,44 @@ export function ShelfImageShareScreen({
         addressLine={mallAddress || undefined}
       />
 
-      {/* Eyebrow */}
-      <div
-        style={{
-          marginTop:     18,
-          marginBottom:  10,
-          fontFamily:    FONT_INTER,
-          fontSize:      11,
-          fontWeight:    600,
-          textTransform: "uppercase",
-          letterSpacing: "0.16em",
-          color:         v2.text.muted,
-          textAlign:     "center",
-        }}
-      >
-        Share My Shelf · 5-card Story sequence
+      {/* Instructions — session 198 C2. Replaces cryptic eyebrow ("Share
+          My Shelf · 5-card Story sequence") + bottom footer disclaimer
+          with action-oriented title + 3-step guidance. Sets vendor
+          expectations top-of-screen so the carousel + action buttons
+          aren't met with confusion about what's happening. */}
+      <div style={{ marginTop: 18, marginBottom: 16 }}>
+        <div
+          style={{
+            fontFamily:    FONT_CORMORANT,
+            fontSize:      22,
+            fontWeight:    500,
+            letterSpacing: "-0.005em",
+            color:         v2.text.primary,
+            textAlign:     "center",
+            lineHeight:    1.3,
+            marginBottom:  12,
+          }}
+        >
+          How to share your shelf
+        </div>
+        <ol
+          style={{
+            margin:        0,
+            padding:       0,
+            listStyle:     "none",
+            display:       "flex",
+            flexDirection: "column",
+            gap:           8,
+            fontFamily:    FONT_INTER,
+            fontSize:      13,
+            color:         v2.text.secondary,
+            lineHeight:    1.5,
+          }}
+        >
+          <Step num={1}>Preview your 5 cards below — drag chips to reorder.</Step>
+          <Step num={2}>Tap Share, then pick Facebook, Instagram, or any app.</Step>
+          <Step num={3}>We&apos;ll attach the images and copy your caption to paste.</Step>
+        </ol>
       </div>
 
       {/* Carousel preview — horizontal scroll-snap */}
@@ -423,21 +446,6 @@ export function ShelfImageShareScreen({
           {caption}
         </div>
       )}
-
-      {/* Footer disclaimer */}
-      <div
-        style={{
-          marginTop:  14,
-          fontFamily: FONT_CORMORANT,
-          fontStyle:  "italic",
-          fontSize:   12,
-          color:      v2.text.muted,
-          textAlign:  "center",
-          lineHeight: 1.5,
-        }}
-      >
-        Tap Share to post directly on Facebook, Instagram, or anywhere else.
-      </div>
 
       {/* ─── Off-screen capture container ─────────────────────────────
           Mounts the 5 Arc 1 cards at full 1080×N for html2canvas-pro.
@@ -779,6 +787,38 @@ function ActionButton({
       {icon}
       <span>{label}</span>
     </button>
+  );
+}
+
+// ─── Step ──────────────────────────────────────────────────────────────────
+// Numbered step in the "How to share your shelf" instructions block.
+// Green circle bullet (matches engagement-tier color vocabulary) + Inter
+// 13px body copy.
+function Step({ num, children }: { num: number; children: React.ReactNode }) {
+  return (
+    <li style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+      <span
+        style={{
+          flexShrink:     0,
+          width:          20,
+          height:         20,
+          borderRadius:   "50%",
+          background:     v2.accent.green,
+          color:          v2.surface.card,
+          display:        "inline-flex",
+          alignItems:     "center",
+          justifyContent: "center",
+          fontFamily:     FONT_INTER,
+          fontSize:       11,
+          fontWeight:     700,
+          marginTop:      1, // optical balance with first text line
+        }}
+        aria-hidden="true"
+      >
+        {num}
+      </span>
+      <span style={{ flex: 1 }}>{children}</span>
+    </li>
   );
 }
 
