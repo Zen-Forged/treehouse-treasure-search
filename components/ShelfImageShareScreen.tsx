@@ -184,6 +184,37 @@ export function ShelfImageShareScreen({
     const files = buildOrderedFiles(capture.cards, vendor);
     if (files.length === 0) return;
     try { await navigator.clipboard.writeText(caption); } catch { /* */ }
+
+    // iOS Safari / iOS PWA intercepts `<a download>` + blob URL as an
+    // open-intent rather than a save-to-disk intent and routes to a
+    // registered PNG handler (Instagram, Photos, etc.) — David's session 198
+    // QA surfaced "Open in Instagram" instead of save. The canonical iOS
+    // save path is navigator.share({ files }) with NO text/url payload so
+    // the share sheet foregrounds "Save N Images" / "Save to Files" rather
+    // than messaging apps. Non-iOS keeps the existing 5-sequential
+    // `<a download>` path which routes cleanly to the Downloads folder on
+    // Android Chrome + every desktop browser.
+    const isIOS = typeof navigator !== "undefined"
+      && /iPad|iPhone|iPod/.test(navigator.userAgent)
+      && typeof navigator.share === "function"
+      && typeof navigator.canShare === "function"
+      && navigator.canShare({ files });
+
+    if (isIOS) {
+      try {
+        await navigator.share({ files });
+        track("share_shelf_image_downloaded", { ...trackPayload, method: "ios_save", file_count: files.length });
+        setCopyToast("caption");
+        return;
+      } catch (err) {
+        const isAbort = err instanceof Error && err.name === "AbortError";
+        if (!isAbort) console.error("[share-my-shelf] iOS save-to-photos share failed:", err);
+        if (isAbort) return; // user canceled — don't fall through
+        // Non-abort error falls through to <a download> path below (best-
+        // effort; will route to Instagram on iOS but at least attempts).
+      }
+    }
+
     downloadFilesSequentially(files);
     track("share_shelf_image_downloaded", { ...trackPayload, method: "download", file_count: files.length });
     setCopyToast("caption");
