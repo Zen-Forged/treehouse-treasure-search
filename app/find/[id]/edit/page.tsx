@@ -33,10 +33,12 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import { PiCamera } from "react-icons/pi";
 import { getPost, deletePost } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { clearPostCache, clearVendorPostsCache } from "@/lib/findContext";
+import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import AmberNotice from "@/components/AmberNotice";
 import FormButton from "@/components/FormButton";
@@ -69,7 +71,23 @@ export default function EditFindPage() {
   const [removing,           setRemoving]           = useState(false);
   const [showRemoveConfirm,  setShowRemoveConfirm]  = useState(false);
 
-  const captionRef = useRef<HTMLTextAreaElement | null>(null);
+  // Session 198 C8 — photo replace state per David's session 198 QA:
+  // "Enable the ability for the image photo to be removed or replaced
+  // from the edit find screen." REPLACE shipped; REMOVE deferred per
+  // API constraint (PATCH /api/my-posts/[id] requires non-empty http(s)
+  // URL on image_url validation at lib/posts route.ts:120). The
+  // existing "Remove from shelf" link is the canonical destructive
+  // option; photo-less finds aren't supported by the entity model.
+  // imageUrl tracks the current preview (updates immediately on
+  // upload success); originalImageUrl preserved for change-detection
+  // so handleSubmit only PATCHes image_url when actually swapped.
+  const [imageUrl,         setImageUrl]         = useState<string>("");
+  const [originalImageUrl, setOriginalImageUrl] = useState<string>("");
+  const [uploadingPhoto,   setUploadingPhoto]   = useState(false);
+  const [photoError,       setPhotoError]       = useState<string | null>(null);
+
+  const captionRef     = useRef<HTMLTextAreaElement | null>(null);
+  const photoInputRef  = useRef<HTMLInputElement | null>(null);
 
   // Mount: auth gate + identity resolution
   useEffect(() => {
@@ -114,6 +132,11 @@ export default function EditFindPage() {
           : "",
       );
       setStatus(fetched.status === "sold" ? "sold" : "available");
+      // Session 198 C8 — hydrate photo state. originalImageUrl preserved
+      // for change-detection in handleSubmit (only PATCH image_url when
+      // user actually swapped the photo).
+      setImageUrl(fetched.image_url ?? "");
+      setOriginalImageUrl(fetched.image_url ?? "");
       setStage("edit");
     })();
 
@@ -157,11 +180,19 @@ export default function EditFindPage() {
     }
 
     const captionTrimmed = caption.trim();
+    // Session 198 C8 — include image_url in updates ONLY when actually
+    // swapped (handlePhotoChange uploads + sets imageUrl on success;
+    // originalImageUrl preserved at load time). Avoids no-op writes when
+    // user only edits text fields. PATCH /api/my-posts/[id] requires
+    // non-empty http(s) URL per its image_url validator (route.ts:120),
+    // so we never pass null/empty here.
+    const imageChanged = imageUrl.length > 0 && imageUrl !== originalImageUrl;
     const updates = {
       title:         trimmedTitle,
       caption:       captionTrimmed.length > 0 ? captionTrimmed : null,
       price_asking:  priceValue,
       status,
+      ...(imageChanged ? { image_url: imageUrl } : {}),
     };
 
     setSubmitting(true);
@@ -190,6 +221,49 @@ export default function EditFindPage() {
       console.error("[edit] submit failed:", err);
       setSubmitError("Couldn't save your changes — try again.");
       setSubmitting(false);
+    }
+  }
+
+  // ── Photo replace ────────────────────────────────────────────────────────
+  // Session 198 C8 — file picker → FileReader dataURL → compressImage
+  // (canvas resize to 1400px longest edge + JPEG re-encode at 0.82
+  // quality, ~150-400KB output) → uploadPostImageViaServer
+  // (POST /api/post-image with base64 + vendorId; returns public Supabase
+  // URL). Preview state updates immediately; the new URL is included in
+  // the PATCH body on the next "Post changes" tap via the imageChanged
+  // branch in handleSubmit. If user backs out before submitting, the
+  // upload is orphaned in storage (acceptable MVP trade-off).
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !post) return;
+    e.target.value = ""; // allow reselecting the same file later
+
+    setUploadingPhoto(true);
+    setPhotoError(null);
+
+    try {
+      // Read file as base64 data URL
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Couldn't read selected file."));
+        reader.readAsDataURL(file);
+      });
+
+      // Compress (resize + JPEG re-encode, browser-side)
+      const compressed = await compressImage(dataUrl);
+
+      // Upload to /api/post-image → returns public Supabase URL
+      if (!post.vendor_id) {
+        throw new Error("Missing vendor reference — can't upload.");
+      }
+      const newUrl = await uploadPostImageViaServer(compressed, post.vendor_id);
+      setImageUrl(newUrl);
+    } catch (err) {
+      console.error("[edit] photo upload failed:", err);
+      setPhotoError(err instanceof Error ? err.message : "Photo upload failed — try again.");
+    } finally {
+      setUploadingPhoto(false);
     }
   }
 
@@ -321,6 +395,98 @@ export default function EditFindPage() {
             Click post changes when finished
           </div>
         </div>
+
+        {/* Session 198 C8 — Photo display + Replace photo affordance.
+            Per David's session 198 QA: "Enable the ability for the
+            image photo to be removed or replaced from the edit find
+            screen." REPLACE shipped (file picker → compressImage →
+            uploadPostImageViaServer → preview updates; new URL
+            included in PATCH body on next Post changes tap via
+            imageChanged branch in handleSubmit). REMOVE deferred per
+            API constraint (image_url validator requires non-empty
+            http(s) URL) + entity-model decision about photo-less
+            finds (the existing "Remove from shelf" link below is the
+            canonical destructive option for photo-less intent).
+            Renders the polaroid 4:5 aspect to mirror /find/[id]
+            display chrome so vendor sees "yes this is the find I
+            want to edit." */}
+        {imageUrl && (
+          <div style={{ padding: "0 22px 18px" }}>
+            <div
+              style={{
+                width:        "100%",
+                aspectRatio:  "4 / 5",
+                borderRadius: 14,
+                overflow:     "hidden",
+                background:   v1.inkWash,
+                marginBottom: 12,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={post.title ?? "Find photo"}
+                style={{
+                  width:     "100%",
+                  height:    "100%",
+                  objectFit: "cover",
+                  display:   "block",
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploadingPhoto || submitting}
+              aria-label="Replace Photo"
+              style={{
+                width:          "100%",
+                background:     v2.surface.input,
+                color:          v2.accent.greenMid,
+                border:         `1px solid ${v2.accent.greenMid}`,
+                borderRadius:   10,
+                padding:        9,
+                fontFamily:     FONT_INTER,
+                fontSize:       11,
+                fontWeight:     600,
+                letterSpacing:  "0.12em",
+                textTransform:  "uppercase",
+                display:        "flex",
+                alignItems:     "center",
+                justifyContent: "center",
+                gap:            8,
+                cursor:         uploadingPhoto || submitting ? "default" : "pointer",
+                opacity:        uploadingPhoto || submitting ? 0.6 : 1,
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <PiCamera size={13} aria-hidden style={{ flexShrink: 0 }} />
+              {uploadingPhoto ? "Uploading…" : "Replace Photo"}
+            </button>
+            {photoError && (
+              <div
+                role="alert"
+                style={{
+                  marginTop:  8,
+                  fontFamily: FONT_INTER,
+                  fontSize:   12,
+                  color:      v1.red,
+                  textAlign:  "center",
+                  lineHeight: 1.5,
+                }}
+              >
+                {photoError}
+              </div>
+            )}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: "none" }}
+            />
+          </div>
+        )}
 
         {/* Fields — Title / Price / Caption / Status */}
         <div
