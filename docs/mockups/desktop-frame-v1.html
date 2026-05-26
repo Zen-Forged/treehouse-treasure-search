@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Desktop Frame — V1 (Shape B design pass)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-page:         #efe9d8;     /* mockup page bg */
+      --paper-cream:     #e8ddc7;     /* v1 paper texture */
+      --warm-cream:      #FBF6EA;     /* v2 warm surface */
+      --tabs-bg:         #E6DECF;     /* v2.bg.tabs — current desktop empty bg */
+      --ink-primary:     #2a1a0a;     /* primary text */
+      --ink-secondary:   #5c4d3a;     /* secondary text */
+      --ink-muted:       #756A5E;     /* muted */
+      --green-mid:       #2E5639;     /* v2.accent.greenMid */
+      --green:           #1F4A31;     /* v2.accent.green */
+      --gold:            #B8945E;     /* tagline accent ornament */
+      --frame-border:    #2a1a0a;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg-page); font-family: 'Inter', sans-serif; color: var(--ink-primary); }
+    body { padding: 32px 24px 64px; }
+
+    /* Doc-level header */
+    .doc-head {
+      max-width: 1320px;
+      margin: 0 auto 32px;
+      padding: 0 8px;
+    }
+    .doc-head h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 32px;
+      letter-spacing: -0.01em;
+      margin: 0 0 8px;
+    }
+    .doc-head p {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--ink-secondary);
+      line-height: 1.55;
+      margin: 0 0 6px;
+      max-width: 900px;
+    }
+    .doc-head .meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 14px;
+    }
+
+    /* Frame card */
+    .frame-card {
+      max-width: 1320px;
+      margin: 0 auto 40px;
+      background: #fff;
+      border: 1px solid rgba(42, 26, 10, 0.10);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(42, 26, 10, 0.05);
+    }
+    .frame-head {
+      padding: 18px 24px;
+      border-bottom: 1px solid rgba(42, 26, 10, 0.08);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .frame-head h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 22px;
+      margin: 0;
+      letter-spacing: -0.005em;
+    }
+    .frame-head .tag {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      font-weight: 600;
+    }
+
+    /* Preview viewport simulates a 1440×900 desktop scaled to fit page */
+    .preview {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1440 / 900;
+      overflow: hidden;
+    }
+
+    /* ─────────── FRAME A — Photo-realistic flatlay ─────────── */
+    .frame-a .preview {
+      /* Layered "paper texture" via gradients — production would use a real photographed bg */
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 30%, rgba(255, 248, 228, 0.55) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 85% 75%, rgba(220, 200, 160, 0.45) 0%, transparent 65%),
+        linear-gradient(135deg, #f5ecd6 0%, #e8d8b8 50%, #ddc89e 100%);
+    }
+    .frame-a .paper-grain {
+      position: absolute; inset: 0;
+      background-image:
+        repeating-linear-gradient(95deg, rgba(120, 90, 50, 0.025) 0px, transparent 1px, transparent 3px, rgba(120, 90, 50, 0.025) 4px),
+        repeating-linear-gradient(5deg,  rgba(80, 60, 30, 0.018) 0px, transparent 2px, transparent 5px, rgba(80, 60, 30, 0.018) 6px);
+      pointer-events: none;
+    }
+    /* Decorative flatlay placeholders — real version = photographed botanicals/postcard/key */
+    .deco {
+      position: absolute;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      color: rgba(42, 26, 10, 0.35);
+      text-align: center;
+      font-style: italic;
+    }
+    .frame-a .deco-botanical {
+      top: -20px; left: -40px;
+      width: 320px; height: 220px;
+      background:
+        radial-gradient(ellipse 60% 80% at 50% 50%, rgba(120, 140, 80, 0.45) 0%, transparent 50%);
+      transform: rotate(-12deg);
+    }
+    .frame-a .deco-botanical::before {
+      content: "🌿"; font-size: 92px;
+      position: absolute; top: 30px; left: 60px;
+      opacity: 0.5; transform: rotate(15deg);
+    }
+    .frame-a .deco-postcard {
+      bottom: 40px; left: 60px;
+      width: 200px; height: 130px;
+      background: linear-gradient(170deg, #f4ead2 0%, #e0d2a8 100%);
+      border: 1px solid rgba(80, 60, 30, 0.15);
+      box-shadow: 0 6px 16px rgba(42, 26, 10, 0.15);
+      transform: rotate(-8deg);
+      border-radius: 2px;
+    }
+    .frame-a .deco-postcard::before {
+      content: "POST CARD";
+      position: absolute; top: 10px; left: 14px;
+      font-family: 'Inter', sans-serif;
+      font-size: 9px; letter-spacing: 0.18em;
+      color: rgba(80, 60, 30, 0.5); font-weight: 600;
+    }
+    .frame-a .deco-key {
+      bottom: 80px; right: 100px;
+      width: 90px; height: 60px;
+      font-size: 56px;
+      color: rgba(120, 90, 50, 0.4);
+      transform: rotate(25deg);
+    }
+    .frame-a .deco-key::before { content: "🗝"; }
+    .frame-a .deco-treehouse {
+      top: 40px; right: 60px;
+      width: 180px; height: 200px;
+      background: linear-gradient(180deg, rgba(255, 250, 235, 0.35) 0%, transparent 100%);
+      border: 1px dashed rgba(80, 60, 30, 0.15);
+      transform: rotate(4deg);
+      padding-top: 70px;
+      border-radius: 2px;
+    }
+    .frame-a .deco-treehouse::before {
+      content: "🏠";
+      font-size: 64px;
+      opacity: 0.4;
+      display: block;
+      text-align: center;
+    }
+
+    /* Brand chrome left column — same across all 3 frames */
+    .brand-chrome {
+      position: absolute;
+      left: 8%;
+      top: 50%;
+      transform: translateY(-50%);
+      max-width: 380px;
+      z-index: 5;
+    }
+    .brand-glyph {
+      width: 56px; height: 64px;
+      margin-bottom: 20px;
+      color: var(--green);
+    }
+    .brand-wordmark {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 400;
+      font-size: 64px;
+      line-height: 0.95;
+      color: var(--ink-primary);
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+    .brand-wordmark .sub {
+      display: block;
+      font-size: 18px;
+      letter-spacing: 0.32em;
+      font-weight: 500;
+      margin-top: 8px;
+      padding-top: 12px;
+      border-top: 1.5px solid currentColor;
+      width: fit-content;
+    }
+    .brand-tagline {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 400;
+      font-size: 28px;
+      line-height: 1.35;
+      color: var(--ink-primary);
+      margin: 32px 0 0;
+      letter-spacing: -0.005em;
+    }
+    .brand-tagline-ornament {
+      width: 70px;
+      height: 14px;
+      margin: 18px 0 14px;
+      background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent);
+      mask: radial-gradient(circle at 50% 50%, #000 60%, transparent 65%);
+    }
+    .brand-subtext {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 16px;
+      color: var(--ink-secondary);
+      margin: 0;
+    }
+
+    /* Phone bezel — Frame A: photographed phone style */
+    .phone-stage {
+      position: absolute;
+      right: 10%;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 4;
+    }
+    .frame-a .phone-bezel {
+      width: 290px; height: 600px;
+      background: linear-gradient(160deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+      border-radius: 44px;
+      padding: 10px;
+      box-shadow:
+        0 30px 60px rgba(42, 26, 10, 0.35),
+        0 12px 24px rgba(42, 26, 10, 0.25),
+        inset 0 2px 4px rgba(255, 255, 255, 0.15);
+      position: relative;
+    }
+    .frame-a .phone-bezel::before {
+      /* notch */
+      content: "";
+      position: absolute;
+      top: 16px; left: 50%; transform: translateX(-50%);
+      width: 110px; height: 30px;
+      background: #1a1a1a;
+      border-radius: 18px;
+      z-index: 2;
+    }
+    .phone-screen {
+      width: 100%; height: 100%;
+      background: var(--tabs-bg);
+      border-radius: 36px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ─────────── FRAME B — Stylized SVG/CSS bezel + illustrated chrome ─────────── */
+    .frame-b .preview {
+      background: linear-gradient(180deg, #f5f1e6 0%, #ebe4d2 100%);
+    }
+    .frame-b .deco-leaf-1 {
+      position: absolute;
+      top: 80px; left: 80px;
+      width: 120px; height: 120px;
+      color: rgba(46, 86, 57, 0.18);
+      font-size: 110px;
+    }
+    .frame-b .deco-leaf-1::before { content: "❋"; }
+    .frame-b .deco-leaf-2 {
+      position: absolute;
+      bottom: 100px; left: 200px;
+      width: 80px; height: 80px;
+      color: rgba(46, 86, 57, 0.14);
+      font-size: 80px;
+      transform: rotate(45deg);
+    }
+    .frame-b .deco-leaf-2::before { content: "❋"; }
+    .frame-b .deco-dots {
+      position: absolute;
+      top: 40%; right: 4%;
+      width: 200px; height: 200px;
+      background-image: radial-gradient(circle, rgba(46, 86, 57, 0.20) 1.5px, transparent 1.5px);
+      background-size: 18px 18px;
+      opacity: 0.5;
+    }
+    .frame-b .phone-bezel {
+      width: 290px; height: 600px;
+      background: var(--ink-primary);
+      border-radius: 44px;
+      padding: 8px;
+      box-shadow: 0 18px 40px rgba(42, 26, 10, 0.20);
+      position: relative;
+      border: 2px solid var(--ink-primary);
+    }
+    .frame-b .phone-bezel::before {
+      content: "";
+      position: absolute;
+      top: 14px; left: 50%; transform: translateX(-50%);
+      width: 100px; height: 24px;
+      background: var(--ink-primary);
+      border-radius: 14px;
+      z-index: 2;
+    }
+    .frame-b .phone-screen { border-radius: 38px; }
+
+    /* ─────────── FRAME C — Hybrid: SVG bezel + photographed bg ─────────── */
+    .frame-c .preview {
+      background:
+        radial-gradient(ellipse 70% 50% at 25% 25%, rgba(255, 248, 228, 0.45) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(200, 180, 140, 0.35) 0%, transparent 65%),
+        linear-gradient(135deg, #ede4ce 0%, #ddd0b0 100%);
+    }
+    .frame-c .paper-grain {
+      position: absolute; inset: 0;
+      background-image:
+        repeating-linear-gradient(95deg, rgba(120, 90, 50, 0.02) 0px, transparent 1px, transparent 3px, rgba(120, 90, 50, 0.02) 4px);
+      pointer-events: none;
+    }
+    .frame-c .deco-postcard {
+      position: absolute;
+      bottom: 60px; left: 100px;
+      width: 180px; height: 110px;
+      background: linear-gradient(170deg, #f4ead2 0%, #e0d2a8 100%);
+      border: 1px solid rgba(80, 60, 30, 0.12);
+      box-shadow: 0 4px 12px rgba(42, 26, 10, 0.10);
+      transform: rotate(-6deg);
+      border-radius: 2px;
+    }
+    .frame-c .deco-botanical {
+      position: absolute;
+      top: 60px; left: 80px;
+      width: 160px; height: 100px;
+      opacity: 0.45;
+      transform: rotate(-12deg);
+      font-size: 90px;
+      color: rgba(120, 140, 80, 0.5);
+    }
+    .frame-c .deco-botanical::before { content: "🌿"; }
+    .frame-c .phone-bezel {
+      width: 290px; height: 600px;
+      background: var(--ink-primary);
+      border-radius: 44px;
+      padding: 8px;
+      box-shadow: 0 22px 50px rgba(42, 26, 10, 0.25);
+      position: relative;
+      border: 1px solid #000;
+    }
+    .frame-c .phone-bezel::before {
+      content: "";
+      position: absolute;
+      top: 16px; left: 50%; transform: translateX(-50%);
+      width: 100px; height: 26px;
+      background: var(--ink-primary);
+      border-radius: 14px;
+      z-index: 2;
+    }
+    .frame-c .phone-screen { border-radius: 36px; }
+
+    /* ─────────── Live-app-inside-phone placeholder ─────────── */
+    .app-shell {
+      position: absolute; inset: 0;
+      background: var(--tabs-bg);
+      display: flex;
+      flex-direction: column;
+    }
+    .app-hero {
+      height: 33%;
+      background:
+        linear-gradient(180deg, rgba(255, 250, 235, 0) 60%, rgba(230, 222, 207, 1) 100%),
+        linear-gradient(135deg, #4a3a28 0%, #2a1a10 100%);
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 20px;
+    }
+    .app-hero::before {
+      content: "";
+      position: absolute;
+      top: 28%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70px; height: 70px;
+      background: var(--green);
+      mask: radial-gradient(circle, transparent 35%, #000 38%);
+      opacity: 0.6;
+    }
+    .app-search {
+      position: absolute;
+      bottom: 12px;
+      left: 12px; right: 12px;
+      height: 32px;
+      background: #FFFCF5;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+    .app-search::before {
+      content: "⌕";
+      font-size: 13px;
+      margin-right: 8px;
+      color: var(--ink-secondary);
+    }
+    .app-chip-row {
+      padding: 10px 14px 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      color: var(--ink-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+    .app-chip-row::before {
+      content: "⊙";
+      color: var(--green);
+      font-size: 14px;
+    }
+    .app-grid {
+      flex: 1;
+      padding: 4px 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      overflow: hidden;
+    }
+    .app-tile {
+      background: #FFFCF5;
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(42, 26, 10, 0.08);
+      padding: 4px;
+    }
+    .app-tile-photo {
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      background: linear-gradient(135deg, #6b5840 0%, #4a3a28 100%);
+      border-radius: 2px;
+      position: relative;
+    }
+    .app-tile-photo::after {
+      content: "🌿";
+      position: absolute;
+      top: 4px; right: 4px;
+      font-size: 10px;
+      opacity: 0.7;
+    }
+    .app-tile-meta {
+      padding: 4px 2px 2px;
+      font-family: 'Inter', sans-serif;
+      font-size: 7px;
+      color: var(--ink-muted);
+    }
+    .app-nav {
+      height: 42px;
+      background: var(--tabs-bg);
+      border-top: 1px solid rgba(42, 26, 10, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 8px;
+      color: var(--ink-muted);
+    }
+    .app-nav-item.active { color: var(--green); font-weight: 600; }
+
+    /* ─────────── Spec notes ─────────── */
+    .notes {
+      padding: 20px 24px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+      background: #fafaf6;
+      border-top: 1px solid rgba(42, 26, 10, 0.06);
+    }
+    .notes .col h4 {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin: 0 0 8px;
+      font-weight: 700;
+    }
+    .notes .col p {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--ink-primary);
+      margin: 0 0 6px;
+    }
+    .notes .col p strong { color: var(--green); font-weight: 600; }
+
+    /* ─────────── Trade-off matrix ─────────── */
+    .matrix {
+      max-width: 1320px;
+      margin: 48px auto 0;
+      background: #fff;
+      border: 1px solid rgba(42, 26, 10, 0.10);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(42, 26, 10, 0.05);
+    }
+    .matrix h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      font-size: 22px;
+      margin: 0;
+      padding: 18px 24px;
+      border-bottom: 1px solid rgba(42, 26, 10, 0.08);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+    }
+    table th, table td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid rgba(42, 26, 10, 0.05);
+      vertical-align: top;
+    }
+    table th {
+      background: #faf5e8;
+      font-weight: 600;
+      color: var(--ink-primary);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    table th:first-child { width: 220px; }
+    table td.axis {
+      font-weight: 600;
+      color: var(--ink-secondary);
+      background: #fafaf6;
+    }
+    table tr:last-child td { border-bottom: none; }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .pill-low    { background: rgba(46, 86, 57, 0.12); color: var(--green); }
+    .pill-med    { background: rgba(184, 148, 94, 0.18); color: #8b6b3a; }
+    .pill-high   { background: rgba(168, 68, 46, 0.14); color: #a8442e; }
+  </style>
+</head>
+<body>
+
+<div class="doc-head">
+  <h1>Desktop Frame — V1</h1>
+  <p>Session 199 — Shape B design pass. Locked structural axes: <strong>live PWA inside frame</strong> · <strong>visitors-only chrome</strong> · <strong>wordmark + tagline only</strong> · <strong>1024px breakpoint</strong>. V1 spans <em>frame style depth</em> — the one axis where production cost / brand fidelity trade hard against each other. Pick a frame to lock; V2 (if needed) will fill-refine within the picked frame.</p>
+  <p>Each frame previews at 1440×900 viewport. Phone bezel renders at ~290×600 to roughly match a real iPhone 14 Pro proportions at scale. The cream-bg-with-2-col-tile-grid inside the phone is a placeholder for the actual PWA — in production, the live 430px app column renders inside the bezel.</p>
+  <div class="meta">docs/mockups/desktop-frame-v1.html · live preview at file:// or via python3 -m http.server</div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════ -->
+<!--  FRAME A — Photo-realistic flatlay (matches reference image exactly) -->
+<!-- ═════════════════════════════════════════════════════════════════ -->
+
+<section class="frame-card frame-a">
+  <div class="frame-head">
+    <h2>Frame A — Photo-realistic flatlay + photographed iPhone</h2>
+    <span class="tag">Reference-image match</span>
+  </div>
+  <div class="preview">
+    <div class="paper-grain"></div>
+    <div class="deco deco-botanical"></div>
+    <div class="deco deco-treehouse"></div>
+    <div class="deco deco-postcard"></div>
+    <div class="deco deco-key"></div>
+    <div class="brand-chrome">
+      <svg class="brand-glyph" viewBox="0 0 56 64" fill="currentColor">
+        <path d="M28 4 C32 14, 44 18, 44 28 C44 34, 38 38, 36 38 L36 60 L20 60 L20 38 C18 38, 12 34, 12 28 C12 18, 24 14, 28 4 Z"/>
+      </svg>
+      <h1 class="brand-wordmark">
+        treehouse
+        <span class="sub">FINDS</span>
+      </h1>
+      <p class="brand-tagline">
+        Embrace the search.<br/>
+        Treasure the find.<br/>
+        Share the story.
+      </p>
+      <div class="brand-tagline-ornament"></div>
+      <p class="brand-subtext">Find before you visit.</p>
+    </div>
+    <div class="phone-stage">
+      <div class="phone-bezel">
+        <div class="phone-screen">
+          <div class="app-shell">
+            <div class="app-hero">
+              <div class="app-search">What are you searching for today?</div>
+            </div>
+            <div class="app-chip-row">All Kentucky locations ⌄</div>
+            <div class="app-grid">
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">6 hours ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">7 hours ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">1 day ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">1 day ago</div></div>
+            </div>
+            <div class="app-nav">
+              <span class="app-nav-item active">⊙ Explore</span>
+              <span class="app-nav-item">❤ Saved</span>
+              <span class="app-nav-item">⌕ Map</span>
+              <span class="app-nav-item">☐ Booth</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="col">
+      <h4>Production</h4>
+      <p>Commission or AI-generate (Midjourney + post-process) <strong>1 hero photograph</strong>: warm-cream textured paper background + flatlay scene with iPhone, botanicals, antique postcard, brass key, treehouse sketch.</p>
+      <p>Optimize the hero to ~400-800KB WebP/AVIF. Phone screen rectangle in the photo defines geometry — production CSS positions a transparent live-app `&lt;div&gt;` exactly over that rectangle.</p>
+    </div>
+    <div class="col">
+      <h4>Engineering</h4>
+      <p>Single PNG/JPG bg via CSS `background-image`. Live PWA's existing 430px max-width column renders as absolute-positioned child at exact pixel coords matching photo's phone-screen rectangle.</p>
+      <p>Viewport scaling: photo + position scale together via CSS `background-size: cover` + percentage positioning. Phone-screen-rectangle math locks at one breakpoint; smaller viewports fall back to current cream-bg behavior.</p>
+    </div>
+    <div class="col">
+      <h4>Trade-offs</h4>
+      <p><strong>+ Highest brand fidelity.</strong> Matches reference image's editorial photography voice exactly. Investor-update / press-page energy.</p>
+      <p>− Asset production is the load-bearing cost. AI generation works but requires careful prompt iteration + post-processing for brand-true botanicals/postcard.</p>
+      <p>− Geometry locked to photo. Future "move the phone" or "add 4th decoration" requires re-shooting/re-rendering.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════════════════════════════════ -->
+<!--  FRAME B — Stylized SVG/CSS bezel + illustrated chrome -->
+<!-- ═════════════════════════════════════════════════════════════════ -->
+
+<section class="frame-card frame-b">
+  <div class="frame-head">
+    <h2>Frame B — Stylized SVG bezel + illustrated chrome</h2>
+    <span class="tag">Pure code · zero photography</span>
+  </div>
+  <div class="preview">
+    <div class="deco-leaf-1"></div>
+    <div class="deco-leaf-2"></div>
+    <div class="deco-dots"></div>
+    <div class="brand-chrome">
+      <svg class="brand-glyph" viewBox="0 0 56 64" fill="currentColor">
+        <path d="M28 4 C32 14, 44 18, 44 28 C44 34, 38 38, 36 38 L36 60 L20 60 L20 38 C18 38, 12 34, 12 28 C12 18, 24 14, 28 4 Z"/>
+      </svg>
+      <h1 class="brand-wordmark">
+        treehouse
+        <span class="sub">FINDS</span>
+      </h1>
+      <p class="brand-tagline">
+        Embrace the search.<br/>
+        Treasure the find.<br/>
+        Share the story.
+      </p>
+      <div class="brand-tagline-ornament"></div>
+      <p class="brand-subtext">Find before you visit.</p>
+    </div>
+    <div class="phone-stage">
+      <div class="phone-bezel">
+        <div class="phone-screen">
+          <div class="app-shell">
+            <div class="app-hero">
+              <div class="app-search">What are you searching for today?</div>
+            </div>
+            <div class="app-chip-row">All Kentucky locations ⌄</div>
+            <div class="app-grid">
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">6 hours ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">7 hours ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">1 day ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">1 day ago</div></div>
+            </div>
+            <div class="app-nav">
+              <span class="app-nav-item active">⊙ Explore</span>
+              <span class="app-nav-item">❤ Saved</span>
+              <span class="app-nav-item">⌕ Map</span>
+              <span class="app-nav-item">☐ Booth</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="col">
+      <h4>Production</h4>
+      <p><strong>Zero photography needed.</strong> SVG phone bezel as React component (inline path). Decorative botanicals/dots/leaves as SVG icons or CSS-rendered geometry. Brand voice expressed via fonts + colors + glyph repetition.</p>
+      <p>Asset weight: minimal (~10-20KB total for all SVG primitives).</p>
+    </div>
+    <div class="col">
+      <h4>Engineering</h4>
+      <p>Pure React + CSS. `&lt;DesktopFrame&gt;` component composes `&lt;PhoneBezel&gt;` SVG + `&lt;BrandChrome&gt;` + decorative SVG elements absolute-positioned. Live PWA renders inside SVG screen rectangle.</p>
+      <p>Viewport scaling: SVG primitives scale cleanly via `viewBox` + `preserveAspectRatio`. Independent of any photo geometry. Easy to dial individual elements.</p>
+    </div>
+    <div class="col">
+      <h4>Trade-offs</h4>
+      <p><strong>+ Lowest production cost.</strong> Ships entirely in code; no photography commission or AI generation.</p>
+      <p>+ Future-flexible. Decorations are SVG components; easy to swap, dial, reposition.</p>
+      <p>− <strong>Doesn't match reference image's voice.</strong> Reads as cleaner / more designer-tool aesthetic (Linear, Stripe, Vercel). Loses Treehouse's editorial-warmth / antique-postcard brand vocabulary.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════════════════════════════════ -->
+<!--  FRAME C — Hybrid: SVG bezel + photographed background -->
+<!-- ═════════════════════════════════════════════════════════════════ -->
+
+<section class="frame-card frame-c">
+  <div class="frame-head">
+    <h2>Frame C — Hybrid: SVG bezel + photographed flatlay background</h2>
+    <span class="tag">Cost / brand-fidelity midpoint</span>
+  </div>
+  <div class="preview">
+    <div class="paper-grain"></div>
+    <div class="deco deco-botanical"></div>
+    <div class="deco deco-postcard"></div>
+    <div class="brand-chrome">
+      <svg class="brand-glyph" viewBox="0 0 56 64" fill="currentColor">
+        <path d="M28 4 C32 14, 44 18, 44 28 C44 34, 38 38, 36 38 L36 60 L20 60 L20 38 C18 38, 12 34, 12 28 C12 18, 24 14, 28 4 Z"/>
+      </svg>
+      <h1 class="brand-wordmark">
+        treehouse
+        <span class="sub">FINDS</span>
+      </h1>
+      <p class="brand-tagline">
+        Embrace the search.<br/>
+        Treasure the find.<br/>
+        Share the story.
+      </p>
+      <div class="brand-tagline-ornament"></div>
+      <p class="brand-subtext">Find before you visit.</p>
+    </div>
+    <div class="phone-stage">
+      <div class="phone-bezel">
+        <div class="phone-screen">
+          <div class="app-shell">
+            <div class="app-hero">
+              <div class="app-search">What are you searching for today?</div>
+            </div>
+            <div class="app-chip-row">All Kentucky locations ⌄</div>
+            <div class="app-grid">
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">6 hours ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">7 hours ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">1 day ago</div></div>
+              <div class="app-tile"><div class="app-tile-photo"></div><div class="app-tile-meta">1 day ago</div></div>
+            </div>
+            <div class="app-nav">
+              <span class="app-nav-item active">⊙ Explore</span>
+              <span class="app-nav-item">❤ Saved</span>
+              <span class="app-nav-item">⌕ Map</span>
+              <span class="app-nav-item">☐ Booth</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="col">
+      <h4>Production</h4>
+      <p><strong>1 background photograph</strong> (paper-texture/flatlay without the phone in frame). Photo carries brand voice. Phone bezel rendered as React/SVG component on top.</p>
+      <p>Asset weight: paper-bg ~200-400KB (smaller than Frame A since no phone in shot) + SVG phone ~10KB.</p>
+    </div>
+    <div class="col">
+      <h4>Engineering</h4>
+      <p>Paper bg as CSS `background-image`. SVG `&lt;PhoneBezel&gt;` component composes independently — positioned via flexbox/grid, not tied to photo coordinates. Decorations live in photo (postcards, botanicals).</p>
+      <p>Phone position dials freely. Future "add 4th decoration" = re-shoot bg only. Future "wider phone bezel" = code change.</p>
+    </div>
+    <div class="col">
+      <h4>Trade-offs</h4>
+      <p><strong>+ Mid production cost.</strong> Single bg photograph (without phone) is simpler to source/generate than Frame A's full composition.</p>
+      <p>+ Phone-position flexibility. Decoupled from photo geometry.</p>
+      <p>− Phone bezel may read as "computer-rendered against real photo" — slightly less polished than Frame A's photographed phone in scene.</p>
+      <p>+ Still carries editorial brand voice via photographed bg (vs Frame B's pure-code aesthetic).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════════════════════════════════ -->
+<!--  TRADE-OFF MATRIX -->
+<!-- ═════════════════════════════════════════════════════════════════ -->
+
+<section class="matrix">
+  <h2>Trade-off matrix — pick a frame to lock</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Axis</th>
+        <th>Frame A — Photo-realistic</th>
+        <th>Frame B — Stylized code</th>
+        <th>Frame C — Hybrid</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="axis">Brand-fidelity match to reference</td>
+        <td><span class="pill pill-low">Exact match</span> editorial photography + flatlay decoration. Reads as press/marketing page.</td>
+        <td><span class="pill pill-high">Generic clean</span> Linear/Stripe-shaped. Loses Treehouse's antique-postcard editorial voice.</td>
+        <td><span class="pill pill-med">Close</span> photo bg carries brand voice; rendered phone reads slightly cleaner.</td>
+      </tr>
+      <tr>
+        <td class="axis">Production cost</td>
+        <td><span class="pill pill-high">High</span> 1 hero photo (composed scene). AI-gen + post-process viable but iterative.</td>
+        <td><span class="pill pill-low">Zero</span> ships entirely in code. No photography, no AI.</td>
+        <td><span class="pill pill-med">Medium</span> 1 bg photo (simpler comp, no phone) + SVG components.</td>
+      </tr>
+      <tr>
+        <td class="axis">Asset weight</td>
+        <td><span class="pill pill-med">~400-800KB</span> hero image WebP/AVIF.</td>
+        <td><span class="pill pill-low">~10-20KB</span> SVG primitives only.</td>
+        <td><span class="pill pill-low">~200-400KB</span> bg photo + SVG.</td>
+      </tr>
+      <tr>
+        <td class="axis">Engineering complexity</td>
+        <td><span class="pill pill-med">Medium</span> photo-coordinates-locked positioning math.</td>
+        <td><span class="pill pill-low">Low</span> pure React/SVG/CSS composition.</td>
+        <td><span class="pill pill-low">Low</span> bg + independent SVG composition.</td>
+      </tr>
+      <tr>
+        <td class="axis">Geometry flexibility</td>
+        <td><span class="pill pill-high">Locked to photo</span> move phone = re-shoot. Add decoration = re-shoot.</td>
+        <td><span class="pill pill-low">Fully flexible</span> all primitives dial freely.</td>
+        <td><span class="pill pill-low">Mostly flexible</span> phone position dials freely; decorations baked in bg.</td>
+      </tr>
+      <tr>
+        <td class="axis">Time to first ship</td>
+        <td><span class="pill pill-high">~Multi-day</span> photo production gates the ship.</td>
+        <td><span class="pill pill-low">~1 session</span> code-only.</td>
+        <td><span class="pill pill-med">~1 session + photo</span> code ships first; photo lands when ready.</td>
+      </tr>
+      <tr>
+        <td class="axis">Investor-update narrative</td>
+        <td><span class="pill pill-low">Strongest</span> highest-polish branded artifact.</td>
+        <td><span class="pill pill-med">Functional</span> "we have desktop chrome" but doesn't advance brand identity.</td>
+        <td><span class="pill pill-low">Strong</span> shows brand voice landing on desktop without bespoke phone shoot.</td>
+      </tr>
+      <tr>
+        <td class="axis">Vendor-value gate alignment</td>
+        <td><span class="pill pill-low">Aligned</span> vendors evaluating platform see polished marketing artifact.</td>
+        <td><span class="pill pill-med">Neutral</span> functional but doesn't help vendor decision.</td>
+        <td><span class="pill pill-low">Aligned</span> still polished enough for vendor evaluation.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+</body>
+</html>
