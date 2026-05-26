@@ -1542,9 +1542,14 @@ export default function FindDetailPage() {
           (em-dash retired). docs/find-detail-title-center-design.md
           Session 78 — delay 0 so title fades in WITH the photograph morph.
           David's request: "feels like one transition, not two."
-          Session 2 — owner-only inline edit pencil at right edge (no bg).
-          Title stays centered; pencil floats in the right gutter. */}
-      <div style={{ position: "relative", padding: "0 22px", marginBottom: 20, textAlign: "center" }}>
+          Session 198 C7 — owner-only edit pencil retired from this block
+          per David's session 198 QA: "replace the edit pencil icon with
+          a button under Flag the Find button that says 'Edit Find'." The
+          new Edit Find CTA renders inside the engagement-stack below
+          (mirrors session 186 Edit Booth pencil-to-CTA pattern on
+          /my-shelf). Position:relative drops since no positioned child
+          remains; title now purely centered. */}
+      <div style={{ padding: "0 22px", marginBottom: 20, textAlign: "center" }}>
         <h1
           style={{
             fontFamily: FONT_LORA,
@@ -1576,24 +1581,6 @@ export default function FindDetailPage() {
           >
             ${Math.round(price)}
           </div>
-        )}
-        {isMyPost && (
-          <button
-            onClick={() => router.push(`/find/${post.id}/edit`)}
-            aria-label="Edit this find"
-            style={{
-              position: "absolute",
-              bottom: 4,
-              right: 14,
-              background: "none",
-              border: "none",
-              padding: 6,
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <Pencil size={18} strokeWidth={1.6} style={{ color: v1.inkMid }} />
-          </button>
         )}
       </div>
 
@@ -1789,6 +1776,57 @@ export default function FindDetailPage() {
               <PiStorefrontBold size={14} aria-hidden style={{ flexShrink: 0 }} />
               Explore this Booth
             </Link>
+          )}
+
+          {/* Session 198 C7 — owner-only "Edit Find" CTA. Replaces the
+              title-block inline pencil retired above per David's session
+              198 QA: "replace the edit pencil icon with a button under
+              Flag the Find button that says 'Edit Find'." Mirrors session
+              186 Edit Booth pencil-to-CTA promotion on /my-shelf: when
+              an owner-edit affordance grows in scope (find page now has
+              status toggle + photo replace + Remove from shelf), a CTA-
+              shaped button reads as an explicit entry point rather than
+              a tiny adornment.
+
+              Same outlined secondary style as Explore this Booth above
+              (cream bg + greenMid border + greenMid text) — Pencil icon
+              from lucide-react size 13 matches the Edit Booth pencil on
+              /my-shelf for cross-surface owner-action visual continuity.
+
+              Stack reading order (vendor viewing own find):
+                1. Flag the Find    — engagement (primary filled green)
+                2. Explore this Booth — navigation (secondary outlined)
+                3. Edit Find        — owner mgmt (secondary outlined)
+              Engagement → navigation → ownership; matches expected
+              tap-priority for a vendor on their own /find page. */}
+          {isMyPost && (
+            <button
+              type="button"
+              onClick={() => router.push(`/find/${post.id}/edit`)}
+              aria-label="Edit Find"
+              style={{
+                width:                   "100%",
+                background:              v2.surface.input,
+                color:                   v2.accent.greenMid,
+                border:                  `1px solid ${v2.accent.greenMid}`,
+                borderRadius:            10,
+                padding:                 9,
+                fontFamily:              FONT_INTER,
+                fontSize:                11,
+                fontWeight:              600,
+                letterSpacing:           "0.12em",
+                textTransform:           "uppercase",
+                display:                 "flex",
+                alignItems:              "center",
+                justifyContent:          "center",
+                gap:                     8,
+                cursor:                  "pointer",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <Pencil size={13} strokeWidth={1.8} aria-hidden style={{ flexShrink: 0 }} />
+              Edit Find
+            </button>
           )}
         </div>
       )}
