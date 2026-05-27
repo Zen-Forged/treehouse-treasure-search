@@ -8,6 +8,47 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.199.0] — 2026-05-26
+
+### Session 199 — Desktop frame chrome end-to-end (Shape B design pass + 4 implementation arcs + 2 QA dial rounds + photo swap-in) — 6 runtime commits + 1 close
+
+David's session-open standup recommended iPhone QA on production v0.198.0; David redirected to a desktop-rendering ask referencing an editorial flatlay mockup. Cost-shape Shape B picked (phone-frame simulation around live app) over Shape A (bg-only) and Shape C (separate marketing landing page). V1 mockup spanned frame style depth axis with 3 frames; David picked **Frame A** (photo-realistic flatlay + photographed iPhone). 4/4 + 2/2 Recommended picks across two prose batches locked 12 frozen decisions D1-D12 + 7-arc implementation plan + 7 Tier B items + 8-row risk register.
+
+Implementation shipped across 4 arcs + 2 mid-session QA dial rounds in single ~3-hour session: Arc 1 (design record + V1 mockup) → Arc 2.1 (primitive + smoke route) → Arc 2.3 (layout adoption) → Arc 2.4 (composition responsive + scrollbar handling) → Arc 3.1 (photo swap-in optimized 3.1MB → 780KB via pngquant) → Arc 2.5 + 3.2 (composition geometry dial + BrandChrome refactor with canonical wordmark + center align + QR code). Each commit built clean across all 48 routes at the boundary gate.
+
+Architectural decision: live PWA renders inside an **iframe** within the phone-stage rectangle, not as direct child rendering. PWA was designed for mobile-viewport-as-scroll-container (StickyMasthead position:fixed, window-scroll listeners, scroll-restore primitives). Iframe gives the PWA its own document scope so every existing PWA feature works pixel-perfect inside the phone-screen without re-engineering. Same-origin iframe shares cookies/auth state. Embedded-mode detection via `?desktop-frame=embedded` URL query prevents infinite recursion.
+
+### Added
+- **`docs/desktop-frame-design.md`** (Arc 1 commit `c649eec`) — design record with 12 frozen decisions D1-D12, 3 component contracts (DesktopFrame + BrandChrome + PhoneStage), 3-arc implementation sequence, 7 Tier B headroom items, 8-row risk register, and Midjourney photo brief with primary prompt + iteration notes for David to run externally in parallel.
+- **`docs/mockups/desktop-frame-v1.html`** (Arc 1 commit `c649eec`) — V1 mockup spans frame style depth axis with 3 frames (A photo-realistic / B stylized SVG / C hybrid) at 1440×900 preview scale + 8-row trade-off matrix.
+- **`<DesktopFrame>` primitive** at `components/DesktopFrame.tsx` (Arc 2.1 commit `0a1596f`) — wraps `{children}` in branded desktop chrome at ≥1024px viewport. Pass-through at <1024px or when running inside the chrome's own iframe (embedded mode). Internal `<BrandChrome>` sub-component renders wordmark image + tagline + ornament + subtext + QR code. Phone bezel CSS-rendered (dark titanium gradient + realistic shadow) wrapping iframe of current path with `?desktop-frame=embedded` appended.
+- **`/desktop-frame-test` smoke route** (Arc 2.1 commit `0a1596f`) — per `feedback_testbed_first_for_ai_unknowns` ✅ Promoted — **6th cumulative firing** (postcard-test → search-bar-test → geolocation-test → vendors-test → share-shelf-test → desktop-frame-test). Mounts primitive with placeholder inner content visible at mobile viewport; David previews chrome at desktop viewport.
+- **`public/desktop-hero.png`** (Arc 3.1 commit `f021d4f`) — photographed flatlay (1672×941) with botanical sprig top-left + antique treehouse sketch top-right + vintage postcard bottom-left + brass key + dried botanicals bottom-right + empty cream-paper center. Optimized via `npx pngquant-bin --quality=70-90 --force` in-place: 3.1MB → 780KB (75% reduction). Quality holds — decorations, postcard handwriting, key patina all legible at production scale.
+- **QR code affordance in BrandChrome** (Arc 3.2 commit `1727fd4`) — encodes `https://app.kentuckytreehouse.com/` so desktop visitors can scan with phone camera → open PWA on iPhone where canonical experience lives. The digital-to-physical bridge thesis applied at the marketing layer. react-qr-code (already a dep from session 196 StoryCtaCard work) at size 120px, fgColor `#5a4a30` brown matching wordmark, bgColor transparent with soft cream quiet zone padding. Caption "Scan to take it with you" in Cormorant italic 13px.
+
+### Changed
+- **`app/layout.tsx`** (Arc 2.3 commit `48d2d3f`) — wraps `{children}` in `<DesktopFrame>` inside FindSessionProvider. Single import + 1 wrap, no removals. At viewport <1024px or when inside DesktopFrame's iframe, the primitive is a pass-through — PWA behavior preserved.
+- **`<DesktopFrame>` composition geometry** (Arc 2.4 commit `0c01a3b`) — previous `BrandChrome` at `left: 8%` + `PhoneStage` at `right: 12%` (absolute positioned to viewport edges) created ~700px empty middle on 1920px viewport. Restructured into centered composition wrapper with `max-width: 1200 → 1100` + flexbox `justifyContent: center` + `gap: 80`. Brand chrome + phone now form a center-anchored ~820px block regardless of viewport width. Composition stays centered at any viewport; photographed flatlay decorations at viewport corners (via `cover` bg) frame the composition on wide screens.
+- **Scrollbar hiding in embedded iframe** (Arc 2.4 commit `0c01a3b`) — David's QA: "any ideas on how to handle the scroll option better so it's not so distracting from the design?" When DesktopFrame detects embedded mode, `document.body.classList.add("desktop-frame-embedded")` activates new `globals.css` rules that hide scrollbars across body + all descendants via `scrollbar-width: none` + `::-webkit-scrollbar { display: none }` + `width: 0; height: 0` defensives.
+- **Hero photo swap** (Arc 3.1 commit `f021d4f`) — `bgStyle.background` swapped from CSS-rendered placeholder (multi-layer radial + linear gradients approximating paper texture) to `url(/desktop-hero.png) center/cover` with `#e8ddc7` (v1.paperCream) fallback before photo loads.
+- **BrandChrome wordmark + alignment + QR** (Arc 2.5 + 3.2 commit `1727fd4`) — David's QA: "Replace the Treehouse and lock symbol you have with the logo we use for the app. The text can be centered underneath it and we should add a QR code." Replaced custom green SVG leaf glyph + CSS-rendered "treehouse FINDS" Cormorant 64px text wordmark with `<img src="/wordmark.png" />` — the canonical app wordmark asset rendered by `<StickyMasthead>` across the entire PWA (botanical glyph + "treehouse" italic-serif + "FINDS" small-caps with horizontal accents, all baked in). Brand chrome container now `textAlign: center` + flex column + alignItems center; all child elements (wordmark img, tagline, ornament, subtext, new QR section) center within the column. Ornament margin `18px 0 14px` → `18px auto 14px`. Tagline 28px → 26px, subtext 16px → 15px (visual rhythm with the tighter wordmark image scale).
+
+### Removed
+- **Custom green SVG leaf glyph + h1 text wordmark** (Arc 3.2 commit `1727fd4`) — Arc 2.1's placeholder rendering retired as scope-adjacent dead-code byproduct per `feedback_dead_code_cleanup_as_byproduct` ✅ Promoted. ~25 LOC retired alongside the feature change (`wordmarkStyle` + `wordmarkSubStyle` styles + inline `<svg>` markup + `<h1>` text composition).
+
+### Fixed
+- **Desktop visitors landing on empty cream bg around 430px PWA column** — root concern resolved. Visible chrome surface for desktop visitors (press, investors, shoppers researching, vendors evaluating); identity beat + interactive demo + scan-to-mobile affordance all in one composition.
+
+### iPhone QA watch-items
+- **Round 3 QA on Vercel preview after this ship** — composition geometry at 1024 / 1280 / 1440 / 1920 viewports; wordmark image proportions vs tagline + QR; QR scan validates (visit `https://app.kentuckytreehouse.com/`); QR transparent-bg quiet zone reads natural on photo or feels like unwanted card overlay; corner decorations stay visible at ultra-wide viewports without aggressive cover crop.
+- **Below 1024px (mobile + tablet portrait)** — Desktop chrome inactive; PWA renders identically to v0.198.0. No regressions expected.
+- **Authed user behavior** — D4 visitor-only gate deferred to Arc 3.3 follow-up. Currently authed users (admin/vendor/shopper) at desktop viewport see the chrome with their PWA inside the iframe. Acceptable for now; future Arc 3.3 adds `useShopperAuth` check to gate chrome to signed-out visitors only.
+- **VisitorTrackerMount duplicate-fire on desktop** — Tier B concern. Parent chrome page + iframe both mount VisitorTrackerMount → 2 `visitor_engaged` events per desktop visitor. Fix candidate: detect `window.self !== window.top` in `lib/visitorTracker.ts` + early-return when iframed.
+
+[v0.199.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.199.0
+
+---
+
 ## [v0.198.0] — 2026-05-26
 
 ### Session 198 — Share My Shelf relocation + UX fixes + iPhone-QA 8-finding bundle + within-session dial — 12 runtime commits + 1 close
