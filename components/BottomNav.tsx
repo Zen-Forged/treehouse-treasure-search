@@ -298,7 +298,15 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     // it's not so close to the bottom of the screen." Bumped 14 -> 22 so the
     // floating pill breathes above the bottom edge instead of crowding it.
     bottom: "max(22px, calc(env(safe-area-inset-bottom, 0px) + 22px))",
-    left: "50%", transform: "translateX(-50%)",
+    left: "50%",
+    // Session 200 — translateZ(0) promotes the pill to its own compositing
+    // layer so iOS Safari repaints it independently of the document flow.
+    // Pairs with the resume-nudge effect below (David iPhone QA v0.199.0:
+    // "the floating nav bar frequently gets detached from the bottom ...
+    // usually if the app is inactive for a while"). Base transform carries
+    // translateZ so React re-renders + the nudge restore both match this
+    // value — no layer-promotion loss from a transform mismatch.
+    transform: "translateX(-50%) translateZ(0)",
     zIndex: 100,
     background: v2.surface.input,
     // Session 159 — David verbatim: "3px padding (top, right, left, bottom)
@@ -352,6 +360,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   // pillGeom: { x, width } in nav-local coordinates. null when no active
   // tab (the pill doesn't render at all then — no flash on first mount).
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const navRef = useRef<HTMLElement>(null);
   const [pillGeom, setPillGeom] = useState<{ x: number; width: number } | null>(null);
 
   // useLayoutEffect fires synchronously after DOM commit and before paint —
@@ -397,8 +406,49 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     return () => window.removeEventListener("resize", reMeasure);
   }, [active]);
 
+  // Session 200 — iOS Safari PWA fixed-bottom repaint fix. David iPhone QA
+  // (v0.199.0): "The floating nav bar frequently gets detached from the
+  // bottom ... usually if the app is inactive for a while." iOS Safari
+  // standalone mis-paints position:fixed; bottom:<offset> elements after
+  // the app is backgrounded/resumed — the pill keeps a stale viewport-
+  // relative position and floats mid-content. (The StickyMasthead is immune
+  // because top:0 anchoring is stable; bottom-anchoring against the dynamic
+  // visual viewport is not — see components/StickyMasthead.tsx session-77
+  // note.) Fix: on every resume signal, nudge the nav's transform one frame
+  // (+0.5px Y, then restore to the translateZ(0) base) to force a repaint
+  // that re-anchors it to the live viewport bottom. visibilitychange +
+  // focus cover app foregrounding; pageshow(persisted) covers bfcache
+  // restore; visualViewport resize covers toolbar/keyboard reflow. Can't be
+  // reproduced on desktop preview (needs real iOS backgrounding) — validated
+  // on-device.
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    let raf = 0;
+    const nudge = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      cancelAnimationFrame(raf);
+      el.style.transform = "translateX(-50%) translateZ(0) translateY(0.5px)";
+      raf = requestAnimationFrame(() => {
+        el.style.transform = "translateX(-50%) translateZ(0)";
+      });
+    };
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) nudge(); };
+    document.addEventListener("visibilitychange", nudge);
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("focus", nudge);
+    window.visualViewport?.addEventListener("resize", nudge);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", nudge);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("focus", nudge);
+      window.visualViewport?.removeEventListener("resize", nudge);
+    };
+  }, []);
+
   return (
-    <nav style={navStyle}>
+    <nav ref={navRef} style={navStyle}>
       {/* Single pill — sibling of all tab buttons, absolutely positioned
           relative to nav. Renders only when an active tab is measured;
           animates x + width between tab geometries via deterministic
