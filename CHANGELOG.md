@@ -8,6 +8,37 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.200.0] — 2026-05-28
+
+### Session 200 — Desktop-frame QA bundle (review-board exemption + iOS nav-detach fix) + /welcome redesign to the /login family — 4 runtime commits + 1 close
+
+Session-open standup recommended Round 3 QA on v0.199.0; David redirected to three iPhone/desktop QA findings on the session-199 desktop frame ship, then a fresh /welcome redesign ask. Findings 1 + 3 shipped; finding 2 closed no-change after reproducing it via local preview (Preview MCP — visibility-first applied to a desktop-rendering bug). The /welcome redesign was cost-shape-triaged (David picked Shape A — match the /login family) and shipped via a 2nd-consumer ActionCard extraction.
+
+### Added
+
+- **`components/ActionCard.tsx`** — shared entry-surface path card extracted from `app/login/page.tsx` (2nd-consumer trigger: `/welcome`). Generalized to render `<a>` for `href` (full nav) or `<button>` for `onClick` (client router.push). Single source of truth so `/login` + `/welcome` path cards stay in lockstep.
+
+### Changed
+
+- **`/welcome` redesigned to match the `/login` entry-surface family** — leads with the `/wordmark.png` brand lockup (96px) + italic Cormorant sub-text, top-anchored (no floating card), two paths rebuilt as shared `<ActionCard>`s (PiStorefrontBold → `/vendor-request`, PiBookmarkSimpleBold → `/me`), header help bubble (PiQuestion → `/contact`) mirroring `/login`. Auth/redirect logic preserved verbatim. David: it "doesn't fit well with the rest of the design ... feel more integrated and substantial as it's the first point of entry for a vendor."
+- **`<DesktopFrame>`** gains a `usePathname()` route-exemption (`FRAME_EXEMPT_PREFIXES = ["/review-board"]`) — 4th pass-through case alongside mobile / embedded / pre-mount. `/review-board` (the internal design control room) no longer renders inside the simulated-iPhone chrome at desktop width.
+- **`<BottomNav>`** floating pill promoted to its own compositing layer (`translateZ(0)`) + a resume-nudge effect (`visibilitychange` / `pageshow[persisted]` / `focus` / `visualViewport` resize) that re-anchors it to the live viewport bottom — fixes the iOS Safari PWA bug where the `position:fixed; bottom:<offset>` pill desyncs and floats mid-content after the app is backgrounded/resumed.
+
+### Removed
+
+- `app/login/page.tsx` local `ActionCard` definition (moved to shared component; byte-identical render via `href`).
+- `app/welcome/page.tsx` local `WelcomeRow` + footer contact link (replaced by shared `ActionCard` + header help bubble).
+
+### iPhone QA watch-items
+
+- **Finding 3 (nav detach) needs on-device validation** — cannot be reproduced on desktop preview; background the PWA a while → resume → confirm the floating nav stays pinned. If it still detaches, escalate to device-inspector.
+- **`/login` authed-cards** (Profile tab while signed in as vendor/admin) — glance to confirm the `ActionCard` extraction left them unchanged (verified-pure refactor, but the authed state needs auth to render).
+- **`/welcome`** — confirm it reads substantial + on-family as a fresh-auth user (or via the `/review-board` welcome tile).
+
+[v0.200.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.200.0
+
+---
+
 ## [v0.199.0] — 2026-05-26
 
 ### Session 199 — Desktop frame chrome end-to-end (Shape B design pass + 4 implementation arcs + 2 QA dial rounds + photo swap-in) — 6 runtime commits + 1 close
