@@ -55,6 +55,7 @@ import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
 import BottomNav from "@/components/BottomNav";
 import FormButton from "@/components/FormButton";
+import ActionCard from "@/components/ActionCard";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 
@@ -1002,92 +1003,6 @@ function LoginInner() {
 // paper hairline → v2.border.light). Same structural shape as session 115
 // (post-it surface + icon bubble + title + italic subtitle + chevron) —
 // entire card is the action, no inner CTA pill.
-function ActionCard({
-  href,
-  title,
-  subtitle,
-  icon,
-}: {
-  href: string;
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <a
-      href={href}
-      style={{
-        display: "block",
-        textDecoration: "none",
-        padding: "14px 14px",
-        background: v2.surface.card,
-        borderRadius: 14,
-        border: `1px solid ${v2.border.light}`,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: v2.accent.greenSoft,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            color: v2.accent.green,
-          }}
-        >
-          {icon}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontFamily: FONT_CORMORANT,
-              fontSize: 16,
-              color: v2.text.primary,
-              // 1.3 per feedback_lora_lineheight_minimum_for_clamp (extended
-              // to Cormorant since session 143 Arc 6.1.2). Card titles can
-              // wrap to 2 lines on narrow phones; descender clearance
-              // matters for any vendor with g/j/p/y in the action label.
-              lineHeight: 1.3,
-              margin: "0 0 2px",
-            }}
-          >
-            {title}
-          </div>
-          <div
-            style={{
-              fontFamily: FONT_CORMORANT,
-              fontStyle: "italic",
-              // Review Board Finding 11B (session 153) — sub-text 12 → 14
-              // on ActionCard. Matches the wordmark sub-text bump for
-              // legibility consistency across all sub-text on /login.
-              fontSize: 14,
-              color: v2.text.secondary,
-              lineHeight: 1.45,
-            }}
-          >
-            {subtitle}
-          </div>
-        </div>
-        <span
-          style={{
-            color: v2.text.secondary,
-            flexShrink: 0,
-            fontSize: 22,
-            lineHeight: 1,
-            fontFamily: FONT_CORMORANT,
-          }}
-        >
-          ›
-        </span>
-      </div>
-    </a>
-  );
-}
-
 function ErrorBanner({ message }: { message: string }) {
   return (
     <motion.div
