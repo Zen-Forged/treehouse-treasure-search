@@ -34,9 +34,19 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import QRCode from "react-qr-code";
 
 const DESKTOP_BREAKPOINT_PX = 1024;
+
+// Session 200 — routes exempt from the desktop frame chrome. /review-board
+// is the internal design control room: it renders its own iframe-tile
+// previews of every app surface, so wrapping it in the simulated-iPhone
+// chrome nests an iframe inside a phone inside the page — confusing + wrong
+// for a desktop-first review surface. David QA (v0.199.0): "I want
+// /review-board to not include the wrapped iphone container look while on
+// desktop." Prefix match so any /review-board/* sub-route is also exempt.
+const FRAME_EXEMPT_PREFIXES = ["/review-board"];
 const PHONE_WIDTH_PX = 360;   // ~430 PWA column compressed to fit photographed iPhone scale
 const PHONE_HEIGHT_PX = 740;  // ~iPhone 14 Pro Max screen ratio adjusted for chrome
 const PHONE_RADIUS_PX = 44;
@@ -83,6 +93,9 @@ type DesktopFrameProps = {
 };
 
 export default function DesktopFrame({ children, iframeSrcOverride }: DesktopFrameProps) {
+  const pathname = usePathname();
+  const isExempt = FRAME_EXEMPT_PREFIXES.some((p) => pathname?.startsWith(p));
+
   const [mounted, setMounted]   = React.useState(false);
   const [isDesktop, setIsDesktop] = React.useState(false);
   const [isEmbedded, setIsEmbedded] = React.useState(false);
@@ -124,7 +137,8 @@ export default function DesktopFrame({ children, iframeSrcOverride }: DesktopFra
   // 1. SSR / pre-hydration → render children (mobile-default; brief flash on desktop)
   // 2. Inside iframe → render children (no chrome, no recursion)
   // 3. Mobile viewport → render children
-  if (!mounted || isEmbedded || !isDesktop) {
+  // 4. Exempt route (e.g. /review-board) → render children (Session 200)
+  if (!mounted || isEmbedded || !isDesktop || isExempt) {
     return <>{children}</>;
   }
 
