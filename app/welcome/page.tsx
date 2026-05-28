@@ -32,11 +32,14 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, Store, HelpCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { PiStorefrontBold, PiBookmarkSimpleBold, PiQuestion } from "react-icons/pi";
 import { getSession, detectUserRoleWithAutoClaim } from "@/lib/auth";
 import { isReviewMode } from "@/lib/reviewMode";
-import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import ActionCard from "@/components/ActionCard";
+import { v1, v2, FONT_CORMORANT } from "@/lib/tokens";
 
 type RenderState = "loading" | "ready";
 
@@ -102,7 +105,15 @@ function WelcomeInner() {
         flexDirection: "column",
       }}
     >
-      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px",
+          flexShrink: 0,
+        }}
+      >
         <button
           onClick={() => router.push("/")}
           aria-label="Back"
@@ -121,194 +132,103 @@ function WelcomeInner() {
         >
           <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
+
+        {/* Help affordance — mirrors /login's header (session 157): icon-only
+            PiQuestion link in a 44×44 bubble matching the back button
+            geometry. Replaces the session-115 footer "Need help? Contact us"
+            link so /welcome's header reads identically to /login's. */}
+        <Link
+          href="/contact"
+          aria-label="Need help? Contact us"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v1.iconBubble,
+            textDecoration: "none",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <PiQuestion size={22} style={{ color: v1.inkPrimary }} />
+        </Link>
       </header>
 
+      {/* Top-anchored brand lockup + path cards — matches /login exactly
+          (session 200, David: redesign /welcome to "feel more integrated
+          and substantial ... first point of entry for a vendor"). Replaces
+          session-115's small vertically-centered card-in-card. The wordmark
+          carries the brand "welcome"; the two paths are shared <ActionCard>s
+          (same component /login's authed cards use). */}
       <div
         style={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          padding: "0 24px 8px",
+          justifyContent: "flex-start",
+          padding: "24px 24px 8px",
           minHeight: 0,
         }}
       >
-        <div
-          style={{
-            background: v2.surface.card,
-            borderRadius: 14,
-            border: `1px solid ${v2.border.light}`,
-            padding: "24px 18px 18px",
-          }}
-        >
-          <p
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <Image
+            src="/wordmark.png"
+            alt="Treehouse Finds"
+            width={300}
+            height={96}
+            priority
             style={{
-              fontFamily: FONT_INTER,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: v2.accent.green,
-              textAlign: "center",
-              margin: "0 0 6px",
+              display: "block",
+              margin: "0 auto 14px",
+              objectFit: "contain",
+              height: 96,
+              width: "auto",
+              maxWidth: "80%",
             }}
-          >
-            Welcome
-          </p>
-          <h1
-            style={{
-              fontFamily: FONT_CORMORANT,
-              fontSize: 22,
-              color: v2.text.primary,
-              margin: "0 0 8px",
-              textAlign: "center",
-              lineHeight: 1.25,
-              letterSpacing: "-0.005em",
-            }}
-          >
-            Start your search
-          </h1>
+          />
           <p
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              fontSize: 13,
-              color: v2.text.primary,
-              textAlign: "center",
-              lineHeight: 1.5,
-              margin: "0 auto 18px",
-              maxWidth: 280,
+              fontSize: 20,
+              fontWeight: 500,
+              color: v2.text.secondary,
+              lineHeight: 1.55,
+              margin: "0 auto",
+              maxWidth: 290,
             }}
           >
             Choose a path &mdash; you can switch anytime.
           </p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <WelcomeRow
-              title="I have a booth"
-              subtitle="Share what's on your shelves."
-              icon={<Store size={16} strokeWidth={1.7} />}
-              onClick={() => router.push("/vendor-request")}
-            />
-            <WelcomeRow
-              title="Just exploring"
-              subtitle="Save your finds and come back to them."
-              icon={<Bookmark size={16} strokeWidth={1.7} />}
-              onClick={() => router.push("/me")}
-            />
-          </div>
         </div>
-      </div>
 
-      <div style={{ flexShrink: 0, padding: "22px 0 26px", textAlign: "center" }}>
-        <Link
-          href="/contact"
+        <div
           style={{
-            fontFamily: FONT_CORMORANT,
-            fontSize: 13,
-            color: v2.text.primary,
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
+            width: "100%",
+            maxWidth: 360,
+            margin: "0 auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
           }}
         >
-          <HelpCircle size={16} strokeWidth={1.6} style={{ color: v2.text.secondary }} />
-          <span
-            style={{
-              textDecoration: "underline",
-              textDecorationStyle: "solid",
-              textDecorationColor: v2.border.light,
-              textUnderlineOffset: 3,
-            }}
-          >
-            Need help? Contact us
-          </span>
-        </Link>
+          <ActionCard
+            title="I have a booth"
+            subtitle="Share what's on your shelves."
+            icon={<PiStorefrontBold size={20} />}
+            onClick={() => router.push("/vendor-request")}
+          />
+          <ActionCard
+            title="Just exploring"
+            subtitle="Save your finds and come back to them."
+            icon={<PiBookmarkSimpleBold size={20} />}
+            onClick={() => router.push("/me")}
+          />
+        </div>
       </div>
     </div>
-  );
-}
-
-function WelcomeRow({
-  title,
-  subtitle,
-  icon,
-  onClick,
-}: {
-  title:    string;
-  subtitle: string;
-  icon:     React.ReactNode;
-  onClick:  () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "12px 14px",
-        background: v2.bg.paper,
-        borderRadius: 10,
-        border: `1px solid ${v2.border.light}`,
-        cursor: "pointer",
-        WebkitTapHighlightColor: "transparent",
-        textAlign: "left",
-        width: "100%",
-      }}
-    >
-      <div
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: "50%",
-          background: v2.accent.greenSoft,
-          color: v2.accent.green,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontFamily: FONT_CORMORANT,
-            fontSize: 14,
-            color: v2.text.primary,
-            lineHeight: 1.25,
-          }}
-        >
-          {title}
-        </div>
-        <div
-          style={{
-            fontFamily: FONT_CORMORANT,
-            fontStyle: "italic",
-            fontSize: 11.5,
-            color: v2.text.primary,
-            lineHeight: 1.4,
-            marginTop: 1,
-          }}
-        >
-          {subtitle}
-        </div>
-      </div>
-      <span
-        style={{
-          color: v2.text.secondary,
-          fontSize: 22,
-          lineHeight: 1,
-          fontFamily: FONT_CORMORANT,
-          flexShrink: 0,
-        }}
-      >
-        ›
-      </span>
-    </button>
   );
 }
 
