@@ -483,7 +483,7 @@ export function ShelfImageShareScreen({
             <StoryFindCard post={picks[2]} vendor={vendor} index={3} />
           </div>
           <div data-shelf-card="cta">
-            <StoryCtaCard vendor={vendor} boothUrl={boothUrl} />
+            <StoryCtaCard vendor={vendor} mall={mall} boothUrl={boothUrl} />
           </div>
         </div>
       )}

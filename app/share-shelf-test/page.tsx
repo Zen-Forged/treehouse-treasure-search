@@ -121,7 +121,7 @@ export default function ShareShelfTestPage() {
           </CardWrapper>
 
           <CardWrapper label="5 · CTA" width={1080 * SCALE} height={1920 * SCALE}>
-            <StoryCtaCard vendor={VENDOR} boothUrl={BOOTH_URL} />
+            <StoryCtaCard vendor={VENDOR} mall={FIXTURE_MALL} boothUrl={BOOTH_URL} />
           </CardWrapper>
         </div>
       </Section>
