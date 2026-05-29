@@ -682,6 +682,51 @@ function DiscoveryFeedInner() {
             <EmptyState
               title="The shelves are quiet."
               subtitle="Check back soon — new finds land here the moment a vendor posts them."
+              cta={
+                <div
+                  style={{
+                    display:        "flex",
+                    flexDirection:  "column",
+                    alignItems:     "center",
+                    gap:            8,
+                  }}
+                >
+                  <p
+                    style={{
+                      fontFamily: FONT_LORA,
+                      fontStyle:  "italic",
+                      fontSize:   14,
+                      color:      v1.inkMid,
+                      lineHeight: 1.6,
+                      maxWidth:   280,
+                      margin:     0,
+                    }}
+                  >
+                    {selectedMall
+                      ? `Have a booth at ${selectedMall.name}?`
+                      : "Have a booth at one of these locations?"}
+                  </p>
+                  <Link
+                    href={
+                      selectedMall
+                        ? `/vendor-request?mall_id=${selectedMall.id}&mall_name=${encodeURIComponent(selectedMall.name)}`
+                        : "/vendor-request"
+                    }
+                    style={{
+                      fontFamily:     FONT_LORA,
+                      fontStyle:      "italic",
+                      fontSize:       15,
+                      fontWeight:     600,
+                      color:          v1.green,
+                      textDecoration: "none",
+                      borderBottom:   `1px solid ${v1.green}`,
+                      paddingBottom:  1,
+                    }}
+                  >
+                    Request a digital booth →
+                  </Link>
+                </div>
+              }
             />
           )
         ) : (
