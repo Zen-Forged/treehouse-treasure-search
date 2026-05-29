@@ -46,3 +46,30 @@ export function navigateUrl(destLat: number, destLng: number): string {
   }
   return `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
 }
+
+/**
+ * Opens the best native-maps experience for the current platform.
+ *
+ * - iOS (maps:// scheme): assign window.location.href so the OS intercepts
+ *   the scheme and hands off to Apple Maps. A new tab is wrong for a custom
+ *   scheme.
+ * - Everything else (https Google Maps web URL): open in a NEW tab via
+ *   window.open. window.open always targets a top-level browser tab, so it
+ *   works even when the app is running inside the desktop phone-frame iframe
+ *   — assigning location.href there would try to navigate the *iframe* to
+ *   Google Maps, which refuses to render in a frame (X-Frame-Options), so
+ *   nothing opened on desktop. It also keeps the PWA in place rather than
+ *   replacing it. Falls back to location.href if the popup is blocked.
+ *
+ * No-op on the server.
+ */
+export function openNavigation(destLat: number, destLng: number): void {
+  if (typeof window === "undefined") return;
+  const url = navigateUrl(destLat, destLng);
+  if (url.startsWith("maps:")) {
+    window.location.href = url;
+    return;
+  }
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) window.location.href = url;
+}

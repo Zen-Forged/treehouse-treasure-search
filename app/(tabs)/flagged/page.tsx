@@ -53,7 +53,7 @@ import SavedFindRow from "@/components/v2/SavedFindRow";
 import SavedEmptyState from "@/components/v2/SavedEmptyState";
 import { milesFromUser } from "@/lib/distance";
 import { useUserLocation } from "@/lib/useUserLocation";
-import { navigateUrl } from "@/lib/mapsDeepLink";
+import { openNavigation } from "@/lib/mapsDeepLink";
 import type { Post, Mall } from "@/types/treehouse";
 
 // Module-scope cache + scroll key — same shape as session 99 baseline.
@@ -331,9 +331,10 @@ export default function FlaggedPage() {
       saved_count: mall.totalSaves,
     });
     if (mall.mallLat != null && mall.mallLng != null) {
-      // window.location.href, not router.push — native maps deep-links use
-      // the maps:// scheme (iOS) which Next router can't handle.
-      window.location.href = navigateUrl(mall.mallLat, mall.mallLng);
+      // openNavigation routes by platform: iOS maps:// via location.href,
+      // web Google Maps via window.open (new tab — works inside the desktop
+      // phone-frame iframe, where location.href silently failed).
+      openNavigation(mall.mallLat, mall.mallLng);
     }
   }
 

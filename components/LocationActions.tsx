@@ -50,7 +50,7 @@
 import * as React from "react";
 import { Navigation } from "lucide-react";
 import { useUserLocation } from "@/lib/useUserLocation";
-import { navigateUrl }     from "@/lib/mapsDeepLink";
+import { openNavigation }  from "@/lib/mapsDeepLink";
 import { track }           from "@/lib/clientEvents";
 import { v2, FONT_INTER }  from "@/lib/tokens";
 
@@ -84,7 +84,7 @@ export default function LocationActions({
       vendor_id: vendorId,
       post_id:   postId,
     });
-    window.location.href = navigateUrl(mallLat, mallLng);
+    openNavigation(mallLat, mallLng);
   };
 
   return (

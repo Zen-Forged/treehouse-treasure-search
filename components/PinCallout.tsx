@@ -40,7 +40,7 @@ import * as React from "react";
 import { MapPin, Navigation } from "lucide-react";
 import { PiCaretLeft, PiCaretRight, PiLeaf } from "react-icons/pi";
 import { v1, v2, FONT_NUMERAL, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
-import { navigateUrl } from "@/lib/mapsDeepLink";
+import { openNavigation } from "@/lib/mapsDeepLink";
 import { track } from "@/lib/clientEvents";
 import DistancePill from "@/components/DistancePill";
 import type { Mall } from "@/types/treehouse";
@@ -100,7 +100,7 @@ export default function PinCallout({
       surface:   "map_callout",
       mall_slug: mall.slug,
     });
-    window.location.href = navigateUrl(Number(mall.latitude), Number(mall.longitude));
+    openNavigation(Number(mall.latitude), Number(mall.longitude));
   };
 
   // Session 123 — body shifts from discovery vocabulary ("X booths · Y finds")
