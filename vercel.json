@@ -7,5 +7,11 @@
     "app/api/post-caption/route.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/refresh-mall-hours",
+      "schedule": "0 8 * * 1"
+    }
+  ]
 }
