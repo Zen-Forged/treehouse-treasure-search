@@ -23,8 +23,8 @@
 
 "use client";
 
-import { PiLeafFill } from "react-icons/pi";
 import { FONT_CORMORANT, FONT_INTER, FONT_NUMERAL, v2 } from "@/lib/tokens";
+import { ShelfLeafBubble, ShelfBrandFooter } from "./brandMarks";
 import type { Post, Vendor } from "@/types/treehouse";
 
 export interface FeedCardProps {
@@ -69,7 +69,7 @@ export function FeedCard({
       <div
         style={{
           height:         168,
-          background:     `linear-gradient(160deg, ${v2.accent.green} 0%, ${v2.accent.greenMid} 100%)`,
+          background:     `linear-gradient(160deg, ${v2.accent.green} 0%, ${v2.accent.greenDeep} 100%)`,
           display:        "flex",
           alignItems:     "center",
           justifyContent: "center",
@@ -117,12 +117,12 @@ export function FeedCard({
           />
         )}
 
-        {/* Bottom dark gradient overlay */}
+        {/* Bottom dark gradient overlay (Arc 3: deeper for meta + footer) */}
         <div
           style={{
             position: "absolute",
             inset:    0,
-            background: "linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.55) 100%)",
+            background: "linear-gradient(180deg, transparent 46%, rgba(0,0,0,0.62) 100%)",
           }}
         />
 
@@ -149,21 +149,8 @@ export function FeedCard({
         )}
 
         {/* Leaf bubble — upper right, Treehouse signature */}
-        <div
-          style={{
-            position:        "absolute",
-            top:             48,
-            right:           48,
-            width:           68,
-            height:          68,
-            borderRadius:    34,
-            background:      v2.surface.card,
-            display:         "flex",
-            alignItems:      "center",
-            justifyContent:  "center",
-          }}
-        >
-          <PiLeafFill size={40} color={v2.accent.green} />
+        <div style={{ position: "absolute", top: 48, right: 48 }}>
+          <ShelfLeafBubble size={68} tone="onDark" />
         </div>
 
         {/* Bottom meta — title + price on darkest gradient stop */}
@@ -172,7 +159,7 @@ export function FeedCard({
             position:  "absolute",
             left:      72,
             right:     72,
-            bottom:    80,
+            bottom:    140,
             color:     v2.surface.card,
           }}
         >
@@ -203,6 +190,11 @@ export function FeedCard({
               ${price}
             </div>
           )}
+        </div>
+
+        {/* Wordmark footer — brand present on the standalone Feed post */}
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 56 }}>
+          <ShelfBrandFooter tone="onDark" />
         </div>
       </div>
     </div>
