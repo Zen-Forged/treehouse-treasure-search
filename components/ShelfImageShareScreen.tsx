@@ -11,7 +11,7 @@
 //   2. Eyebrow line — "5-card Story sequence · Tap Share to post"
 //   3. Carousel preview — horizontal scroll-snap of 5 captured-card <img>s
 //      + position indicator ("Card N of 5")
-//   4. Action row — Share (primary) / Download / Copy caption / Copy link
+//   4. Action row — Save to Photos (primary) / Send to an app / Copy caption / Copy link
 //   5. Caption echo (read-only) for vendor preview
 //   6. Footer disclaimer
 //   7. Off-screen capture container (5 Arc 1 cards mounted at full 1080×N
@@ -334,9 +334,9 @@ export function ShelfImageShareScreen({
             lineHeight:    1.5,
           }}
         >
-          <Step num={1}>Preview your 5 cards below — drag chips to reorder.</Step>
-          <Step num={2}>Tap Share, then pick Facebook, Instagram, or any app.</Step>
-          <Step num={3}>We&apos;ll attach the images and copy your caption to paste.</Step>
+          <Step num={1}>Save your 5 cards to Photos.</Step>
+          <Step num={2}>Open Facebook (or Instagram) and start a new post.</Step>
+          <Step num={3}>Add the cards from your camera roll — your caption&apos;s already copied to paste.</Step>
         </ol>
       </div>
 
@@ -389,15 +389,15 @@ export function ShelfImageShareScreen({
         <ActionButton
           primary
           disabled={wrapperState !== "ready"}
-          icon={<PiShareFat size={18} color={v2.surface.card} />}
-          label="Share"
-          onClick={handleNativeShare}
+          icon={<PiDownloadSimple size={18} color={v2.surface.card} />}
+          label="Save 5 cards to Photos"
+          onClick={handleDownload}
         />
         <ActionButton
           disabled={wrapperState !== "ready"}
-          icon={<PiDownloadSimple size={18} color={v2.text.primary} />}
-          label="Download all 5 cards"
-          onClick={handleDownload}
+          icon={<PiShareFat size={18} color={v2.text.primary} />}
+          label="Send to an app"
+          onClick={handleNativeShare}
         />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <ActionButton
