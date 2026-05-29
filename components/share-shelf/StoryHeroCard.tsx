@@ -1,36 +1,44 @@
 // components/share-shelf/StoryHeroCard.tsx
 //
 // Session 196 Arc 1.2 — Story sequence card 1 of 5 ("booth hero").
+// Session 201 Arc 3 brand-identity pass — see "Arc 3 refinements" below.
 //
 // Renders at fixed 1080×1920 (canonical IG/FB Story aspect 9:16). No
-// position styling on the component itself — the wrapper (Arc 2's
-// refactored <ShelfImageShareScreen>) handles off-screen positioning
-// (left: -99999) for html2canvas-pro capture. The /share-shelf-test
-// smoke route (Arc 1.6) wraps with transform:scale to show in viewport.
+// position styling consumed externally — the wrapper (Arc 2's refactored
+// <ShelfImageShareScreen>) handles off-screen positioning (left: -99999)
+// for html2canvas-pro capture. The /share-shelf-test smoke route wraps
+// with transform:scale to show in viewport.
 //
 // Composition per Frame ii balanced co-brand (V2 design D5):
-//   - Green-gradient bg (v2.accent.green → v2.accent.greenMid, 160°)
-//   - Top section:   "This week at" Inter small-caps eyebrow
-//                  + leaf glyph at low-opacity centerpiece (Treehouse motif)
-//   - Mid section:   Vendor display_name Cormorant italic (large)
-//                  + Booth N pill Inter small-caps
-//                  + Mall city/state Cormorant italic small
-//   - Bottom section: AI-gen hook line Cormorant italic
-//                   with hairline top-border separator
+//   - Green→greenDeep gradient bg (real tonal depth; see Arc 3 note)
+//   - Large faint leaf backdrop motif filling the composition
+//   - Leaf-bubble corner signature (shared <ShelfLeafBubble>, top-right)
+//   - Top:    "This week at" Inter small-caps eyebrow
+//   - Center: vendor display_name Cormorant italic (large)
+//             + Booth N pill + mall city/state (vertically centered)
+//   - Bottom: AI-gen hook line Cormorant italic w/ hairline separator
+//             + "Treehouse Finds" wordmark footer (shared <ShelfBrandFooter>)
 //
-// Brand chrome ~40% (balanced co-brand per D5). Vendor identity reads
-// foreground; Treehouse signature (green palette + leaf motif + wordmark
-// recognizable elsewhere in sequence) frames it.
+// Arc 3 refinements (session 201, Shape B brand-signature system):
+//   1. The green/greenMid tokens are both #1F4A31 (session-168 foundation
+//      consolidation), so the old green→greenMid gradient was a FLAT fill —
+//      the #1 reason the hero read empty. Now green→greenDeep (#143020) for
+//      real depth.
+//   2. Old standalone 280px @ 18% leaf was a faint centered watermark; it's
+//      now a large 620px @ ~7% backdrop motif that fills the dead band and
+//      reads as intentional composition.
+//   3. Added the leaf-bubble corner mark (matches every other card) + the
+//      wordmark footer (wordmark now present on slide 1, not buried at the
+//      CTA card). Content vertically centered via flex so the card no longer
+//      has a large empty spacer band.
 //
 // All sizes calibrated to 1080×1920 canvas (≈7.7× the V2 mockup scale).
-// Text rendering uses FONT_CORMORANT (canonical italic serif post-session
-// 138 v2 migration) + FONT_INTER (small-caps + eyebrow) + FONT_NUMERAL
-// (Times New Roman, used in CTA card not here).
 
 "use client";
 
 import { PiLeafFill } from "react-icons/pi";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
+import { ShelfLeafBubble, ShelfBrandFooter } from "./brandMarks";
 import type { Mall, Vendor } from "@/types/treehouse";
 
 export interface StoryHeroCardProps {
@@ -69,114 +77,143 @@ export function StoryHeroCard({
         // ─── Capture-node canvas (fixed 1080×1920) ─────────────────────
         width:    1080,
         height:   1920,
+        position: "relative",
+        overflow: "hidden",
         boxSizing: "border-box",
-        padding:  96,
-        // ─── Frame ii balanced co-brand chrome ─────────────────────────
-        background: `linear-gradient(160deg, ${v2.accent.green} 0%, ${v2.accent.greenMid} 100%)`,
+        // ─── Arc 3: real tonal depth (green → greenDeep) ───────────────
+        background: `linear-gradient(155deg, ${v2.accent.green} 0%, ${v2.accent.green} 42%, ${v2.accent.greenDeep} 100%)`,
         color:      v2.surface.card,
-        // ─── Vertical flow: top → mid (centered) → bottom hook ─────────
-        display:        "flex",
-        flexDirection:  "column",
-        textAlign:      "center",
-        // Anti-alias text consistently across capture.
         WebkitFontSmoothing: "antialiased",
       }}
     >
-      {/* ─── Top: eyebrow + leaf-glyph motif ───────────────────────── */}
+      {/* ─── Backdrop leaf motif — large, faint, fills the composition ── */}
       <div
         style={{
-          fontFamily:    FONT_INTER,
-          fontSize:      32,
-          fontWeight:    700,
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
-          color:         "rgba(255, 252, 245, 0.82)",
-          marginBottom:  40,
+          position:      "absolute",
+          left:          "50%",
+          top:           "54%",
+          transform:     "translate(-50%, -50%) rotate(-12deg)",
+          color:         "rgba(255, 252, 245, 0.07)",
+          pointerEvents: "none",
         }}
       >
-        This week at
+        <PiLeafFill size={620} />
       </div>
 
+      {/* ─── Leaf-bubble corner signature (matches every card) ────────── */}
+      <div style={{ position: "absolute", top: 64, right: 64 }}>
+        <ShelfLeafBubble size={84} tone="onDark" />
+      </div>
+
+      {/* ─── Content layer ────────────────────────────────────────────── */}
       <div
         style={{
-          marginBottom: 40,
-          color:        "rgba(255, 252, 245, 0.18)",
-          display:      "flex",
-          justifyContent: "center",
+          position:       "relative",
+          zIndex:         1,
+          height:         "100%",
+          boxSizing:      "border-box",
+          padding:        96,
+          display:        "flex",
+          flexDirection:  "column",
+          textAlign:      "center",
         }}
       >
-        <PiLeafFill size={280} />
-      </div>
-
-      {/* ─── Mid: vendor name + booth pill + mall ──────────────────── */}
-      <div
-        style={{
-          fontFamily:  FONT_CORMORANT,
-          fontStyle:   "italic",
-          fontWeight:  500,
-          fontSize:    132,
-          lineHeight:  1.1,
-          color:       v2.surface.card,
-          marginBottom: 24,
-        }}
-      >
-        {boothName}
-      </div>
-
-      {boothNo && (
+        {/* Top: eyebrow */}
         <div
           style={{
             fontFamily:    FONT_INTER,
             fontSize:      32,
             fontWeight:    700,
-            letterSpacing: "0.16em",
+            letterSpacing: "0.22em",
             textTransform: "uppercase",
-            color:         "rgba(255, 252, 245, 0.85)",
-            marginBottom:  20,
+            color:         "rgba(255, 252, 245, 0.82)",
           }}
         >
-          Booth {boothNo}
+          This week at
         </div>
-      )}
 
-      {(mallName || mallCityState) && (
+        {/* Center: vendor name + booth pill + mall (vertically centered) */}
         <div
           style={{
-            fontFamily: FONT_CORMORANT,
-            fontStyle:  "italic",
-            fontWeight: 400,
-            fontSize:   44,
-            lineHeight: 1.3,
-            color:      "rgba(255, 252, 245, 0.78)",
+            flex:           1,
+            display:        "flex",
+            flexDirection:  "column",
+            justifyContent: "center",
           }}
         >
-          {mallName}
-          {mallCityState && (
-            <>
-              <br />
-              {mallCityState}
-            </>
+          <div
+            style={{
+              fontFamily:  FONT_CORMORANT,
+              fontStyle:   "italic",
+              fontWeight:  500,
+              fontSize:    132,
+              lineHeight:  1.1,
+              color:       v2.surface.card,
+              marginBottom: 24,
+            }}
+          >
+            {boothName}
+          </div>
+
+          {boothNo && (
+            <div
+              style={{
+                fontFamily:    FONT_INTER,
+                fontSize:      32,
+                fontWeight:    700,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color:         "rgba(255, 252, 245, 0.85)",
+                marginBottom:  20,
+              }}
+            >
+              Booth {boothNo}
+            </div>
+          )}
+
+          {(mallName || mallCityState) && (
+            <div
+              style={{
+                fontFamily: FONT_CORMORANT,
+                fontStyle:  "italic",
+                fontWeight: 400,
+                fontSize:   44,
+                lineHeight: 1.3,
+                color:      "rgba(255, 252, 245, 0.78)",
+              }}
+            >
+              {mallName}
+              {mallCityState && (
+                <>
+                  <br />
+                  {mallCityState}
+                </>
+              )}
+            </div>
           )}
         </div>
-      )}
 
-      {/* ─── Spacer pushes hook to bottom ──────────────────────────── */}
-      <div style={{ flex: 1 }} />
+        {/* Bottom: AI-gen hook + hairline + wordmark footer */}
+        <div>
+          <div
+            style={{
+              fontFamily: FONT_CORMORANT,
+              fontStyle:  "italic",
+              fontWeight: 500,
+              fontSize:   56,
+              lineHeight: 1.25,
+              color:      v2.surface.card,
+              borderTop:  "1px solid rgba(255, 252, 245, 0.28)",
+              paddingTop: 40,
+            }}
+          >
+            {aiHook || `${findCount} new finds on the shelf →`}
+          </div>
 
-      {/* ─── Bottom: AI-gen hook with hairline top-border ──────────── */}
-      <div
-        style={{
-          fontFamily: FONT_CORMORANT,
-          fontStyle:  "italic",
-          fontWeight: 500,
-          fontSize:   56,
-          lineHeight: 1.25,
-          color:      v2.surface.card,
-          borderTop:  "1px solid rgba(255, 252, 245, 0.28)",
-          paddingTop: 40,
-        }}
-      >
-        {aiHook || `${findCount} new finds on the shelf →`}
+          <div style={{ marginTop: 44 }}>
+            <ShelfBrandFooter tone="onDark" />
+          </div>
+        </div>
       </div>
     </div>
   );
