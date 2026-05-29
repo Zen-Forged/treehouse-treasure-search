@@ -342,6 +342,11 @@ export const v2 = {
     greenDark: "var(--th-v2-accent-green-dark)",
     greenSoft: "var(--th-v2-accent-green-soft)",
     greenMid:  "var(--th-v2-accent-green-mid)",
+    // Session 201 — darker forest stop for Share My Shelf brand-chrome
+    // gradients (Story hero + Feed strip). green/greenMid are both
+    // #1F4A31, so those gradients were flat; greenDeep is the bottom stop
+    // that gives them real depth. Social-asset capture only.
+    greenDeep: "var(--th-v2-accent-green-deep)",
     // Deep brick — error text + glyph color (ErrorBanner). Preserves
     // canonical v1.red #8B2020 hue across the v2 migration; only
     // translucency retires (rgba → solid surface.error blend).

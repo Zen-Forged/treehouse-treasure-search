@@ -232,6 +232,13 @@
   --th-v2-accent-green-dark: #1F4A31;
   --th-v2-accent-green-soft: #E8EEE6;
   --th-v2-accent-green-mid:  #1F4A31;
+  /* Session 201 — Share My Shelf brand chrome depth stop. The unified
+     green/greenMid/greenDark are all #1F4A31 (session 168 foundation
+     consolidation), so the Story-hero + Feed-strip green gradients read
+     as a flat fill. greenDeep is the darker bottom stop that gives those
+     gradients real tonal depth. Additive; specific to social-asset
+     capture, mirrors v2.priceGold's same-feature precedent (session 196). */
+  --th-v2-accent-green-deep: #143020;
 
   --th-v2-brown:      #6A513E;
   --th-v2-brown-soft: #B8A996;
