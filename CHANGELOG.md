@@ -8,6 +8,28 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.202.0] — 2026-05-29
+
+### Session 202 — On-device QA of the session-201 ships (all clean) + Share My Shelf instructions reshape — 1 runtime commit + 1 close
+
+A `/session-open`-recommended QA pass. **All four session-201 ships passed:** nav-detach (background→resume keeps the floating nav pinned — the session-200 fix validated on-device); the map-led CTA renders the real cream pinned-map in the captured Story CTA on production; desktop Directions verified locally via a live `window.open` intercept inside the un-sandboxed, same-origin DesktopFrame iframe (captured the Google Maps URL + `_blank` + `noopener,noreferrer` + handle returned + no fallback — the iframe-navigation bug is structurally dead); the empty-mall vendor CTA's deep-link → form-prefill contract verified. The one finding off the walk drove a single-commit reshape of the Share My Shelf instructions.
+
+### Changed
+
+- **Share My Shelf action hierarchy + instructions (`components/ShelfImageShareScreen.tsx`)** — the old "Tap Share, then pick Facebook … we'll attach the images" promised what Facebook's iOS share target silently drops (a multi-image payload — the D14 carry, now confirmed). Reshaped (Option A): the primary green action flips to **"Save 5 cards to Photos"** (the iOS save-to-Photos handler, which already auto-copies the caption); native share is demoted + relabeled **"Send to an app"** (still serves Instagram / Messages / AirDrop, which genuinely accept the files — no longer dangling Facebook as a one-tap that drops images); the 3 steps are rewritten to the honest **save → post → paste** flow. No logic change (+10/-10 LOC).
+
+### Fixed
+
+- **The D14 multi-file carry** (open since session 198) — resolved by routing around Facebook's share target (instruct download-then-manual-post) rather than relying on a native handoff that silently degrades.
+
+### iPhone QA watch-items
+
+- Auth-gated /my-shelf eyeball: confirm the green button reads "Save 5 cards to Photos" + the 3 honest steps land right (surface isn't reachable in local preview without vendor auth + a ≥3-post booth).
+
+[v0.202.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.202.0
+
+---
+
 ## [v0.201.0] — 2026-05-29
 
 ### Session 201 — Share My Shelf Arc 3 brand-identity pass + desktop Directions fix + map-led CTA card + empty-mall vendor CTA — 8 runtime commits + 1 close
