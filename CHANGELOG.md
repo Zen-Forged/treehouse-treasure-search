@@ -8,6 +8,42 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.201.0] — 2026-05-29
+
+### Session 201 — Share My Shelf Arc 3 brand-identity pass + desktop Directions fix + map-led CTA card + empty-mall vendor CTA — 8 runtime commits + 1 close
+
+Session-open standup recommended on-device QA of the session-200 ships; David redirected to **Share My Shelf Arc 3** (brand-identity pass). Audited the four `components/share-shelf/` cards via the Preview MCP (Preview-as-visibility-tool, session-200 pattern) — the find/feed cards already cleared the "share-worthy" bar; the hero read flat (the green gradient's two stops both resolve to `#1F4A31` since the session-168 consolidation = a literal flat fill) and the wordmark was buried on the CTA card alone. David picked **Brand-signature system (Shape B)** + keep the text wordmark for now. Then two QA-driven follow-ons: the desktop **Directions** button did nothing (the iframe couldn't navigate to Google Maps), and David's QA verdict on the CTA card — the QR is dead weight on a phone-viewed Story — drove a **map-led CTA redesign**. Finally a long-pending uncommitted ask: a **vendor-request CTA on the empty-mall state**.
+
+### Added
+
+- **`v2.accent.greenDeep` (`#143020`)** — darker forest stop so the Share My Shelf brand-chrome gradients (Story hero + Feed strip) read with real tonal depth instead of a flat fill. Additive, social-asset-capture only (mirrors `v2.priceGold`'s session-196 precedent).
+- **`components/share-shelf/brandMarks.tsx`** — two shared brand-signature primitives: `ShelfLeafBubble` (the leaf corner mark, extracted from the inline copies on StoryFindCard + FeedCard, tone-aware onDark/onLight) + `ShelfBrandFooter` (the "Treehouse Finds" wordmark lockup). Every card now carries the same corner + footer so the 5-card sequence reads as one designed set.
+- **`lib/mapsDeepLink.ts` `openNavigation()`** — platform-routing helper: iOS `maps://` via `location.href`, web Google Maps via `window.open(_blank)`.
+- **Vendor-request CTA on the empty-mall Home state** — "Have a booth at {mall}?" + "Request a digital booth →" deep-linked to `/vendor-request?mall_id=…&mall_name=…` (form pre-fills the location). Uses `EmptyState`'s existing `cta` slot.
+
+### Changed
+
+- **StoryHeroCard** — green→greenDeep gradient depth + a large faint leaf backdrop motif (fills the dead band) + leaf-bubble corner + wordmark footer + flex-centered name block. The flat/empty hero is now dense + designed.
+- **StoryFindCard + FeedCard** — adopt the shared marks + gain the wordmark footer; deeper bottom gradient so meta + footer read; Feed strip gets the gradient depth.
+- **StoryCtaCard — map-led redesign** — the QR (dead weight on a phone-viewed Story) is replaced with a pinned Mapbox Static Images snapshot (cream brand style, session 181) + a layered CTA: "Come find us at {mall}" + city/state + "Bookmark the booth in the app". Gains a `mall` prop (threaded through `ShelfImageShareScreen` + the smoke route); a probe `Image` falls the box back to a pin glyph if the snapshot can't load (no token / preview-origin 403). Production (`app.kentuckytreehouse.com` referer-allowlisted) loads the real map.
+- **Directions opens in a new tab on web** — all three consumers (LocationActions "Take the Trip", PinCallout "Go", /flagged "Get Directions") route through `openNavigation`. Fixes desktop, where the old `location.href` tried to navigate the DesktopFrame iframe to Google Maps (refused via `X-Frame-Options`), so nothing happened.
+
+### Removed
+
+- StoryCtaCard QR code + `react-qr-code` import + URL preview (replaced by the map; `boothUrl` kept on the contract as reserved `_boothUrl`).
+- Inline leaf-bubble copies on StoryFindCard + FeedCard + the standalone wordmark on StoryCtaCard (replaced by the shared marks; `PiLeafFill` / `FONT_NUMERAL` imports retire as dead-code byproducts).
+
+### iPhone QA watch-items
+
+- **Map-led CTA card** — confirm the actual cream pinned-map renders on a production capture (the local preview shows the pin-glyph fallback because the Mapbox token 403s off the production origin).
+- **Directions** — click on desktop to confirm a Google Maps tab opens; the iOS `maps://` path is unchanged but worth a tap on-device.
+- **Empty-mall vendor CTA** — scope Home to an empty mall on-device to confirm the prompt + pre-scoped link read well.
+- **Carry-over (from v0.200.0):** Finding 3 nav-detach still needs on-device validation.
+
+[v0.201.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.201.0
+
+---
+
 ## [v0.200.0] — 2026-05-28
 
 ### Session 200 — Desktop-frame QA bundle (review-board exemption + iOS nav-detach fix) + /welcome redesign to the /login family — 4 runtime commits + 1 close
