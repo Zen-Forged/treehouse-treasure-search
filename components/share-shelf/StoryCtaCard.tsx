@@ -28,7 +28,8 @@
 "use client";
 
 import QRCode from "react-qr-code";
-import { FONT_CORMORANT, FONT_INTER, FONT_NUMERAL, v1, v2 } from "@/lib/tokens";
+import { FONT_CORMORANT, FONT_INTER, v1, v2 } from "@/lib/tokens";
+import { ShelfLeafBubble, ShelfBrandFooter } from "./brandMarks";
 import type { Vendor } from "@/types/treehouse";
 
 export interface StoryCtaCardProps {
@@ -56,6 +57,7 @@ export function StoryCtaCard({ vendor, boothUrl, domRef }: StoryCtaCardProps) {
         height:   1920,
         boxSizing: "border-box",
         padding:  96,
+        position:   "relative",
         // ─── Frame ii dashed-pill CTA chrome ───────────────────────────
         background: v1.postit,
         border:     `8px dashed ${v2.accent.green}`,
@@ -68,6 +70,11 @@ export function StoryCtaCard({ vendor, boothUrl, domRef }: StoryCtaCardProps) {
         WebkitFontSmoothing: "antialiased",
       }}
     >
+      {/* ─── Leaf-bubble corner signature (matches every card) ────────── */}
+      <div style={{ position: "absolute", top: 56, right: 56 }}>
+        <ShelfLeafBubble size={80} tone="onLight" />
+      </div>
+
       {/* ─── Header: small-caps "Visit Booth N" ────────────────────── */}
       {boothNo && (
         <div
@@ -133,18 +140,8 @@ export function StoryCtaCard({ vendor, boothUrl, domRef }: StoryCtaCardProps) {
         {urlPreview}
       </div>
 
-      {/* ─── Wordmark footer — Times New Roman green ───────────────── */}
-      <div
-        style={{
-          fontFamily:    FONT_NUMERAL,
-          fontWeight:    600,
-          fontSize:      40,
-          letterSpacing: "0.05em",
-          color:         v2.accent.green,
-        }}
-      >
-        Treehouse Finds
-      </div>
+      {/* ─── Wordmark footer — shared lockup, matches every card ──────── */}
+      <ShelfBrandFooter tone="onLight" />
     </div>
   );
 }
