@@ -67,8 +67,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Clock } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
+import { googleListingUrl } from "@/lib/mapsDeepLink";
 import {
   v1,
   v2,
@@ -658,6 +659,13 @@ export function MallBlock({
     : [mallName, mallCity].filter(Boolean).join(", ");
   const href = mapsUrl(mapQuery);
   const trimmedDirections = directionsText?.trim() || null;
+  // Session 203 (Shape A — hours via deep-link). The Google place listing is
+  // where merchant-maintained hours render; we route to it rather than
+  // mirroring hours data that would go stale. Name-first query resolves the
+  // business listing reliably; address + city disambiguate.
+  const hoursUrl = googleListingUrl(
+    [mallName, address, mallCity].filter(Boolean).join(", "),
+  );
 
   return (
     // Session 128 (refinement design D6): grid layout retired in favor of
@@ -755,6 +763,37 @@ export function MallBlock({
           {trimmedDirections}
         </div>
       )}
+      {/* Session 203 (Shape A) — hours via deep-link. Routes to the Google
+          place listing, where merchant-maintained hours (+ "Open now / Closed"
+          status) render natively and stay current with zero maintenance on
+          our side. Plain <a target="_blank"> opens a top-level tab even inside
+          the desktop phone-frame iframe (session 199). Renders unconditionally
+          — every mall has a name to resolve the listing against. Honest copy:
+          we route to where hours live rather than claiming to show them. */}
+      <div style={{ marginTop: trimmedDirections ? 8 : 6 }}>
+        <a
+          href={hoursUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            fontFamily: FONT_INTER,
+            fontSize: 11.5,
+            fontWeight: 500,
+            letterSpacing: "0.01em",
+            color: v2.text.secondary,
+            textDecoration: "none",
+          }}
+        >
+          <Clock size={12} strokeWidth={1.8} aria-hidden />
+          Hours on Google
+          <span aria-hidden style={{ opacity: 0.6 }}>
+            &rsaquo;
+          </span>
+        </a>
+      </div>
     </div>
   );
 }

@@ -73,3 +73,30 @@ export function openNavigation(destLat: number, destLng: number): void {
   const opened = window.open(url, "_blank", "noopener,noreferrer");
   if (!opened) window.location.href = url;
 }
+
+/**
+ * Returns a Google Maps URL that resolves to the place's listing — where
+ * hours of operation render natively, alongside the merchant's photos,
+ * phone, and "Open now / Closed" status.
+ *
+ * Session 203 (Shape A — deep-link): we deliberately do NOT store or display
+ * hours ourselves. Google Business Profile is the one source merchants
+ * actively keep current (seasonal hours, holidays), so routing to it stays
+ * accurate with zero maintenance on our side, rather than mirroring data
+ * that drifts stale.
+ *
+ * Built for use in a plain `<a href target="_blank">` — that opens a
+ * top-level browser tab even when the PWA is running inside the desktop
+ * phone-frame iframe (session 199), so no openNavigation()-style
+ * window.open dance is needed here.
+ *
+ * Google's `maps/search/?api=1&query=` reliably resolves a business
+ * name + address to its listing panel. Distinct from navigateUrl(), which
+ * builds a turn-by-turn *directions* URL — the listing is where hours live.
+ *
+ * @param query - business name + address/city, e.g.
+ *   "Kentucky Treehouse, 123 Main St, Louisville KY"
+ */
+export function googleListingUrl(query: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
