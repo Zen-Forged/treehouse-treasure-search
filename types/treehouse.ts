@@ -32,6 +32,15 @@ export interface Mall {
   hero_subtitle?:  string | null;
   hero_style?:     string | null;
   hero_image_url?: string | null;
+
+  // ── Hours layer (session 203 migration 025 — Shape B open-now badge) ──
+  // All NULL until the weekly cron populates them; badge falls back to the
+  // Shape A "Hours on Google" deep-link when hours_json is absent (D9).
+  place_id?:         string | null;  // Google Places place_id (one-time backfill, D7)
+  hours_json?:       unknown | null; // Place Details opening-hours periods, verbatim (D6)
+  hours_timezone?:   string | null;  // IANA zone — KY straddles Eastern + Central (D11)
+  business_status?:  string | null;  // OPERATIONAL | CLOSED_TEMPORARILY | CLOSED_PERMANENTLY (D10)
+  hours_fetched_at?: string | null;  // last successful refresh
 }
 
 export interface Vendor {
