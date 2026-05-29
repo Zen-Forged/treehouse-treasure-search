@@ -8,6 +8,34 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.203.0] — 2026-05-29
+
+### Session 203 — Location hours end-to-end: Shape A deep-link + Shape B open-now badge (Google Places + weekly cron) — 6 runtime commits + 1 close
+
+David's ask: surface each Location's hours of operation automatically, never hand-maintained. Audit established malls had no hours column + `add-mall.ts` uses free OSM geocoding (no Google key in the stack). Cost-shape triage → David picked **Shape A (deep-link)** first, then greenlit **Shape B (open-now badge)** after a cost analysis verified against current 2026 pricing ($0/month at ~29 malls weekly — the opening-hours SKU is Place Details Enterprise, $20/1k with 1,000 free/mo; gated only by a billing card de-risked with a hard quota cap). Both shipped end-to-end: Shape A as the floor + graceful fallback, Shape B as the enrichment across the three decide-to-visit surfaces. Hours read live from the merchant's Google Business Profile — zero ongoing maintenance.
+
+### Added
+
+- **`lib/mapsDeepLink.ts` `googleListingUrl()`** — Google Maps place-listing URL (where hours render); distinct from the directions URL `navigateUrl()`.
+- **"Hours on Google ›" affordance on MallBlock** (Shape A, `75bd5af`) — /shelf + /my-shelf; iframe-safe `<a target="_blank">`.
+- **Shape B substrate:** migration 025 (`place_id` / `hours_json` / `hours_timezone` / `business_status` / `hours_fetched_at` on malls) · `scripts/backfill-mall-place-ids.ts` (one-time Text Search → place_id; 16/16 resolved in prod) · `lib/googlePlaces.ts` (Place Details New, Enterprise field mask = the cost lever) · `/api/cron/refresh-mall-hours` (CRON_SECRET-gated weekly) · `vercel.json` cron `0 8 * * 1` · `scripts/refresh-mall-hours.ts` (first populate; 16/16 hours in prod) · `lib/mallHours.ts` (timezone-aware open-now compute, 11/11 unit tests) · `components/MallHoursBadge.tsx` · `/mall-hours-test` smoke route · migration 026 (`mall_hours_badge_tapped` event).
+- **Open-now badge** ("Open now · closes 6 PM" / "Closed · opens 9 AM") on MallBlock + SavedMallCardV2 + PinCallout, tappable → Google listing (`41ee21b`).
+- **`docs/location-hours-design.md`** — Shape B design record (14 frozen decisions + risk register + 5 arcs).
+
+### Changed
+
+- `lib/posts.ts` long mall-join SELECT extended with the hours columns (one `replace_all`) so /shelf + /my-shelf carry hours; /flagged + /map already do via `getActiveMalls` `select("*")`.
+- `Mall` type + event-type unions (`lib/events.ts` + `lib/clientEvents.ts` + `/api/events` whitelist) extended with the hours fields + the badge-tap event.
+
+### iPhone QA watch-items
+
+- Eyeball badge placement + dot/text sizing (D13 dial) on /shelf, Saved, and the Map pin. Verified live on `/shelf/the-quirky-turkey` ("Open now · closes 7 PM", green dot) — the visual dial is David's call.
+- 🖐️ HITL: paste migration 026 (prod + staging) so badge-tap analytics land (until then the event 400s silently — harmless); add `CRON_SECRET` to Vercel env so the Monday refresh authenticates.
+
+[v0.203.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.203.0
+
+---
+
 ## [v0.202.0] — 2026-05-29
 
 ### Session 202 — On-device QA of the session-201 ships (all clean) + Share My Shelf instructions reshape — 1 runtime commit + 1 close
