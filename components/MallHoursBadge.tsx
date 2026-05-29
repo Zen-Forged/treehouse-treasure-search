@@ -14,9 +14,9 @@
 "use client";
 
 import * as React from "react";
-import { computeMallHours, type MallHoursKind } from "@/lib/mallHours";
+import { computeMallHours, type MallHoursKind, type MallHoursInput } from "@/lib/mallHours";
+import { track } from "@/lib/clientEvents";
 import { v1, v2, FONT_INTER } from "@/lib/tokens";
-import type { OpeningHours } from "@/lib/googlePlaces";
 
 const DOT_COLOR: Record<MallHoursKind, string> = {
   open: v2.accent.green,
@@ -29,13 +29,16 @@ const DOT_COLOR: Record<MallHoursKind, string> = {
 };
 
 export interface MallHoursBadgeProps {
-  hoursJson?:
-    | { regularOpeningHours?: OpeningHours | null; currentOpeningHours?: OpeningHours | null }
-    | null;
+  // malls.hours_json (jsonb) — accepted as unknown so callers pass it without a
+  // cast; bridged to the structured shape internally.
+  hoursJson?: unknown;
   timezone?: string | null;
   businessStatus?: string | null;
   /** Google listing URL — the badge is tappable → full hours (D5). */
   href: string;
+  /** Analytics (D14) — fire mall_hours_badge_tapped on tap when both are set. */
+  mallSlug?: string | null;
+  surface?: string;
   /** Inject a fixed moment for the smoke route; defaults to live "now". */
   now?: Date;
 }
@@ -45,17 +48,30 @@ export default function MallHoursBadge({
   timezone,
   businessStatus,
   href,
+  mallSlug,
+  surface,
   now,
 }: MallHoursBadgeProps) {
-  const state = computeMallHours({ hoursJson, timezone, businessStatus }, now ?? new Date());
+  const state = computeMallHours(
+    { hoursJson: hoursJson as MallHoursInput["hoursJson"], timezone, businessStatus },
+    now ?? new Date(),
+  );
   // D9 — no hours data; caller renders the Shape A "Hours on Google" link instead.
   if (state.kind === "unknown") return null;
+
+  // Fire-and-forget; the navigation proceeds regardless (D14).
+  const handleTap = () => {
+    if (mallSlug && surface) {
+      track("mall_hours_badge_tapped", { mall_slug: mallSlug, surface, open_state: state.kind });
+    }
+  };
 
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={handleTap}
       style={{
         display: "inline-flex",
         alignItems: "center",

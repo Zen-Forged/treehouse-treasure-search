@@ -77,7 +77,7 @@ export async function searchPosts(opts: {
     .select(`
       *,
       vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
-      mall:malls     ( id, name, city, state, slug, address, latitude, longitude )
+      mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .eq("status", "available")
     .gte("created_at", cutoff)
@@ -111,7 +111,7 @@ export async function getFeedPosts(limit = 40): Promise<Post[]> {
     .select(`
       *,
       vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
-      mall:malls     ( id, name, city, state, slug, address, latitude, longitude )
+      mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .eq("status", "available")
     .gte("created_at", cutoff)
@@ -137,7 +137,7 @@ export async function getPost(id: string): Promise<Post | null> {
     .select(`
       *,
       vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
-      mall:malls     ( id, name, city, state, slug, address, latitude, longitude )
+      mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .eq("id", id)
     .single();
@@ -165,7 +165,7 @@ export async function getPostsByIds(ids: string[]): Promise<Post[]> {
     .select(`
       *,
       vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
-      mall:malls     ( id, name, city, state, slug, address, latitude, longitude )
+      mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .in("id", ids)
     .order("created_at", { ascending: false });
@@ -200,7 +200,7 @@ export async function getVendorPosts(vendorId: string, limit = 40): Promise<Post
     .select(`
       *,
       vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
-      mall:malls     ( id, name, city, state, slug, address, latitude, longitude )
+      mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false })
@@ -309,7 +309,7 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
   if (isReviewMode()) return getFixtureVendorBySlug(slug);
   const { data, error } = await supabase
     .from("vendors")
-    .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude )`)
+    .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )`)
     .eq("slug", slug)
     .single();
   if (error) { console.error("[posts] getVendorBySlug:", error.message); return null; }
@@ -334,7 +334,7 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
 export async function getVendorsByUserId(userId: string): Promise<Vendor[]> {
   const { data, error } = await supabase
     .from("vendors")
-    .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude )`)
+    .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )`)
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
   if (error) { console.error("[posts] getVendorsByUserId:", error.message); return []; }
@@ -369,7 +369,7 @@ export async function getVendorByUserId(userId: string): Promise<Vendor | null> 
 export async function getVendorById(id: string): Promise<Vendor | null> {
   const { data, error } = await supabase
     .from("vendors")
-    .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude )`)
+    .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )`)
     .eq("id", id)
     .maybeSingle();
   if (error) { console.error("[posts] getVendorById:", error.message); return null; }
@@ -402,7 +402,7 @@ export async function getVendorByEmail(email: string): Promise<Vendor | null> {
 
     const { data, error } = await supabase
       .from("vendors")
-      .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude )`)
+      .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )`)
       .eq("display_name", request.name)
       .eq("mall_id", request.mall_id)
       .is("user_id", null)
@@ -434,7 +434,7 @@ export async function linkVendorToUser(vendorId: string, userId: string): Promis
       .update({ user_id: userId })
       .eq("id", vendorId)
       .is("user_id", null)
-      .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude )`)
+      .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )`)
       .single();
 
     if (error) {

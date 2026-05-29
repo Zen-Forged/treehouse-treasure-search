@@ -102,7 +102,12 @@ export type ClientEventType =
   // avoid circular import). Declared in ClientEventType for whitelist parity
   // + so future enrichment of the visitor signal (e.g. a follow-on
   // visitor_returned event) composes onto the same shape.
-  | "visitor_engaged";
+  | "visitor_engaged"
+  // ── Session 203 — Location hours Shape B (D14 in docs/location-hours-design.md) ──
+  // Fires when a shopper taps the "Open now · closes 6 PM" badge on MallBlock /
+  // SavedMallCardV2 / PinCallout → the Google listing (D5). Payload:
+  // { mall_slug, surface, open_state }.
+  | "mall_hours_badge_tapped";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";

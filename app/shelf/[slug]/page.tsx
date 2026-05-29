@@ -425,6 +425,8 @@ export default function PublicShelfPage() {
   const mallName    = mall?.name ?? (vendor?.mall as Mall | undefined)?.name ?? "America's Antique Mall";
   const mallCity    = mall?.city ?? (vendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
   const address     = mall?.address ?? null;
+  // Session 203 — Shape B hours. Same resolution order as mallName above.
+  const hoursMall   = mall ?? (vendor?.mall as Mall | undefined) ?? null;
 
   // Session 50 (Q-008) — airplane is visible to everyone once the booth
   // has at least one available post (mirrors the server's empty-window
@@ -507,6 +509,11 @@ export default function PublicShelfPage() {
               mallCity={mallCity}
               address={address}
               directionsText={vendor?.directions_text ?? null}
+              mallSlug={hoursMall?.slug ?? null}
+              hoursJson={hoursMall?.hours_json}
+              hoursTimezone={hoursMall?.hours_timezone ?? null}
+              businessStatus={hoursMall?.business_status ?? null}
+              hoursSurface="shelf"
             />
 
             {/* Review Board Finding 3 (session 169) — Bookmark Booth

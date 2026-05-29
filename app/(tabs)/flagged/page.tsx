@@ -83,6 +83,12 @@ type MallSection = {
   recency:      number;
   /** Total saved finds at this mall — used for analytics on Get Directions tap. */
   totalSaves:   number;
+  // Session 203 — Shape B open-now badge fields (sourced from the full Mall in
+  // mallsById, which getActiveMalls select("*") carries).
+  mallSlug:        string | null;
+  hoursJson:       unknown;
+  hoursTimezone:   string | null;
+  businessStatus:  string | null;
 };
 
 function groupByMallAndBooth(
@@ -146,6 +152,10 @@ function groupByMallAndBooth(
         booths:      [],
         recency:     0,
         totalSaves:  0,
+        mallSlug:       mall?.slug            ?? sample.mall?.slug            ?? null,
+        hoursJson:      mall?.hours_json       ?? sample.mall?.hours_json     ?? null,
+        hoursTimezone:  mall?.hours_timezone   ?? sample.mall?.hours_timezone ?? null,
+        businessStatus: mall?.business_status  ?? sample.mall?.business_status ?? null,
       });
     }
     mallMap.get(mallId)!.booths.push(booth);
@@ -378,6 +388,10 @@ export default function FlaggedPage() {
                 distanceMi={miles}
                 findsCount={mall.totalSaves}
                 onGetDirections={() => handleGetDirections(mall)}
+                mallSlug={mall.mallSlug}
+                hoursJson={mall.hoursJson}
+                hoursTimezone={mall.hoursTimezone}
+                businessStatus={mall.businessStatus}
               >
                 {mall.booths.map((booth) => (
                   <AccordionBoothSection

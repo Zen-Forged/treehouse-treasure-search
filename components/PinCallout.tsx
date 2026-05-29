@@ -40,13 +40,14 @@ import * as React from "react";
 import { MapPin, Navigation } from "lucide-react";
 import { PiCaretLeft, PiCaretRight, PiLeaf } from "react-icons/pi";
 import { v1, v2, FONT_NUMERAL, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
-import { openNavigation } from "@/lib/mapsDeepLink";
+import { openNavigation, googleListingUrl } from "@/lib/mapsDeepLink";
 import { track } from "@/lib/clientEvents";
 import DistancePill from "@/components/DistancePill";
+import MallHoursBadge from "@/components/MallHoursBadge";
 import type { Mall } from "@/types/treehouse";
 
 interface PinCalloutProps {
-  mall:        Pick<Mall, "id" | "slug" | "name" | "hero_image_url" | "latitude" | "longitude">;
+  mall:        Pick<Mall, "id" | "slug" | "name" | "hero_image_url" | "latitude" | "longitude" | "address" | "hours_json" | "hours_timezone" | "business_status">;
   findCount:   number;
   /** Session 123 — saves at this mall (post-R1 / R18 find→found thesis).
    *  > 0 → "X saved finds"; 0 or null → fallback to "{findCount} finds". */
@@ -290,6 +291,16 @@ export default function PinCallout({
         <DistancePill miles={miles} />
         {mallNameRow}
         <div style={{ marginTop: 2 }}>{statLine}</div>
+
+        {/* Session 203 — Shape B open-now badge; self-hides when no hours data. */}
+        <MallHoursBadge
+          hoursJson={mall.hours_json}
+          timezone={mall.hours_timezone}
+          businessStatus={mall.business_status}
+          href={googleListingUrl([mall.name, mall.address].filter(Boolean).join(", "))}
+          mallSlug={mall.slug}
+          surface="map"
+        />
 
         {/* Mini CTA row — Directions (outline, native maps deep-link) + Explore
             (filled green, scope-commit). Dial G reversed the original order +

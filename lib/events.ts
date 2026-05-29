@@ -143,7 +143,10 @@ export type EventType =
   //                     time_to_engage_ms, page_path, mall_scope,
   //                     first_event_type? }. Source: lib/visitorTracker.ts.
   // Migration 024 adds the matching enum value.
-  | "visitor_engaged";
+  | "visitor_engaged"
+  // Session 203 — Location hours Shape B (D14). Tap on the open-now badge →
+  // Google listing. Migration 026 adds the matching enum value.
+  | "mall_hours_badge_tapped";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

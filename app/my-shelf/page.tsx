@@ -814,6 +814,8 @@ function MyBoothInner() {
   const mallName    = mall?.name ?? (activeVendor?.mall as Mall | undefined)?.name ?? "America's Antique Mall";
   const mallCity    = mall?.city ?? (activeVendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
   const address     = mall?.address ?? null;
+  // Session 203 — Shape B hours. Same resolution order as mallName above.
+  const hoursMall   = mall ?? (activeVendor?.mall as Mall | undefined) ?? null;
   const loading     = !vendorReady || postsLoading;
 
   // Multi-booth gating — admin impersonation always reads as single-booth,
@@ -889,6 +891,11 @@ function MyBoothInner() {
               mallCity={mallCity}
               address={address}
               directionsText={activeVendor?.directions_text ?? null}
+              mallSlug={hoursMall?.slug ?? null}
+              hoursJson={hoursMall?.hours_json}
+              hoursTimezone={hoursMall?.hours_timezone ?? null}
+              businessStatus={hoursMall?.business_status ?? null}
+              hoursSurface="my_shelf"
             />
 
             {/* Session 169 round 3 — Review Board Finding 1: "Add a Find"

@@ -29,6 +29,8 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 import { PiLeafBold } from "react-icons/pi";
+import MallHoursBadge from "@/components/MallHoursBadge";
+import { googleListingUrl } from "@/lib/mapsDeepLink";
 
 // Session 144 iPhone QA: long mall names ("Copper Awning Flea Market") wrapped
 // to 2 lines at fontSize 25 on iPhone widths. Mirrors PostcardMallCard's
@@ -44,6 +46,12 @@ interface SavedMallCardV2Props {
   findsCount: number;
   onGetDirections: () => void;
   children: React.ReactNode; // accordion sections
+  // Session 203 — Shape B open-now badge (D3 surface). Self-hides when hours
+  // data is absent (no Shape A fallback on Saved — the card simply omits it).
+  mallSlug?: string | null;
+  hoursJson?: unknown;
+  hoursTimezone?: string | null;
+  businessStatus?: string | null;
 }
 
 function formatDistanceLabel(distanceMi: number | null): string | null {
@@ -58,6 +66,10 @@ export default function SavedMallCardV2({
   findsCount,
   onGetDirections,
   children,
+  mallSlug,
+  hoursJson,
+  hoursTimezone,
+  businessStatus,
 }: SavedMallCardV2Props) {
   const distanceLabel = formatDistanceLabel(distanceMi);
   const hasDistance = distanceLabel !== null;
@@ -191,6 +203,17 @@ export default function SavedMallCardV2({
           }}
         >
           {mallAddress}
+        </div>
+        {/* Session 203 — Shape B open-now badge; self-hides when no hours data. */}
+        <div style={{ gridColumn: "1 / -1", gridRow: 3, marginTop: 4 }}>
+          <MallHoursBadge
+            hoursJson={hoursJson}
+            timezone={hoursTimezone}
+            businessStatus={businessStatus}
+            href={googleListingUrl([mallName, mallAddress].filter(Boolean).join(", "))}
+            mallSlug={mallSlug}
+            surface="saved"
+          />
         </div>
       </div>
 

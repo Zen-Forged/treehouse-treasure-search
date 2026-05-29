@@ -99,6 +99,10 @@ const CLIENT_EVENT_TYPES = [
   // sessionStorage guard prevents duplicate fires. Migration 024 adds the
   // matching enum value.
   "visitor_engaged",
+  // Session 203 — Location hours Shape B (D14). Open-now badge tap → Google
+  // listing, from MallBlock / SavedMallCardV2 / PinCallout. Migration 026 adds
+  // the matching enum value.
+  "mall_hours_badge_tapped",
 ] as const;
 type ClientEventType = (typeof CLIENT_EVENT_TYPES)[number];
 

@@ -70,6 +70,8 @@ import { motion } from "framer-motion";
 import { ImagePlus, Clock } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import { googleListingUrl } from "@/lib/mapsDeepLink";
+import MallHoursBadge from "@/components/MallHoursBadge";
+import { computeMallHours, type MallHoursInput } from "@/lib/mallHours";
 import {
   v1,
   v2,
@@ -644,6 +646,11 @@ export function MallBlock({
   mallCity,
   address,
   directionsText,
+  mallSlug,
+  hoursJson,
+  hoursTimezone,
+  businessStatus,
+  hoursSurface,
 }: {
   mallName: string;
   mallCity?: string;
@@ -653,7 +660,16 @@ export function MallBlock({
   // NULL/empty = no custom directions; the address + mapsUrl deep-link carry
   // alone (existing behavior preserved for vendors who haven't enriched).
   directionsText?: string | null;
+  // Session 203 — Location hours Shape B Arc 4. When hours data is present the
+  // open-now badge replaces the Shape A "Hours on Google" link (D5); when it's
+  // absent the badge yields null and we fall back to the link (D9).
+  mallSlug?: string | null;
+  hoursJson?: unknown; // malls.hours_json (jsonb); cast to the structured shape internally
+  hoursTimezone?: string | null;
+  businessStatus?: string | null;
+  hoursSurface?: string;
 }) {
+  const hours = hoursJson as MallHoursInput["hoursJson"];
   const mapQuery = address
     ? address
     : [mallName, mallCity].filter(Boolean).join(", ");
@@ -666,6 +682,9 @@ export function MallBlock({
   const hoursUrl = googleListingUrl(
     [mallName, address, mallCity].filter(Boolean).join(", "),
   );
+  // Shape B (Arc 4): badge when hours known, link fallback when unknown (D9).
+  const hoursKnown =
+    computeMallHours({ hoursJson: hours, timezone: hoursTimezone, businessStatus }).kind !== "unknown";
 
   return (
     // Session 128 (refinement design D6): grid layout retired in favor of
@@ -763,36 +782,44 @@ export function MallBlock({
           {trimmedDirections}
         </div>
       )}
-      {/* Session 203 (Shape A) — hours via deep-link. Routes to the Google
-          place listing, where merchant-maintained hours (+ "Open now / Closed"
-          status) render natively and stay current with zero maintenance on
-          our side. Plain <a target="_blank"> opens a top-level tab even inside
-          the desktop phone-frame iframe (session 199). Renders unconditionally
-          — every mall has a name to resolve the listing against. Honest copy:
-          we route to where hours live rather than claiming to show them. */}
+      {/* Session 203 — hours affordance. Shape B badge ("Open now · closes
+          6 PM") when Google hours are known (D5); falls back to the Shape A
+          "Hours on Google" deep-link when not (D9). Both open the Google
+          listing in a top-level tab — iframe-safe (session 199). */}
       <div style={{ marginTop: trimmedDirections ? 8 : 6 }}>
-        <a
-          href={hoursUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontFamily: FONT_INTER,
-            fontSize: 11.5,
-            fontWeight: 500,
-            letterSpacing: "0.01em",
-            color: v2.text.secondary,
-            textDecoration: "none",
-          }}
-        >
-          <Clock size={12} strokeWidth={1.8} aria-hidden />
-          Hours on Google
-          <span aria-hidden style={{ opacity: 0.6 }}>
-            &rsaquo;
-          </span>
-        </a>
+        {hoursKnown ? (
+          <MallHoursBadge
+            hoursJson={hours}
+            timezone={hoursTimezone}
+            businessStatus={businessStatus}
+            href={hoursUrl}
+            mallSlug={mallSlug}
+            surface={hoursSurface}
+          />
+        ) : (
+          <a
+            href={hoursUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              fontFamily: FONT_INTER,
+              fontSize: 11.5,
+              fontWeight: 500,
+              letterSpacing: "0.01em",
+              color: v2.text.secondary,
+              textDecoration: "none",
+            }}
+          >
+            <Clock size={12} strokeWidth={1.8} aria-hidden />
+            Hours on Google
+            <span aria-hidden style={{ opacity: 0.6 }}>
+              &rsaquo;
+            </span>
+          </a>
+        )}
       </div>
     </div>
   );
