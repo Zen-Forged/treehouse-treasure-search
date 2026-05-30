@@ -8,6 +8,30 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.204.0] — 2026-05-30
+
+### Session 204 — Share My Shelf Arc 4: Sonnet caption + hero-hook generator (Shape C: AI enrichment + deterministic floor) — 3 runtime commits + 1 close
+
+Opened by landing what session 203 shipped — the two HITL pastes (migration 026 `mall_hours_badge_tapped` enum + `CRON_SECRET`) closed, and the open-now badge's D13 visual dial walked clean on-device (ships as-is). Then the marquee vendor feature's last build arc: **Share My Shelf Arc 4**. Cost-shape triage surfaced a real fork — the design-record D7 ("AI-gen per format") couldn't be a "pure internal swap" because a real Sonnet call is async + server-side, unlike the synchronous placeholder. David picked **Shape C: Sonnet enrichment with the deterministic template as the instant first-paint + graceful fallback** — the same floor-and-enrichment pattern as session 203's hours badge. 3 commits smallest→largest, build green at every boundary, route verified live against a real find-set (`source:"claude"`).
+
+### Added
+
+- **`app/api/shelf-caption/route.ts`** (C2) — text-only `claude-sonnet-4-6` route writing a vendor-tone Story caption + short hero hook from the picks' titles/captions/tags (the publish-time vision output, so no photo re-upload). Mirrors `/api/post-caption` conventions: in-memory per-IP rate limit (10/60s), `ANTHROPIC_API_KEY` check, `source:"claude"|"mock"` flag. Booth URL is appended server-side — never model-generated — so the link is always exact.
+- **`lib/aiShelfCaption.ts` `fetchShelfCaption()`** (C3) — async enrichment fetcher that never throws; returns the deterministic floor on any failure (no posts, network error, non-OK, route's own mock), Sonnet copy when `source==="claude"`.
+- **`ShelfCaptionResult` type + exported `composeStoryCaption`** (C1) — the internal Story-caption builder is now the shared deterministic floor, reused by both the route's server-side fallback and the client's network-error fallback (single source of truth).
+
+### Changed
+
+- **`components/ShelfImageShareScreen.tsx`** (C3) — the two synchronous caption/hook `useMemo`s swapped for deterministic-floor first-paint → Sonnet-enrichment-on-arrival; the enrichment bumps `captureKey` so the off-screen hero card re-captures with the AI hook. Regenerate (D8) now re-fetches a fresh caption (new picks → new copy) instead of cycling five canned hooks.
+
+### iPhone QA watch-items
+
+- **Share My Shelf Arc 4 on-device** — owner-gated UI (vendor viewing own booth, ≥3 posts), so it can't QA on Vercel preview without auth. Tap **Share on Social**: caption should render instantly (template), then the Sonnet copy + hero hook swap in ~1–2s, and **Regenerate** should re-roll finds + caption together.
+
+[v0.204.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.204.0
+
+---
+
 ## [v0.203.0] — 2026-05-29
 
 ### Session 203 — Location hours end-to-end: Shape A deep-link + Shape B open-now badge (Google Places + weekly cron) — 6 runtime commits + 1 close
