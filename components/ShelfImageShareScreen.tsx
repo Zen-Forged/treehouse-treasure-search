@@ -37,7 +37,7 @@ import { Reorder } from "framer-motion";
 import { PiDownloadSimple, PiShareFat, PiCopySimple, PiLinkSimple, PiShuffle, PiDotsSixVertical } from "react-icons/pi";
 import { track } from "@/lib/clientEvents";
 import { getVendorWindowPosts } from "@/lib/posts";
-import { generateShelfCaption, placeholderHeroHook } from "@/lib/aiShelfCaption";
+import { generateShelfCaption, placeholderHeroHook, fetchShelfCaption } from "@/lib/aiShelfCaption";
 import { useShelfCapture } from "@/lib/useShelfCapture";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 import { SlimHeader } from "@/components/ui/SlimHeader";
@@ -94,22 +94,32 @@ export function ShelfImageShareScreen({
     enabled: captureReady,
   });
 
-  // ─── Caption + hook gen (placeholder per Arc 4 swap-target) ──────────
-  const caption = useMemo(() => {
-    if (picks.length === 0) return "";
-    return generateShelfCaption({
-      vendor,
-      mall,
-      posts:  picks,
-      format: "story",
-      boothUrl,
-    });
-  }, [vendor, mall, picks, boothUrl]);
+  // ─── Caption + hero hook (Arc 4: deterministic floor → Sonnet enrichment) ─
+  // Floor (generateShelfCaption + placeholderHeroHook) renders instantly +
+  // never blank; fetchShelfCaption swaps in Sonnet-enriched copy when it lands,
+  // bumping captureKey so the off-screen hero card re-captures with the AI
+  // hook. Any failure keeps the floor (fetchShelfCaption never throws).
+  const [caption, setCaption] = useState("");
+  const [aiHook, setAiHook]   = useState("");
 
-  const aiHook = useMemo(
-    () => placeholderHeroHook(picks.length, aiHookSeed),
-    [picks.length, aiHookSeed],
-  );
+  useEffect(() => {
+    if (picks.length === 0) { setCaption(""); setAiHook(""); return; }
+
+    // Instant floor.
+    setCaption(generateShelfCaption({ vendor, mall, posts: picks, format: "story", boothUrl }));
+    setAiHook(placeholderHeroHook(picks.length, aiHookSeed));
+
+    // Sonnet enrichment — swaps in + re-captures when source==="claude".
+    let alive = true;
+    fetchShelfCaption({ vendor, mall, posts: picks, boothUrl, heroSeed: aiHookSeed }).then(res => {
+      if (!alive || res.source !== "claude") return;
+      setCaption(res.storyCaption);
+      setAiHook(res.heroHook);
+      setCaptureKey(k => k + 1);
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picks, aiHookSeed, vendor.id, mall?.id, boothUrl]);
 
   // ─── Auto-clear copy toast after 1.8s ────────────────────────────────
   useEffect(() => {
@@ -234,15 +244,14 @@ export function ShelfImageShareScreen({
     } catch { /* */ }
   }, [boothUrl]);
 
-  // ─── Regenerate (D8) — re-rolls finds + cycles placeholder hook ───────
+  // ─── Regenerate (D8) — re-rolls finds + re-fetches AI caption ─────────
   // Per D8 (single affordance re-rolls finds + AI caption together) + D10
   // (regenerate re-rolls which 3 picks; random shuffle if vendor has >3
-  // posts). Always bumps aiHookSeed so the hero hook visibly changes even
-  // when picks can't change (vendor ≤3 posts), and bumps captureKey so
-  // useShelfCapture re-runs against the new off-screen DOM.
-  //
-  // Real AI caption gen lands in Arc 4; until then placeholder cycles
-  // through 5 hook variants per placeholderHeroHook (lib/aiShelfCaption).
+  // posts). Bumping aiHookSeed + picks both retrigger the caption effect,
+  // which re-fetches a fresh Sonnet caption (new picks → new copy) and
+  // re-paints the floor instantly meanwhile; the aiHookSeed also varies the
+  // floor hook when the network path is unavailable. captureKey bump forces
+  // an immediate floor re-capture before the AI enrichment lands.
   const handleRegenerate = useCallback(() => {
     if (!posts || posts.length === 0) return;
     if (posts.length > 3) {

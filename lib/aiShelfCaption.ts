@@ -46,11 +46,9 @@ export interface GenerateShelfCaptionInput {
 }
 
 /**
- * Returns the caption string for the requested format.
- *
- * Arc 4 will swap the body to a Sonnet vision/text call that reads the post
- * titles + photos and writes vendor-tone-matched copy. Until then, the
- * deterministic template is canonical.
+ * Returns the deterministic caption string for the requested format. This is
+ * the FLOOR — the instant first-paint + the fallback when fetchShelfCaption's
+ * Sonnet call is unavailable.
  */
 export function generateShelfCaption(input: GenerateShelfCaptionInput): string {
   const { vendor, mall, posts, format, boothUrl } = input;
@@ -71,6 +69,60 @@ export function generateShelfCaption(input: GenerateShelfCaptionInput): string {
     return buildFeedCaption({ vendorName, findCount, mallName, urlPreview });
   }
   return composeStoryCaption({ vendorName, boothNo, mallName, city, findCount, urlPreview });
+}
+
+/**
+ * Arc 4 — fetches the Sonnet-enriched Story caption + hero hook from
+ * /api/shelf-caption. ALWAYS resolves (never throws): any failure (no posts,
+ * network error, non-OK response, route's own mock fallback) returns the
+ * deterministic floor flagged source:"mock". The caller renders the floor
+ * instantly via generateShelfCaption + placeholderHeroHook, then swaps in this
+ * result when source==="claude".
+ *
+ * heroSeed varies the floor hook on regenerate so the fallback still changes
+ * visibly when the network path is unavailable.
+ */
+export async function fetchShelfCaption(input: {
+  vendor:   Vendor;
+  mall:     Mall | null;
+  posts:    Post[];
+  boothUrl: string;
+  heroSeed?: number;
+}): Promise<ShelfCaptionResult> {
+  const { vendor, mall, posts, boothUrl, heroSeed = 0 } = input;
+
+  // Deterministic floor — also the network-error fallback (single source of
+  // truth with the server route via composeStoryCaption).
+  const floor: ShelfCaptionResult = {
+    storyCaption: posts.length ? generateShelfCaption({ vendor, mall, posts, format: "story", boothUrl }) : "",
+    heroHook:     placeholderHeroHook(posts.length, heroSeed),
+    source:       "mock",
+  };
+
+  if (posts.length === 0) return floor;
+
+  try {
+    const res = await fetch("/api/shelf-caption", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        vendorName:  vendor.display_name,
+        boothNumber: vendor.booth_number,
+        mallName:    mall?.name ?? vendor.mall?.name ?? null,
+        city:        mall?.city ?? vendor.mall?.city ?? null,
+        boothUrl,
+        finds:       posts.map(p => ({ title: p.title, caption: p.caption, tags: p.tags ?? [] })),
+      }),
+    });
+    if (!res.ok) return floor;
+    const data = (await res.json()) as Partial<ShelfCaptionResult>;
+    // Route fell back to its own mock, or returned garbled output → use the
+    // client floor (which honors heroSeed; the route's mock is seed-0).
+    if (data.source !== "claude" || !data.storyCaption || !data.heroHook) return floor;
+    return { storyCaption: data.storyCaption, heroHook: data.heroHook, source: "claude" };
+  } catch {
+    return floor;
+  }
 }
 
 // ─── Shared builders ──────────────────────────────────────────────────────
