@@ -1,24 +1,24 @@
 // lib/aiShelfCaption.ts
 //
-// Session 197 Arc 2 C1 — Share My Shelf caption generator (placeholder).
+// Session 197 Arc 2 C1 — Share My Shelf caption generator.
+// Session 204 Arc 4 — Sonnet enrichment with deterministic fallback (Shape C).
 //
 // Per session-196 design record §3.5 component contract + D7 (caption strategy
 // AI-generated per format) + D15 (caption clipboard auto-copy fires on Share
-// or Download). This module ships the SIGNATURE the wrapper consumes; the
-// IMPLEMENTATION is a deterministic template today and gets swapped to a real
-// Sonnet call when Arc 4 (caption + copy gen) ships.
+// or Download).
 //
-// Why ship the placeholder now (Arc 2) instead of waiting for Arc 4:
-//   - Arc 2 needs SOME caption to wire D15 clipboard auto-copy + D8 regenerate
-//     "re-rolls finds + caption together" mental model.
-//   - Locking the signature now means Arc 4 is a pure internal swap, no
-//     consumer touches required.
-//   - Placeholder template per D15 example is good-enough-for-iPhone-QA:
-//       "🍃 This week at {vendor_name} — {N} new finds on the shelf.
-//        Visit Booth {N} at {mall_name}, {city}. {url}"
-//   - Sonnet swap in Arc 4 introduces variation + per-find hooks; the
-//     placeholder is bounded + predictable so QA can validate clipboard +
-//     share path without caption-variance noise.
+// Two layers, "floor + enrichment" per the session-203 pattern:
+//   1. DETERMINISTIC FLOOR — generateShelfCaption() + placeholderHeroHook()
+//      compute an instant, never-blank caption + hero hook from the post
+//      titles. This is the synchronous first-paint AND the offline/error
+//      fallback. Single source of truth: composeStoryCaption() is reused by
+//      both this module's generateShelfCaption AND the server route's
+//      no-key/error fallback (app/api/shelf-caption/route.ts).
+//   2. SONNET ENRICHMENT — fetchShelfCaption() POSTs the picks' titles +
+//      captions + tags to /api/shelf-caption; Sonnet writes a vendor-tone
+//      Story caption + hero hook referencing the actual finds. The wrapper
+//      swaps the enrichment in when it arrives; the floor is what renders
+//      until then + what we fall back to if the route 404s or errors.
 //
 // Format-aware (D7):
 //   - "story" → multi-line narrative caption suitable for IG/FB Story text
@@ -27,6 +27,13 @@
 import type { Mall, Post, Vendor } from "@/types/treehouse";
 
 export type ShelfCaptionFormat = "story" | "feed";
+
+/** Arc 4 — fetchShelfCaption() return shape. source flags Sonnet vs floor. */
+export interface ShelfCaptionResult {
+  storyCaption: string;
+  heroHook:     string;
+  source:       "claude" | "mock";
+}
 
 export interface GenerateShelfCaptionInput {
   vendor: Vendor;
@@ -63,12 +70,17 @@ export function generateShelfCaption(input: GenerateShelfCaptionInput): string {
   if (format === "feed") {
     return buildFeedCaption({ vendorName, findCount, mallName, urlPreview });
   }
-  return buildStoryCaption({ vendorName, boothNo, mallName, city, findCount, urlPreview });
+  return composeStoryCaption({ vendorName, boothNo, mallName, city, findCount, urlPreview });
 }
 
-// ─── Internal builders ────────────────────────────────────────────────────
+// ─── Shared builders ──────────────────────────────────────────────────────
 
-function buildStoryCaption(parts: {
+/**
+ * Composes the multi-line Story caption from primitive parts. Exported so the
+ * server route (app/api/shelf-caption/route.ts) reuses the SAME deterministic
+ * text as its no-key/error fallback — single source of truth for the floor.
+ */
+export function composeStoryCaption(parts: {
   vendorName: string;
   boothNo:    string | null;
   mallName:   string | null;
