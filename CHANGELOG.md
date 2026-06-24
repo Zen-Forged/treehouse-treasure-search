@@ -8,6 +8,38 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.205.0] — 2026-06-24
+
+### Session 205 — Home Hub: a dedicated central-hub front door (design pass → 4 build arcs → WCAG-clean → deployed) — 5 runtime commits + 1 dial commit + 1 close
+
+David's ask: a dedicated Home page that acts as the central hub and **sells the app's value + purpose from the first moment**. Audit-first established that `/` is the Explore feed (no value-selling surface exists in-app; the brand pitch was stranded on the desktop frame). Cost-shape fork → **Shape B: a new persistent `/home` hub + Home nav tab, alongside the Explore feed** (Explore stays at `/`). After a 3-frame V1 mockup, David shared a richer media reference (photographic hero card + 3-audience "advantage" grid + location carousel + vendor CTA), which became the V2 — rebuilt in Treehouse's wordmark/palette/fonts/"booths" vocabulary. 15-decision design record at [`docs/home-hub-design.md`](docs/home-hub-design.md), then 4 build arcs: route/nav scaffold → primitives in isolation + `/home-hub-test` smoke route → wire live data → dials + a design-reviewer pass. Shipped to Vercel production; then 6 on-device QA dials.
+
+### Added
+
+- **`/home` route** (`app/(tabs)/home/page.tsx`) — the hub: hero card (proximity-led "Discover treasures near you." → Map), "The Treehouse Advantage" 3-audience grid (Shoppers · Vendors · Malls, Malls tagged COMING SOON per R13), "Explore Nearby" carousel of live malls (per-location hero photo + distance + booth count, nearest-first via `useUserLocation` + `milesFromUser`, graceful when denied), search row → Explore, vendor CTA → `/vendor-request`.
+- **`components/home-hub/`** primitives — `HeroCard`, `AdvantageGrid`, `NearbyLocationCard` + `NearbyLocationsRail`, `VendorCtaCard`, `palette.ts` (`HUB_GOLD`/`HUB_TEAL` fills + `HUB_GOLD_TEXT`/`HUB_TEAL_TEXT` AA-passing text variants).
+- **`/home-hub-test`** smoke route (testbed-first).
+- **Home nav tab** at BottomNav slot 1 (10th R10 D1 iteration) — Home · Explore · Map · Flagged (+ Booth for vendors); the prior first-tab key renamed `home → explore`.
+
+### Changed
+
+- **PWA `start_url` `/` → `/home`** (manifest) — opening the installed app lands on the hub.
+- **`/home` masthead = the shared `<StickyMasthead>`** (via TabsChrome) — matches `/flagged`'s 72px wordmark; the custom HubMasthead + its "LOCAL FINDS · REAL TREASURES" sub-brand retired.
+- Design-reviewer WCAG fixes — gold/teal **label/tag text** darkened to AA-passing values (icon-circle fills keep the bright accents); search-row label `muted → secondary`; location-card name gained a bottom scrim.
+
+### Removed
+
+- `components/home-hub/HubMasthead.tsx` (replaced by the shared StickyMasthead).
+
+### iPhone QA watch-items
+
+- **Geolocation path on a real device** — granting location should make the Explore Nearby cards show "X mi · N booths" and sort nearest-first (headless preview has no location).
+- **Card tap** commits that mall's scope → Explore; **Explore Nearby** → Map; **vendor CTA** → `/vendor-request`. Eyeball the darkened gold/teal labels + COMING SOON at arm's length.
+
+[v0.205.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.205.0
+
+---
+
 ## [v0.204.0] — 2026-05-30
 
 ### Session 204 — Share My Shelf Arc 4: Sonnet caption + hero-hook generator (Shape C: AI enrichment + deterministic floor) — 3 runtime commits + 1 close
