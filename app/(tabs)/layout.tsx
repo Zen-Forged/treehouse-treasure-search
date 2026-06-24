@@ -59,10 +59,15 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   // same commit per feedback_single_coupled_commit_when_must_move_together
   // ✅ Promoted — adding the tab without wiring active prop would render
   // the Map slot permanently un-highlighted mid-commit.
-  const activeNav: "home" | "flagged" | "map" =
+  // Session 205 — /home hub tab added at BottomNav slot 1 (10th R10 D1
+  // iteration). The prior "/" tab's key renamed "home" → "explore" in the
+  // same commit (BottomNav.tsx); this is the sole consumer of the old key.
+  // /home → "home" (the hub); "/" → "explore" (the feed).
+  const activeNav: "home" | "explore" | "flagged" | "map" =
+    pathname === "/home"    ? "home" :
     pathname === "/flagged" ? "flagged" :
     pathname === "/map"     ? "map" :
-    "home";
+    "explore";
 
   // Session 179 — David iPhone QA finding 1: "change BG to match the
   // masthead BG" on /map. The /map page's StickyMasthead uses

@@ -120,7 +120,7 @@ import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MdOutlineExplore } from "react-icons/md";
-import { PiLeafBold, PiMapPinBold, PiStorefrontBold } from "react-icons/pi";
+import { PiHouseBold, PiLeafBold, PiMapPinBold, PiStorefrontBold } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
 import { useUserRole } from "@/lib/useUserRole";
 
@@ -199,7 +199,7 @@ import { useUserRole } from "@/lib/useUserRole";
 //
 // History note: "login" / "admin" / "profile" members still preserved in
 // NavTab type (no consumer renders them; type stays for callsite compat).
-export type NavTab = "home" | "map" | "flagged" | "booth" | "admin" | "login" | "profile" | null;
+export type NavTab = "home" | "explore" | "map" | "flagged" | "booth" | "admin" | "login" | "profile" | null;
 
 interface BottomNavProps {
   active?: NavTab;
@@ -247,8 +247,22 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   const showBoothTab = roleState.role === "vendor";
 
   const tabs: TabDef[] = [
+    // Session 205 — 10th iteration of R10 D1 (docs/home-hub-design.md D8).
+    // New Home hub tab at slot 1. The prior leftmost tab (label "Explore",
+    // href "/") keeps its label + route but its internal key renames
+    // "home" → "explore" so the new tab owns key "home" + href "/home".
+    // activeNav in app/(tabs)/layout.tsx remaps in the SAME commit (the sole
+    // consumer of the old "home" key, confirmed via grep) per
+    // feedback_single_coupled_commit_when_must_move_together ✅ Promoted.
+    // Does NOT revert session 134's Home→Explore rename — the Explore feed
+    // keeps its name + "/" route; this ADDS a distinct Home hub above it.
+    // PiHouseBold matches the Phosphor bold family (Map/Saved/Booth glyphs).
     {
-      key: "home", label: "Explore", href: "/",
+      key: "home", label: "Home", href: "/home",
+      icon: <PiHouseBold size={21} />,
+    },
+    {
+      key: "explore", label: "Explore", href: "/",
       icon: <MdOutlineExplore size={22} />,
     },
     // Session 190 — Map moves from slot 3 (post-Saved) to slot 2

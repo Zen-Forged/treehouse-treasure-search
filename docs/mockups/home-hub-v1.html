@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Home Hub — V1 (3 frames spanning the hero/brand treatment)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-tabs:#E6DECF;        /* Home/Saved page bg */
+    --surface-warm:#FBF6EA;
+    --surface-card:#FFFCF5;
+    --green:#1F4A31;          /* unified foundation green */
+    --green-deep:#143020;
+    --gold:#b9912f;           /* ornament gold */
+    --ink-brown:#5a4a30;      /* wordmark ink */
+    --text-primary:#2A2419;
+    --text-secondary:#5C5246;
+    --text-muted:#8A7F6E;
+    --border-light:rgba(42,36,25,0.10);
+    --border-med:rgba(42,36,25,0.18);
+    --cor:'Cormorant Garamond',Georgia,serif;
+    --lora:'Lora',Georgia,serif;
+    --sans:'Inter',-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#3a3631;font-family:var(--sans);color:#e9e3d6;padding:36px 24px 80px;}
+  .head{max-width:1320px;margin:0 auto 30px;}
+  .head h1{font-family:var(--cor);font-style:italic;font-weight:600;font-size:30px;color:#f3ecdc;letter-spacing:.2px;}
+  .head p{font-size:13.5px;color:#b8b0a0;margin-top:8px;max-width:760px;line-height:1.55;}
+  .row{display:flex;gap:34px;justify-content:center;flex-wrap:wrap;max-width:1320px;margin:0 auto;}
+  .col{width:392px;}
+  .flabel{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#cdbf9e;margin-bottom:4px;}
+  .fsub{font-family:var(--cor);font-style:italic;font-size:16px;color:#d8cdb6;margin-bottom:14px;min-height:42px;}
+  /* phone */
+  .phone{width:392px;height:812px;border-radius:42px;background:#000;padding:7px;box-shadow:0 26px 60px rgba(0,0,0,.45);}
+  .screen{width:100%;height:100%;border-radius:35px;overflow:hidden;background:var(--bg-tabs);position:relative;display:flex;flex-direction:column;}
+  .scrollwrap{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+  /* shared bits */
+  .cta{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--green);color:#F5EFE2;font-family:var(--sans);font-weight:600;font-size:15.5px;padding:14px;border-radius:14px;letter-spacing:.2px;box-shadow:0 3px 10px rgba(20,48,32,.22);}
+  .rows{display:flex;flex-direction:column;gap:10px;}
+  .lrow{display:flex;align-items:center;gap:13px;background:var(--surface-card);border:1px solid var(--border-light);border-radius:14px;padding:13px 14px;box-shadow:0 1.5px 3px rgba(42,36,25,.06);}
+  .lglyph{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(31,74,49,.10);color:var(--green);font-size:18px;flex:none;}
+  .ltext{flex:1;}
+  .ltitle{font-family:var(--lora);font-size:15px;color:var(--text-primary);font-weight:500;line-height:1.25;}
+  .lsub{font-family:var(--sans);font-size:11.5px;color:var(--text-muted);margin-top:2px;letter-spacing:.02em;}
+  .lcount{font-family:'Times New Roman',serif;font-size:19px;color:var(--green);font-weight:600;}
+  .lchev{color:var(--text-muted);font-size:18px;margin-left:6px;}
+  .vfoot{text-align:center;margin-top:4px;}
+  .vfoot a{font-family:var(--cor);font-style:italic;font-size:14px;color:var(--text-secondary);border-bottom:1px dotted var(--text-muted);text-decoration:none;padding-bottom:1px;}
+  .ornament{height:2px;width:74px;margin:0 auto;background:linear-gradient(90deg,transparent,var(--gold),transparent);border-radius:2px;}
+  /* tagline voice */
+  .tagline{font-family:var(--cor);font-style:italic;font-weight:500;color:var(--text-primary);line-height:1.18;}
+  .subline{font-family:var(--cor);font-style:italic;color:var(--text-secondary);}
+  /* bottom nav */
+  .nav{position:absolute;left:0;right:0;bottom:18px;display:flex;justify-content:center;pointer-events:none;}
+  .navpill{display:flex;gap:4px;background:var(--surface-card);border-radius:18px;padding:5px 6px;box-shadow:0 6px 16px rgba(0,0,0,.16),0 1px 3px rgba(0,0,0,.1);}
+  .ntab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 11px;border-radius:13px;font-family:var(--sans);font-size:9.5px;font-weight:600;color:var(--text-muted);}
+  .ntab .ni{font-size:17px;line-height:1;}
+  .ntab.on{background:rgba(31,74,49,.10);color:var(--green);}
+  /* notes */
+  .note{margin-top:16px;background:#322e29;border:1px solid #4a453d;border-radius:12px;padding:13px 15px;font-size:12.5px;line-height:1.55;color:#c8c0b0;}
+  .note b{color:#ece3d0;font-weight:600;}
+  .note .pro{color:#9ec79e;}
+  .note .con{color:#d6a98a;}
+  .matrix{max-width:1100px;margin:46px auto 0;background:#322e29;border:1px solid #4a453d;border-radius:14px;overflow:hidden;}
+  .matrix table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .matrix th,.matrix td{padding:11px 14px;text-align:left;border-bottom:1px solid #423d35;}
+  .matrix th{background:#3a352e;color:#e7dcc6;font-weight:600;font-family:var(--sans);}
+  .matrix td{color:#c8c0b0;}
+  .matrix td:first-child{color:#ece3d0;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Home Hub — V1</h1>
+  <p>Locked: a single <b style="color:#f3ecdc">pitch-forward composition</b>, an <b style="color:#f3ecdc">opt-in Home tab</b> (Explore stays at <code>/</code>), and <b style="color:#f3ecdc">lightweight live-count launch rows</b>. The three frames below span the one open visual axis — <b style="color:#f3ecdc">how the value pitch at the top is composed</b>: photo-led, typographic, or hybrid. Launch rows + CTAs are identical across all three so the comparison is clean.</p>
+</div>
+
+<div class="row">
+
+  <!-- FRAME A — Photo-hero led -->
+  <div class="col">
+    <div class="flabel">Frame A</div>
+    <div class="fsub">Photo-hero led — continuity with the app</div>
+    <div class="phone"><div class="screen"><div class="scrollwrap">
+      <!-- hero photo -->
+      <div style="position:relative;height:312px;flex:none;background:linear-gradient(160deg,#d8cbb0,#bfae8c);overflow:hidden;">
+        <img src="/public/home-hero.png" onerror="this.onerror=null;this.src='../../public/home-hero.png'" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,30,22,.18) 0%,rgba(20,30,22,0) 30%,rgba(230,222,207,0) 50%,rgba(230,222,207,.86) 92%,var(--bg-tabs) 100%);"></div>
+        <div style="position:absolute;left:0;right:0;bottom:30px;text-align:center;padding:0 26px;">
+          <img src="/public/wordmark.png" onerror="this.onerror=null;this.src='../../public/wordmark.png'" alt="Treehouse Finds" style="height:34px;width:auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25));margin-bottom:12px;">
+          <div class="tagline" style="font-size:23px;color:#23311f;text-shadow:0 1px 1px rgba(255,255,255,.4);">Embrace the search.<br>Treasure the find.</div>
+        </div>
+      </div>
+      <!-- body on cream -->
+      <div style="flex:1;padding:18px 22px 0;display:flex;flex-direction:column;gap:16px;">
+        <div class="cta">Start exploring <span style="font-size:18px;">→</span></div>
+        <div class="rows">
+          <div class="lrow"><div class="lglyph">📍</div><div class="ltext"><div class="ltitle">Active near you</div><div class="lsub">LOCATIONS OPEN TODAY</div></div><div class="lcount">12</div><div class="lchev">›</div></div>
+          <div class="lrow"><div class="lglyph">🌿</div><div class="ltext"><div class="ltitle">Fresh this week</div><div class="lsub">NEW FINDS ON THE SHELVES</div></div><div class="lcount">40</div><div class="lchev">›</div></div>
+          <div class="lrow"><div class="lglyph">🔖</div><div class="ltext"><div class="ltitle">Your saved finds</div><div class="lsub">WAITING TO BE FOUND</div></div><div class="lcount">7</div><div class="lchev">›</div></div>
+        </div>
+        <div class="vfoot"><a href="#">Have a booth? Request a digital booth →</a></div>
+      </div>
+    </div>
+      <div class="nav"><div class="navpill">
+        <div class="ntab on"><span class="ni">⌂</span>Home</div>
+        <div class="ntab"><span class="ni">⊕</span>Explore</div>
+        <div class="ntab"><span class="ni">⌖</span>Map</div>
+        <div class="ntab"><span class="ni">❦</span>Saved</div>
+      </div></div>
+    </div></div>
+    <div class="note"><b>Photo carries the brand warmth</b> + feels continuous with the existing 33vh hero. <span class="pro">Pro:</span> instantly recognizable, magnetic, reuses <code>home-hero.png</code>. <span class="con">Con:</span> the pitch competes with the photo for attention; tagline legibility depends on the photo region.</div>
+  </div>
+
+  <!-- FRAME B — Editorial brand composition -->
+  <div class="col">
+    <div class="flabel">Frame B</div>
+    <div class="fsub">Editorial brand — the desktop pitch, on mobile</div>
+    <div class="phone"><div class="screen"><div class="scrollwrap" style="background:var(--bg-tabs);">
+      <div style="flex:1;padding:64px 28px 0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;">
+        <img src="/public/wordmark.png" onerror="this.onerror=null;this.src='../../public/wordmark.png'" alt="Treehouse Finds" style="height:40px;width:auto;margin-bottom:30px;">
+        <div class="tagline" style="font-size:30px;">Embrace the search.<br>Treasure the find.<br>Share the story.</div>
+        <div class="ornament" style="margin:26px auto 18px;"></div>
+        <div class="subline" style="font-size:16px;margin-bottom:30px;">Find before you visit.</div>
+        <div class="cta" style="width:100%;">Start exploring <span style="font-size:18px;">→</span></div>
+        <div class="rows" style="width:100%;margin-top:24px;text-align:left;">
+          <div class="lrow" style="background:transparent;border:none;border-bottom:1px solid var(--border-light);border-radius:0;box-shadow:none;padding:13px 2px;"><div class="lglyph" style="background:transparent;">📍</div><div class="ltext"><div class="ltitle">Active near you</div></div><div class="lcount">12</div><div class="lchev">›</div></div>
+          <div class="lrow" style="background:transparent;border:none;border-bottom:1px solid var(--border-light);border-radius:0;box-shadow:none;padding:13px 2px;"><div class="lglyph" style="background:transparent;">🌿</div><div class="ltext"><div class="ltitle">Fresh this week</div></div><div class="lcount">40</div><div class="lchev">›</div></div>
+          <div class="lrow" style="background:transparent;border:none;border-radius:0;box-shadow:none;padding:13px 2px;"><div class="lglyph" style="background:transparent;">🔖</div><div class="ltext"><div class="ltitle">Your saved finds</div></div><div class="lcount">7</div><div class="lchev">›</div></div>
+        </div>
+        <div class="vfoot" style="margin-top:22px;"><a href="#">Have a booth? Request a digital booth →</a></div>
+      </div>
+    </div>
+      <div class="nav"><div class="navpill">
+        <div class="ntab on"><span class="ni">⌂</span>Home</div>
+        <div class="ntab"><span class="ni">⊕</span>Explore</div>
+        <div class="ntab"><span class="ni">⌖</span>Map</div>
+        <div class="ntab"><span class="ni">❦</span>Saved</div>
+      </div></div>
+    </div></div>
+    <div class="note"><b>Sells the purpose most explicitly</b> — typographic, premium, quiet. Echoes the desktop BrandChrome verbatim. <span class="pro">Pro:</span> the pitch is unmissable; reads "designed", not "another feed". <span class="con">Con:</span> no photography up top — relies entirely on type + ornament to carry warmth; can feel sparse on a small screen.</div>
+  </div>
+
+  <!-- FRAME C — Hybrid -->
+  <div class="col">
+    <div class="flabel">Frame C</div>
+    <div class="fsub">Hybrid — photo band + typographic pitch</div>
+    <div class="phone"><div class="screen"><div class="scrollwrap">
+      <!-- shorter photo band -->
+      <div style="position:relative;height:200px;flex:none;background:linear-gradient(160deg,#d8cbb0,#bfae8c);overflow:hidden;">
+        <img src="/public/home-hero.png" onerror="this.onerror=null;this.src='../../public/home-hero.png'" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,30,22,.10) 0%,rgba(230,222,207,0) 55%,rgba(230,222,207,.9) 94%,var(--bg-tabs) 100%);"></div>
+        <div style="position:absolute;left:0;right:0;bottom:18px;text-align:center;">
+          <img src="/public/wordmark.png" onerror="this.onerror=null;this.src='../../public/wordmark.png'" alt="Treehouse Finds" style="height:32px;width:auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.22));">
+        </div>
+      </div>
+      <div style="flex:1;padding:18px 24px 0;display:flex;flex-direction:column;align-items:center;text-align:center;">
+        <div class="tagline" style="font-size:24px;">Embrace the search.<br>Treasure the find.<br>Share the story.</div>
+        <div class="ornament" style="margin:16px auto 16px;"></div>
+        <div class="cta" style="width:100%;">Start exploring <span style="font-size:18px;">→</span></div>
+        <div class="rows" style="width:100%;margin-top:18px;text-align:left;">
+          <div class="lrow"><div class="lglyph">📍</div><div class="ltext"><div class="ltitle">Active near you</div><div class="lsub">LOCATIONS OPEN TODAY</div></div><div class="lcount">12</div><div class="lchev">›</div></div>
+          <div class="lrow"><div class="lglyph">🌿</div><div class="ltext"><div class="ltitle">Fresh this week</div><div class="lsub">NEW FINDS THIS WEEK</div></div><div class="lcount">40</div><div class="lchev">›</div></div>
+          <div class="lrow"><div class="lglyph">🔖</div><div class="ltext"><div class="ltitle">Your saved finds</div><div class="lsub">WAITING TO BE FOUND</div></div><div class="lcount">7</div><div class="lchev">›</div></div>
+        </div>
+        <div class="vfoot" style="margin-top:16px;"><a href="#">Have a booth? Request a digital booth →</a></div>
+      </div>
+    </div>
+      <div class="nav"><div class="navpill">
+        <div class="ntab on"><span class="ni">⌂</span>Home</div>
+        <div class="ntab"><span class="ni">⊕</span>Explore</div>
+        <div class="ntab"><span class="ni">⌖</span>Map</div>
+        <div class="ntab"><span class="ni">❦</span>Saved</div>
+      </div></div>
+    </div></div>
+    <div class="note"><b>Photo warmth + the explicit pitch.</b> A compact photo band gives recognition, the full tagline + ornament sell the purpose, launch rows ground it in utility. <span class="pro">Pro:</span> best of both — magnetic AND legible pitch. <span class="con">Con:</span> most vertical real estate up top; launch rows sit lower on first paint.</div>
+  </div>
+
+</div>
+
+<div class="matrix">
+  <table>
+    <tr><th>Axis</th><th>A · Photo-led</th><th>B · Editorial</th><th>C · Hybrid</th></tr>
+    <tr><td>Pitch legibility</td><td>Medium (over photo)</td><td>Highest</td><td>High</td></tr>
+    <tr><td>Brand warmth / magnetism</td><td>Highest</td><td>Lower (type only)</td><td>High</td></tr>
+    <tr><td>Continuity w/ existing hero</td><td>Highest</td><td>Lowest</td><td>Medium</td></tr>
+    <tr><td>"Designed, not a feed" feel</td><td>Medium</td><td>Highest</td><td>High</td></tr>
+    <tr><td>Launch rows above fold</td><td>Yes</td><td>Yes (lower)</td><td>Mostly</td></tr>
+    <tr><td>Reuses home-hero.png</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+  </table>
+</div>
+
+</body>
+</html>

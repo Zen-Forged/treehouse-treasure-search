@@ -71,6 +71,12 @@ export default function TabsChrome() {
   // MallPickerChip + MapPageBody + MapCarousel) since the (tabs)/ HomeHero
   // pattern doesn't apply on the map page (no hero photo, standard masthead
   // per D9 + D10). TabsChrome early-returns null on /map.
+  // Session 205 — /home hub renders its own chrome (HubMasthead) inside its
+  // page, the same pattern /map uses (docs/home-hub-design.md §5). TabsChrome
+  // early-returns null so the (tabs)/ HomeHero + Profile overlay +
+  // MallPickerChip stack does NOT render on the hub.
+  if (pathname === "/home") return null;
+
   if (pathname === "/map") return null;
 
   // Session 182 — Saved chrome restructure. Replace HomeHero (33vh
