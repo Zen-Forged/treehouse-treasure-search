@@ -10,7 +10,7 @@
 import Link from "next/link";
 import { PiStorefrontBold } from "react-icons/pi";
 import { v2, FONT_CORMORANT, FONT_LORA, FONT_INTER } from "@/lib/tokens";
-import { HUB_GOLD } from "./palette";
+import { HUB_GOLD, HUB_GOLD_TEXT } from "./palette";
 
 interface Props {
   href?: string;
@@ -48,7 +48,7 @@ export default function VendorCtaCard({ href = "/vendor-request", photoUrl }: Pr
           <p style={{ fontFamily: FONT_LORA, fontSize: 11.5, color: v2.text.secondary, lineHeight: 1.4, margin: "3px 0 0" }}>
             List your finds and reach local shoppers before they visit the mall.
           </p>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 9, fontFamily: FONT_INTER, fontSize: 12, fontWeight: 700, color: HUB_GOLD }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 9, fontFamily: FONT_INTER, fontSize: 12, fontWeight: 700, color: HUB_GOLD_TEXT }}>
             Request a digital booth <span style={{ fontSize: 14 }}>→</span>
           </span>
         </div>

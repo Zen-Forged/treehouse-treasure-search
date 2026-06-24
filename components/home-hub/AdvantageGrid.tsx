@@ -11,11 +11,12 @@
 import type { ReactNode } from "react";
 import { PiShoppingBagBold, PiStorefrontBold, PiBuildingsBold } from "react-icons/pi";
 import { v2, FONT_INTER, FONT_LORA } from "@/lib/tokens";
-import { HUB_GOLD, HUB_TEAL } from "./palette";
+import { HUB_GOLD, HUB_TEAL, HUB_GOLD_TEXT, HUB_TEAL_TEXT } from "./palette";
 
 interface Audience {
   icon: ReactNode;
-  accent: string;
+  accent: string;      // icon-circle fill (bright; passes 3:1 UI bar)
+  labelColor: string;  // label TEXT (AA-passing on the hub bg per REC-1/2/3)
   label: string;
   copy: string;
   comingSoon?: boolean;
@@ -23,15 +24,15 @@ interface Audience {
 
 const AUDIENCES: Audience[] = [
   {
-    icon: <PiShoppingBagBold />, accent: v2.accent.green, label: "FOR SHOPPERS",
+    icon: <PiShoppingBagBold />, accent: v2.accent.green, labelColor: v2.accent.green, label: "FOR SHOPPERS",
     copy: "Find unique pieces near you, save your favorites & never miss a great find.",
   },
   {
-    icon: <PiStorefrontBold />, accent: HUB_GOLD, label: "FOR VENDORS",
+    icon: <PiStorefrontBold />, accent: HUB_GOLD, labelColor: HUB_GOLD_TEXT, label: "FOR VENDORS",
     copy: "Showcase your finds, reach more shoppers & grow your booth locally.",
   },
   {
-    icon: <PiBuildingsBold />, accent: HUB_TEAL, label: "FOR MALLS",
+    icon: <PiBuildingsBold />, accent: HUB_TEAL, labelColor: HUB_TEAL_TEXT, label: "FOR MALLS",
     copy: "Drive foot traffic, promote your vendors & build a thriving community.",
     comingSoon: true,
   },
@@ -76,7 +77,7 @@ export default function AdvantageGrid() {
             >
               {a.icon}
             </div>
-            <h3 style={{ fontFamily: FONT_INTER, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", margin: "0 0 8px", color: a.accent }}>
+            <h3 style={{ fontFamily: FONT_INTER, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", margin: "0 0 8px", color: a.labelColor }}>
               {a.label}
             </h3>
             <p style={{ fontFamily: FONT_LORA, fontSize: 12.5, lineHeight: 1.45, color: v2.text.secondary, margin: 0 }}>
@@ -87,7 +88,7 @@ export default function AdvantageGrid() {
                 style={{
                   display: "inline-block", marginTop: 7,
                   fontFamily: FONT_INTER, fontSize: 8.5, fontWeight: 700, letterSpacing: "0.08em",
-                  color: HUB_TEAL, background: "rgba(91,123,138,0.12)", borderRadius: 8, padding: "2px 7px",
+                  color: HUB_TEAL_TEXT, background: "rgba(91,123,138,0.12)", borderRadius: 8, padding: "2px 7px",
                 }}
               >
                 COMING SOON

@@ -93,7 +93,12 @@ export default function HomeHubPage() {
             style={{
               flex: 1, display: "flex", alignItems: "center", gap: 10, textAlign: "left",
               background: v2.surface.input, border: `1px solid ${v2.border.medium}`,
-              borderRadius: 26, padding: "13px 18px", color: v2.text.muted,
+              borderRadius: 26, padding: "13px 18px",
+              // REC-4 — this is a <button> with static label text, NOT an HTML
+              // ::placeholder, so the lint placeholder-exemption doesn't apply.
+              // v2.text.secondary (passes WCAG 1.4.3) per the session-153/191
+              // muted→secondary canonical.
+              color: v2.text.secondary,
               fontFamily: FONT_INTER, fontSize: 14, cursor: "pointer",
             }}
           >
@@ -114,7 +119,10 @@ export default function HomeHubPage() {
         </div>
 
         <HeroCard
-          photoUrl="/home-hero.png"
+          // desktop-hero.png is the clean editorial flatlay (no baked-in
+          // wordmark, unlike home-hero.png which bled through the scrim).
+          // Arc 4 dial — swap to a dedicated hero asset if David has one.
+          photoUrl="/desktop-hero.png"
           headline="Discover treasures near you."
           sub="Find what's on the shelves — before you visit."
           ctaLabel="Explore Nearby"

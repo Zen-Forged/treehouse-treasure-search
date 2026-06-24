@@ -52,7 +52,7 @@ export default function HomeHubTestPage() {
             style={{
               flex: 1, display: "flex", alignItems: "center", gap: 10,
               background: v2.surface.input, border: `1px solid ${v2.border.medium}`,
-              borderRadius: 26, padding: "13px 18px", color: v2.text.muted,
+              borderRadius: 26, padding: "13px 18px", color: v2.text.secondary,
               fontFamily: FONT_INTER, fontSize: 14,
             }}
           >

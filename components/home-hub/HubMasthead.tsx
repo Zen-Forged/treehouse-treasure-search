@@ -8,7 +8,7 @@
 
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import { FONT_INTER } from "@/lib/tokens";
-import { HUB_GOLD } from "./palette";
+import { HUB_GOLD_TEXT } from "./palette";
 
 const TOP = "calc(env(safe-area-inset-top, 0px) + 16px)";
 
@@ -32,7 +32,7 @@ export default function HubMasthead() {
           fontSize:      9.5,
           fontWeight:    700,
           letterSpacing: "0.22em",
-          color:         HUB_GOLD,
+          color:         HUB_GOLD_TEXT,
           marginTop:     5,
         }}
       >

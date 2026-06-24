@@ -51,11 +51,22 @@ export default function NearbyLocationCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photoUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         )}
+        {/* Bottom scrim (design-reviewer REC-6) — guarantees the name's dark
+            substrate independent of the photo; a light mall exterior would
+            otherwise drop #fff text to ~1.3:1. Mirrors the HeroCard pattern. */}
         <div
           style={{
-            position:   "absolute", left: 10, bottom: 9,
-            fontFamily: FONT_CORMORANT, fontStyle: "italic", fontWeight: 600, fontSize: 17,
-            color:      "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+            position: "absolute", left: 0, right: 0, bottom: 0, height: 56,
+            background: "linear-gradient(to top, rgba(15,16,12,0.72), rgba(15,16,12,0))",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position:     "absolute", left: 10, right: 10, bottom: 9,
+            fontFamily:   FONT_CORMORANT, fontStyle: "italic", fontWeight: 600, fontSize: 17,
+            color:        "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+            whiteSpace:   "nowrap", overflow: "hidden", textOverflow: "ellipsis",
           }}
         >
           {name}
