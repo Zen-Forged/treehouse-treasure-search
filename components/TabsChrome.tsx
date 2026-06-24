@@ -71,11 +71,14 @@ export default function TabsChrome() {
   // MallPickerChip + MapPageBody + MapCarousel) since the (tabs)/ HomeHero
   // pattern doesn't apply on the map page (no hero photo, standard masthead
   // per D9 + D10). TabsChrome early-returns null on /map.
-  // Session 205 — /home hub renders its own chrome (HubMasthead) inside its
-  // page, the same pattern /map uses (docs/home-hub-design.md §5). TabsChrome
-  // early-returns null so the (tabs)/ HomeHero + Profile overlay +
-  // MallPickerChip stack does NOT render on the hub.
-  if (pathname === "/home") return null;
+  // Session 205 — /home hub chrome = the shared <StickyMasthead> (David QA
+  // dial: "keep the treehouse logo the same size and position as the flagged
+  // tab" + "remove LOCAL FINDS · REAL TREASURES"). Same wordmark (72px) as
+  // /flagged, profile right, no back button (the hub is the entry/start_url
+  // landing). Replaces the Arc-2 custom HubMasthead (retired).
+  if (pathname === "/home") {
+    return <StickyMasthead right={<MastheadProfileButton />} />;
+  }
 
   if (pathname === "/map") return null;
 

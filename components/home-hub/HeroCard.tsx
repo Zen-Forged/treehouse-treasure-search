@@ -48,7 +48,9 @@ export default function HeroCard({ photoUrl, headline, sub, ctaLabel, onCta }: H
         style={{
           position:       "absolute",
           inset:          0,
-          padding:        "26px 24px",
+          // David QA dial — more inner padding so text + button breathe off
+          // the card edges.
+          padding:        "32px 30px",
           display:        "flex",
           flexDirection:  "column",
           justifyContent: "center",
@@ -56,11 +58,15 @@ export default function HeroCard({ photoUrl, headline, sub, ctaLabel, onCta }: H
       >
         <h2
           style={{
+            // David QA dial — was lineHeight 1.02 (cramped) + letterSpacing
+            // 0.3px + default word spacing (too airy between words). Looser
+            // lines, tighter letters + words.
             fontFamily:    FONT_CORMORANT,
             fontWeight:    600,
             fontSize:      38,
-            lineHeight:    1.02,
-            letterSpacing: "0.3px",
+            lineHeight:    1.12,
+            letterSpacing: "-0.2px",
+            wordSpacing:   "-0.04em",
             color:         "#FBF7EE",
             maxWidth:      240,
             margin:        0,

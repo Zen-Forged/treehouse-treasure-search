@@ -14,7 +14,8 @@
 import { useState } from "react";
 import { PiMagnifyingGlassBold, PiSlidersHorizontalBold } from "react-icons/pi";
 import { v2, FONT_INTER } from "@/lib/tokens";
-import HubMasthead from "@/components/home-hub/HubMasthead";
+import StickyMasthead from "@/components/StickyMasthead";
+import MastheadProfileButton from "@/components/MastheadProfileButton";
 import HeroCard from "@/components/home-hub/HeroCard";
 import AdvantageGrid from "@/components/home-hub/AdvantageGrid";
 import NearbyLocationsRail from "@/components/home-hub/NearbyLocationsRail";
@@ -43,7 +44,7 @@ export default function HomeHubTestPage() {
         paddingBottom:  60,
       }}
     >
-      <HubMasthead />
+      <StickyMasthead right={<MastheadProfileButton />} />
 
       <div style={{ padding: "4px 18px 0", display: "flex", flexDirection: "column" }}>
         {/* search row — static stand-in for Arc 2 */}

@@ -1,8 +1,8 @@
 // app/(tabs)/home/page.tsx
-// Home Hub — Arc 3 (docs/home-hub-design.md). The real composition, wired to
-// live data. TabsChrome early-returns null on /home (Arc 1) so this page owns
-// its chrome (HubMasthead); the (tabs) layout provides the outer wrapper bg +
-// maxWidth + BottomNav.
+// Home Hub — docs/home-hub-design.md. The real composition, wired to live data.
+// Chrome: TabsChrome renders <StickyMasthead> for /home (session-205 QA dial —
+// matches /flagged's wordmark); the (tabs) layout provides the outer wrapper bg
+// + maxWidth + BottomNav. This page renders only the body.
 //
 // Data:
 //   - useActiveMalls()        — cached/reactive active-mall list
@@ -27,7 +27,6 @@ import { getMallStatsByMallId, type MallStats } from "@/lib/posts";
 import { useUserLocation } from "@/lib/useUserLocation";
 import { milesFromUser } from "@/lib/distance";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import HubMasthead from "@/components/home-hub/HubMasthead";
 import HeroCard from "@/components/home-hub/HeroCard";
 import AdvantageGrid from "@/components/home-hub/AdvantageGrid";
 import NearbyLocationsRail from "@/components/home-hub/NearbyLocationsRail";
@@ -82,8 +81,8 @@ export default function HomeHubPage() {
         paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
       }}
     >
-      <HubMasthead />
-
+      {/* Masthead is rendered by TabsChrome (<StickyMasthead>) for /home —
+          matches /flagged exactly (David QA dial). */}
       <div style={{ padding: "4px 18px 0", display: "flex", flexDirection: "column" }}>
         {/* search row — entry point into Explore's search (Arc 4/Tier B: live
             inline search). Whole row taps through to the feed. */}
@@ -126,7 +125,8 @@ export default function HomeHubPage() {
           headline="Discover treasures near you."
           sub="Find what's on the shelves — before you visit."
           ctaLabel="Explore Nearby"
-          onCta={goExplore}
+          // David QA dial — "Explore Nearby" routes to the Map tab/page.
+          onCta={() => router.push("/map")}
         />
 
         <div style={{ height: 30 }} />

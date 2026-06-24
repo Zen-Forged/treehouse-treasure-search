@@ -2,7 +2,7 @@
   "name": "Treehouse Finds",
   "short_name": "Treehouse",
   "description": "Discover unique vintage and antique finds at local booths near you.",
-  "start_url": "/",
+  "start_url": "/home",
   "display": "standalone",
   "background_color": "#f5f2eb",
   "theme_color": "#1e4d2b",
