@@ -16,9 +16,10 @@ interface Props {
   onViewMap?: () => void;
   onTapLocation?: (id: string) => void;
   onToggleSave?: (id: string) => void;
+  showSave?: boolean;
 }
 
-export default function NearbyLocationsRail({ locations, onViewMap, onTapLocation, onToggleSave }: Props) {
+export default function NearbyLocationsRail({ locations, onViewMap, onTapLocation, onToggleSave, showSave = true }: Props) {
   return (
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -47,6 +48,7 @@ export default function NearbyLocationsRail({ locations, onViewMap, onTapLocatio
           <NearbyLocationCard
             key={loc.id}
             {...loc}
+            showSave={showSave}
             onTap={onTapLocation ? () => onTapLocation(loc.id) : undefined}
             onToggleSave={onToggleSave ? () => onToggleSave(loc.id) : undefined}
           />

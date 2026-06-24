@@ -22,10 +22,14 @@ export interface NearbyLocation {
 interface Props extends NearbyLocation {
   onToggleSave?: () => void;
   onTap?: () => void;
+  // showSave defaults true (testbed). The real hub passes false until the
+  // ★ Favorite Mall backend exists (lattice Mall-tier engagement; no
+  // favorite-malls hook today) — avoids a dead heart that writes nowhere.
+  showSave?: boolean;
 }
 
 export default function NearbyLocationCard({
-  name, photoUrl, distanceMi, boothCount, saved, onToggleSave, onTap,
+  name, photoUrl, distanceMi, boothCount, saved, onToggleSave, onTap, showSave = true,
 }: Props) {
   return (
     <div
@@ -67,16 +71,18 @@ export default function NearbyLocationCard({
           {distanceMi != null ? " · " : ""}
           {boothCount} booths
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleSave?.(); }}
-          aria-label={saved ? "Remove from saved" : "Save location"}
-          style={{
-            background: "none", border: "none", padding: 0, cursor: "pointer",
-            display: "flex", color: saved ? v2.accent.green : v2.text.muted, fontSize: 18,
-          }}
-        >
-          {saved ? <PiHeartFill /> : <PiHeartBold />}
-        </button>
+        {showSave && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSave?.(); }}
+            aria-label={saved ? "Remove from saved" : "Save location"}
+            style={{
+              background: "none", border: "none", padding: 0, cursor: "pointer",
+              display: "flex", color: saved ? v2.accent.green : v2.text.muted, fontSize: 18,
+            }}
+          >
+            {saved ? <PiHeartFill /> : <PiHeartBold />}
+          </button>
+        )}
       </div>
     </div>
   );
