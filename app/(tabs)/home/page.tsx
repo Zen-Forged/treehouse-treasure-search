@@ -20,8 +20,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PiMagnifyingGlassBold, PiSlidersHorizontalBold } from "react-icons/pi";
-import { v2, FONT_INTER } from "@/lib/tokens";
 import { useActiveMalls } from "@/lib/cachedMalls";
 import { getMallStatsByMallId, type MallStats } from "@/lib/posts";
 import { useUserLocation } from "@/lib/useUserLocation";
@@ -69,8 +67,6 @@ export default function HomeHubPage() {
     return list.slice(0, NEARBY_CAP);
   }, [malls, userLoc, stats]);
 
-  const goExplore = () => router.push("/");
-
   return (
     <div
       style={{
@@ -83,40 +79,10 @@ export default function HomeHubPage() {
     >
       {/* Masthead is rendered by TabsChrome (<StickyMasthead>) for /home —
           matches /flagged exactly (David QA dial). */}
-      <div style={{ padding: "4px 18px 0", display: "flex", flexDirection: "column" }}>
-        {/* search row — entry point into Explore's search (Arc 4/Tier B: live
-            inline search). Whole row taps through to the feed. */}
-        <div style={{ display: "flex", gap: 11, alignItems: "center", margin: "6px 0 16px" }}>
-          <button
-            onClick={goExplore}
-            style={{
-              flex: 1, display: "flex", alignItems: "center", gap: 10, textAlign: "left",
-              background: v2.surface.input, border: `1px solid ${v2.border.medium}`,
-              borderRadius: 26, padding: "13px 18px",
-              // REC-4 — this is a <button> with static label text, NOT an HTML
-              // ::placeholder, so the lint placeholder-exemption doesn't apply.
-              // v2.text.secondary (passes WCAG 1.4.3) per the session-153/191
-              // muted→secondary canonical.
-              color: v2.text.secondary,
-              fontFamily: FONT_INTER, fontSize: 14, cursor: "pointer",
-            }}
-          >
-            <PiMagnifyingGlassBold /> Search antique, vintage &amp; more…
-          </button>
-          <button
-            onClick={goExplore}
-            aria-label="Browse the feed"
-            style={{
-              width: 50, height: 50, borderRadius: "50%", flex: "none", border: "none", cursor: "pointer",
-              background: v2.accent.green, color: "#F2EBDB", fontSize: 19,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 2px 7px rgba(20,48,32,0.25)",
-            }}
-          >
-            <PiSlidersHorizontalBold />
-          </button>
-        </div>
-
+      <div style={{ padding: "12px 18px 0", display: "flex", flexDirection: "column" }}>
+        {/* Search + filter row retired session 206 — it only deep-linked to
+            Explore and served no real function on the hub. The hero is the
+            top-of-page anchor now. (Tier B: live inline search may revive it.) */}
         <HeroCard
           // desktop-hero.png is the clean editorial flatlay (no baked-in
           // wordmark, unlike home-hero.png which bled through the scrim).
