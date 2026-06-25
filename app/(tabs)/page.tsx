@@ -55,13 +55,11 @@ import {
 import { formatTimeAgo } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperSaves } from "@/lib/useShopperSaves";
-import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 // Chrome (TabPageMasthead + PostcardMallCard + BottomNav + MallSheet) lives
 // in app/(tabs)/layout.tsx as of session 109 — flicker-eliminating shared
 // layout. This page renders only the Home body (SearchBar + featured banner
 // + masonry).
-import FeaturedBanner from "@/components/FeaturedBanner";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import EmptyState from "@/components/EmptyState";
 import MallMatchChip from "@/components/MallMatchChip";
@@ -430,7 +428,6 @@ function DiscoveryFeedInner() {
   const saves = useShopperSaves();
   const followedIds = saves.ids;
   const [lastViewedId,      setLastViewedId]      = useState<string | null>(null);
-  const [featuredImageUrl,  setFeaturedImageUrl]  = useState<string | null>(null);
   const wasHidden        = useRef(false);
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
@@ -479,12 +476,6 @@ function DiscoveryFeedInner() {
   }, [q, mallId]);
 
   useEffect(() => { loadPosts(); }, [loadPosts]);
-
-  // Load featured-find banner URL on mount — fire-and-forget; banner renders
-  // null when no image is set (v1.1l graceful collapse).
-  useEffect(() => {
-    getSiteSettingUrl("featured_find_image_url").then(setFeaturedImageUrl);
-  }, []);
 
   // ── Scroll + last-viewed restore ────────────────────────────────────────────
   useEffect(() => {
@@ -623,14 +614,9 @@ function DiscoveryFeedInner() {
         />
       </div>
 
-      {/* ── 2. FeaturedBanner (eyebrow variant) — admin-editable. Only
-             renders when an image URL is set; otherwise collapses quietly. */}
-      <FeaturedBanner
-        variant="eyebrow"
-        imageUrl={featuredImageUrl}
-        minHeight={200}
-        marginBottom={6}
-      />
+      {/* FeaturedBanner retired from Explore session 206 #4 — the admin
+          "home hero" upload (featured_find_image_url) now drives the /home
+          hub HeroCard, where it belongs. */}
 
       {/* Diamond divider hairline retired session 105 — the SearchBar
           slot above the masonry now serves as the visual separator

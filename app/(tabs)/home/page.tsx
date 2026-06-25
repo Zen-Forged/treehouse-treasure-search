@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useActiveMalls } from "@/lib/cachedMalls";
 import { getMallStatsByMallId, type MallStats } from "@/lib/posts";
+import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { useUserLocation } from "@/lib/useUserLocation";
 import { milesFromUser } from "@/lib/distance";
 import { useSavedMallId } from "@/lib/useSavedMallId";
@@ -41,10 +42,14 @@ export default function HomeHubPage() {
   const userLoc      = useUserLocation();
   const [, setMallId] = useSavedMallId();
   const [stats, setStats] = useState<Record<string, MallStats>>({});
+  // The admin "home hero" upload (site_settings featured_find_image_url) drives
+  // this card (s206 #4). Fallback to the editorial flatlay when unset.
+  const [heroUrl, setHeroUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     getMallStatsByMallId().then((s) => { if (alive) setStats(s); }).catch(() => {});
+    getSiteSettingUrl("featured_find_image_url").then((u) => { if (alive) setHeroUrl(u); }).catch(() => {});
     return () => { alive = false; };
   }, []);
 
@@ -84,10 +89,9 @@ export default function HomeHubPage() {
             Explore and served no real function on the hub. The hero is the
             top-of-page anchor now. (Tier B: live inline search may revive it.) */}
         <HeroCard
-          // desktop-hero.png is the clean editorial flatlay (no baked-in
-          // wordmark, unlike home-hero.png which bled through the scrim).
-          // Arc 4 dial — swap to a dedicated hero asset if David has one.
-          photoUrl="/desktop-hero.png"
+          // Admin-uploaded hero (featured_find_image_url) when set, else the
+          // clean editorial flatlay desktop-hero.png (no baked-in wordmark).
+          photoUrl={heroUrl ?? "/desktop-hero.png"}
           headline="Discover treasures near you."
           sub="Find what's on the shelves — before you visit."
           ctaLabel="Explore Nearby"
