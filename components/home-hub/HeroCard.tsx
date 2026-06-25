@@ -23,7 +23,7 @@ export default function HeroCard({ photoUrl, headline, sub, ctaLabel, onCta }: H
         position:     "relative",
         borderRadius: 20,
         overflow:     "hidden",
-        height:       248,
+        height:       272,
         boxShadow:    "0 8px 22px rgba(40,30,15,0.18)",
         background:   "linear-gradient(160deg,#d8cbb0,#bfae8c)",
       }}
@@ -48,9 +48,10 @@ export default function HeroCard({ photoUrl, headline, sub, ctaLabel, onCta }: H
         style={{
           position:       "absolute",
           inset:          0,
-          // David QA dial — more inner padding so text + button breathe off
-          // the card edges.
-          padding:        "32px 30px",
+          // David QA dial (s206) — taller card (272) + more vertical inner
+          // padding so "Discover" pulls off the top edge + the CTA pulls off
+          // the bottom edge.
+          padding:        "40px 30px",
           display:        "flex",
           flexDirection:  "column",
           justifyContent: "center",
@@ -58,17 +59,18 @@ export default function HeroCard({ photoUrl, headline, sub, ctaLabel, onCta }: H
       >
         <h2
           style={{
-            // David QA dial — was lineHeight 1.02 (cramped) + letterSpacing
-            // 0.3px + default word spacing (too airy between words). Looser
-            // lines, tighter letters + words.
+            // David QA dial (s206) — the headline wraps to 2-3 lines; the
+            // multi-line vertical gap read disjointed ("Discover" / "treasures
+            // near"). Tighter lineHeight (1.12 → 1.0) groups the lines into one
+            // block; wider maxWidth (240 → 270) gives a cleaner wrap; normal
+            // wordSpacing (the prior -0.04em fought the tightening).
             fontFamily:    FONT_CORMORANT,
             fontWeight:    600,
             fontSize:      38,
-            lineHeight:    1.12,
+            lineHeight:    1.0,
             letterSpacing: "-0.2px",
-            wordSpacing:   "-0.04em",
             color:         "#FBF7EE",
-            maxWidth:      240,
+            maxWidth:      270,
             margin:        0,
           }}
         >
