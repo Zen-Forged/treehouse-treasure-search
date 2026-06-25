@@ -51,8 +51,9 @@ export async function searchPosts(opts: {
   query:    string;
   mallId?:  string | null;
   limit?:   number;
+  includeAllAges?: boolean;
 }): Promise<Post[]> {
-  const { query, mallId, limit = 40 } = opts;
+  const { query, mallId, limit = 40, includeAllAges = false } = opts;
   // Review Board (session 150) — fixture-substitute reads only. Simple
   // contains-match against title + caption + tags so search visibly
   // filters the masonry on /review-board?reviewMode=1 even though no
@@ -79,8 +80,10 @@ export async function searchPosts(opts: {
       vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
       mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
-    .eq("status", "available")
-    .gte("created_at", cutoff)
+    .eq("status", "available");
+  // s206 #7 — admin search returns finds of any age.
+  if (!includeAllAges) q = q.gte("created_at", cutoff);
+  q = q
     .textSearch("search_tsv", query, { type: "websearch", config: "english" })
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -92,7 +95,7 @@ export async function searchPosts(opts: {
   return (data ?? []) as Post[];
 }
 
-export async function getFeedPosts(limit = 40): Promise<Post[]> {
+export async function getFeedPosts(limit = 40, includeAllAges = false): Promise<Post[]> {
   // Review Board (session 150) — fixture-substitute. Returns all
   // available fixture posts ordered by created_at desc (the fixture
   // POST_BASE() helper already staggers timestamps in feed order).
@@ -106,17 +109,18 @@ export async function getFeedPosts(limit = 40): Promise<Post[]> {
   // detectOwnershipAsync on /find/[id]), vendor.bio, mall.address (needed
   // by the cartographic maps link). ~30-100 bytes/post; trivial payload
   // bump for instant tap-to-detail metadata paint.
-  const { data, error } = await supabase
+  let q = supabase
     .from("posts")
     .select(`
       *,
       vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
       mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
-    .eq("status", "available")
-    .gte("created_at", cutoff)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .eq("status", "available");
+  // s206 #7 — admin sees finds of any age (no 30-day freshness window).
+  if (!includeAllAges) q = q.gte("created_at", cutoff);
+  q = q.order("created_at", { ascending: false }).limit(limit);
+  const { data, error } = await q;
   if (error) { console.error("[posts] getFeedPosts:", error.message); return []; }
   return (data ?? []) as Post[];
 }
@@ -737,13 +741,16 @@ export interface MallStats {
 
 const FRESHNESS_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-export async function getMallStatsByMallId(): Promise<Record<string, MallStats>> {
+export async function getMallStatsByMallId(includeAllAges = false): Promise<Record<string, MallStats>> {
   // Review Board (session 150) — fixture-substitute.
   if (isReviewMode()) return getFixtureMallStats();
   const thirtyDaysAgo = new Date(Date.now() - FRESHNESS_WINDOW_MS).toISOString();
+  let postsQuery = supabase.from("posts").select("mall_id").eq("status", "available");
+  // s206 #7 — admin counts finds of any age toward per-mall findCount.
+  if (!includeAllAges) postsQuery = postsQuery.gte("created_at", thirtyDaysAgo);
   const [vendorsRes, postsRes] = await Promise.all([
     supabase.from("vendors").select("mall_id"),
-    supabase.from("posts").select("mall_id").eq("status", "available").gte("created_at", thirtyDaysAgo),
+    postsQuery,
   ]);
 
   if (vendorsRes.error) console.error("[posts] getMallStatsByMallId vendors:", vendorsRes.error.message);

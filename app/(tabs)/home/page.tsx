@@ -26,6 +26,7 @@ import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { useUserLocation } from "@/lib/useUserLocation";
 import { milesFromUser } from "@/lib/distance";
 import { useSavedMallId } from "@/lib/useSavedMallId";
+import { useUserRole } from "@/lib/useUserRole";
 import HeroCard from "@/components/home-hub/HeroCard";
 import AdvantageGrid from "@/components/home-hub/AdvantageGrid";
 import NearbyLocationsRail from "@/components/home-hub/NearbyLocationsRail";
@@ -40,6 +41,7 @@ export default function HomeHubPage() {
   const router       = useRouter();
   const malls        = useActiveMalls();
   const userLoc      = useUserLocation();
+  const { role }     = useUserRole();
   const [, setMallId] = useSavedMallId();
   const [stats, setStats] = useState<Record<string, MallStats>>({});
   // The admin "home hero" upload (site_settings featured_find_image_url) drives
@@ -48,10 +50,11 @@ export default function HomeHubPage() {
 
   useEffect(() => {
     let alive = true;
-    getMallStatsByMallId().then((s) => { if (alive) setStats(s); }).catch(() => {});
+    // s206 #7 — admin counts finds of any age toward booth-rail stats.
+    getMallStatsByMallId(role === "admin").then((s) => { if (alive) setStats(s); }).catch(() => {});
     getSiteSettingUrl("featured_find_image_url").then((u) => { if (alive) setHeroUrl(u); }).catch(() => {});
     return () => { alive = false; };
-  }, []);
+  }, [role]);
 
   const locations = useMemo<NearbyLocation[]>(() => {
     const list: NearbyLocation[] = malls.map((m) => ({

@@ -42,6 +42,7 @@ import { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback, Sus
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getFeedPosts, getActiveMalls, searchPosts } from "@/lib/posts";
+import { useUserRole } from "@/lib/useUserRole";
 import {
   v1,
   v2,
@@ -429,6 +430,9 @@ function DiscoveryFeedInner() {
   const followedIds = saves.ids;
   const [lastViewedId,      setLastViewedId]      = useState<string | null>(null);
   const wasHidden        = useRef(false);
+  // s206 #7 — admin viewers bypass the 30-day freshness window (re-fetches
+  // when role hydrates none → admin via the loadPosts dep below).
+  const { role: viewerRole } = useUserRole();
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
 
@@ -456,9 +460,11 @@ function DiscoveryFeedInner() {
     else if (cachedFeedPosts === null) setLoading(true);
     setError(false);
     try {
+      // s206 #7 — admin sees finds of any age (no 30-day window).
+      const includeAllAges = viewerRole === "admin";
       const data = isSearching
-        ? await searchPosts({ query: q, mallId: mallId ?? null, limit: 80 })
-        : await getFeedPosts(80);
+        ? await searchPosts({ query: q, mallId: mallId ?? null, limit: 80, includeAllAges })
+        : await getFeedPosts(80, includeAllAges);
       setPosts(data);
       if (!isSearching) cachedFeedPosts = data;
       // Phase B QA fix #2 — populate the /find/[id] post cache with every
@@ -473,7 +479,7 @@ function DiscoveryFeedInner() {
       if (!isSearching && cachedFeedPosts === null) setError(true);
       setLoading(false);
     }
-  }, [q, mallId]);
+  }, [q, mallId, viewerRole]);
 
   useEffect(() => { loadPosts(); }, [loadPosts]);
 

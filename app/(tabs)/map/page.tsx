@@ -73,6 +73,7 @@ import MapCarousel from "@/components/MapCarousel";
 // trigger" to "back-to-Explore navigation" (mirror of Home chip's
 // forward-to-/map role); MallSheet picker becomes dormant on /map.
 import { useSavedMallId } from "@/lib/useSavedMallId";
+import { useUserRole } from "@/lib/useUserRole";
 import { getActiveMalls, getMallStatsByMallId, type MallStats } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import { v2 } from "@/lib/tokens";
@@ -101,6 +102,7 @@ let cachedMallStats: Record<string, MallStats> | null = null;
 
 export default function MapPage() {
   const router = useRouter();
+  const { role } = useUserRole();
   const [mallId, setMallId] = useSavedMallId();
   const [malls, setMalls] = React.useState<Mall[]>(() => cachedMalls ?? []);
   const [mallStats, setMallStats] = React.useState<Record<string, MallStats>>(
@@ -124,11 +126,12 @@ export default function MapPage() {
       cachedMalls = next;
       setMalls(next);
     });
-    getMallStatsByMallId().then((next) => {
+    // s206 #7 — admin counts finds of any age toward per-mall findCount.
+    getMallStatsByMallId(role === "admin").then((next) => {
       cachedMallStats = next;
       setMallStats(next);
     });
-  }, []);
+  }, [role]);
 
   // Auto-peek the selected mall on mount so the PinCallout surfaces
   // immediately (Directions / Explore CTAs visible without an extra tap).
