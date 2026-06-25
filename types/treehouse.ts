@@ -58,6 +58,7 @@ export interface Vendor {
   instagram_url:  string | null;  // Session 184 migration 022 — vendor profile enrichment
   directions_text: string | null; // Session 184 migration 022 — free-text in-mall directions
   hero_image_url: string | null;
+  hidden_from_feed?: boolean;  // Session 206 migration 027 — demo/hidden booths excluded from public discovery (optional: absent/false = visible)
   // Joined
   mall?: Mall;
 }

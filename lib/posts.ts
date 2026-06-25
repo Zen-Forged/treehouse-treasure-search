@@ -77,7 +77,7 @@ export async function searchPosts(opts: {
     .from("posts")
     .select(`
       *,
-      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url, hidden_from_feed ),
       mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .eq("status", "available");
@@ -92,7 +92,8 @@ export async function searchPosts(opts: {
 
   const { data, error } = await q;
   if (error) { console.error("[posts] searchPosts:", error.message); return []; }
-  return (data ?? []) as Post[];
+  // s206 #6b — drop finds belonging to hidden/demo booths from search.
+  return (data ?? []).filter((p) => !p.vendor?.hidden_from_feed) as Post[];
 }
 
 export async function getFeedPosts(limit = 40, includeAllAges = false): Promise<Post[]> {
@@ -113,7 +114,7 @@ export async function getFeedPosts(limit = 40, includeAllAges = false): Promise<
     .from("posts")
     .select(`
       *,
-      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url, hidden_from_feed ),
       mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .eq("status", "available");
@@ -122,7 +123,8 @@ export async function getFeedPosts(limit = 40, includeAllAges = false): Promise<
   q = q.order("created_at", { ascending: false }).limit(limit);
   const { data, error } = await q;
   if (error) { console.error("[posts] getFeedPosts:", error.message); return []; }
-  return (data ?? []) as Post[];
+  // s206 #6b — drop finds belonging to hidden/demo booths from the feed.
+  return (data ?? []).filter((p) => !p.vendor?.hidden_from_feed) as Post[];
 }
 
 export async function getPost(id: string): Promise<Post | null> {
@@ -140,7 +142,7 @@ export async function getPost(id: string): Promise<Post | null> {
     .from("posts")
     .select(`
       *,
-      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url, hidden_from_feed ),
       mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .eq("id", id)
@@ -168,7 +170,7 @@ export async function getPostsByIds(ids: string[]): Promise<Post[]> {
     .from("posts")
     .select(`
       *,
-      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url, hidden_from_feed ),
       mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .in("id", ids)
@@ -203,7 +205,7 @@ export async function getVendorPosts(vendorId: string, limit = 40): Promise<Post
     .from("posts")
     .select(`
       *,
-      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url, hidden_from_feed ),
       mall:malls     ( id, name, city, state, slug, address, latitude, longitude, hours_json, hours_timezone, business_status )
     `)
     .eq("vendor_id", vendorId)
@@ -745,11 +747,11 @@ export async function getMallStatsByMallId(includeAllAges = false): Promise<Reco
   // Review Board (session 150) — fixture-substitute.
   if (isReviewMode()) return getFixtureMallStats();
   const thirtyDaysAgo = new Date(Date.now() - FRESHNESS_WINDOW_MS).toISOString();
-  let postsQuery = supabase.from("posts").select("mall_id").eq("status", "available");
+  let postsQuery = supabase.from("posts").select("mall_id, vendor_id").eq("status", "available");
   // s206 #7 — admin counts finds of any age toward per-mall findCount.
   if (!includeAllAges) postsQuery = postsQuery.gte("created_at", thirtyDaysAgo);
   const [vendorsRes, postsRes] = await Promise.all([
-    supabase.from("vendors").select("mall_id"),
+    supabase.from("vendors").select("id, mall_id, hidden_from_feed"),
     postsQuery,
   ]);
 
@@ -759,11 +761,16 @@ export async function getMallStatsByMallId(includeAllAges = false): Promise<Reco
   const stats: Record<string, MallStats> = {};
   const ensure = (id: string) => (stats[id] ??= { boothCount: 0, findCount: 0 });
 
+  // s206 #6b — hidden/demo booths don't count toward public per-mall stats.
+  const hiddenVendorIds = new Set(
+    (vendorsRes.data ?? []).filter((v) => v.hidden_from_feed).map((v) => v.id),
+  );
+
   for (const v of vendorsRes.data ?? []) {
-    if (v.mall_id) ensure(v.mall_id).boothCount += 1;
+    if (v.mall_id && !v.hidden_from_feed) ensure(v.mall_id).boothCount += 1;
   }
   for (const p of postsRes.data ?? []) {
-    if (p.mall_id) ensure(p.mall_id).findCount += 1;
+    if (p.mall_id && !hiddenVendorIds.has(p.vendor_id)) ensure(p.mall_id).findCount += 1;
   }
   return stats;
 }
