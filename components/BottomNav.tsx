@@ -244,7 +244,12 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   // 3-tab. The transition fires once per session (BottomNav is mounted
   // in the persistent (tabs)/layout.tsx so doesn't remount on tab nav).
   // Pulse bounded; if iPhone QA flags it, gate render via isLoading.
-  const showBoothTab = roleState.role === "vendor";
+  // Session 206 #6a — admin now also sees the Booth tab (→ /my-shelf), where
+  // their demo booth tied to david@zenforged.com lives. Bounded reversal of
+  // session 160's "admin sees Admin → /admin, not Booth" decision per
+  // feedback_surface_locked_design_reversals ✅ Promoted — admin reaches /admin
+  // via the masthead Profile bubble (unchanged); the Booth tab is additive.
+  const showBoothTab = roleState.role === "vendor" || roleState.role === "admin";
 
   const tabs: TabDef[] = [
     // Session 205 — 10th iteration of R10 D1 (docs/home-hub-design.md D8).
