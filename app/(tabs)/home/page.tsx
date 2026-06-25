@@ -91,8 +91,9 @@ export default function HomeHubPage() {
           headline="Discover treasures near you."
           sub="Find what's on the shelves — before you visit."
           ctaLabel="Explore Nearby"
-          // David QA dial — "Explore Nearby" routes to the Map tab/page.
-          onCta={() => router.push("/map")}
+          // "Explore Nearby" opens the Map at the all-Kentucky overview
+          // (?scope=all) — no mall pre-selected (s206 #5).
+          onCta={() => router.push("/map?scope=all")}
         />
 
         <div style={{ height: 30 }} />
@@ -102,7 +103,7 @@ export default function HomeHubPage() {
         <NearbyLocationsRail
           locations={locations}
           showSave={false}
-          onViewMap={() => router.push("/map")}
+          onViewMap={() => router.push("/map?scope=all")}
           onTapLocation={(id) => { setMallId(id); router.push("/"); }}
         />
 

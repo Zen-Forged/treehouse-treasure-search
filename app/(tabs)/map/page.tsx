@@ -108,6 +108,12 @@ export default function MapPage() {
   );
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
   const [resetKey, setResetKey] = React.useState(0);
+  // Session 206 #5 — arriving from the /home hub's "Explore Nearby" / "view
+  // map" carries ?scope=all so the map opens the all-Kentucky overview with NO
+  // mall scoped, regardless of the user's persisted saved-mall. We override the
+  // *view* scope only (effectiveMallId below) — the persisted mallId is left
+  // untouched so the Explore feed keeps the user's chosen scope.
+  const [allScope, setAllScope] = React.useState(false);
   // Session 179 — sheetOpen state retired alongside MallSheet import per
   // feedback_dead_code_cleanup_as_byproduct ✅ Promoted (finding 4 +
   // session 178 D6 reversal). No remaining consumer of bottom-sheet
@@ -131,15 +137,25 @@ export default function MapPage() {
   // — those originate from inside the page; re-peeking would feel like a
   // bug per session 108 D26 reasoning).
   React.useEffect(() => {
+    // ?scope=all (from the /home hub) → all-Kentucky overview: skip auto-peek.
+    if (new URLSearchParams(window.location.search).get("scope") === "all") {
+      setAllScope(true);
+      return;
+    }
     if (mallId) setPeekedMallId(mallId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Derive picker chip's identity from malls + current mallId. Stale id
+  // The view scope: null when arriving all-Kentucky from the hub, else the
+  // persisted saved-mall. Drives the chip, the map fit, and the carousel —
+  // but NOT the persisted mallId (Explore's scope stays put).
+  const effectiveMallId = allScope ? null : mallId;
+
+  // Derive picker chip's identity from malls + effectiveMallId. Stale id
   // OR null → "All Kentucky locations" (canonical all-scope label,
   // matches TabsChrome's selectedMall pattern verbatim).
-  const selectedMall = mallId
-    ? malls.find((m) => m.id === mallId) ?? null
+  const selectedMall = effectiveMallId
+    ? malls.find((m) => m.id === effectiveMallId) ?? null
     : null;
   const mallName = selectedMall ? selectedMall.name : "All Kentucky locations";
 
@@ -206,7 +222,7 @@ export default function MapPage() {
         <MapPageBody
           malls={malls}
           mallStats={mallStats}
-          selectedMallId={mallId}
+          selectedMallId={effectiveMallId}
           peekedMallId={peekedMallId}
           resetKey={resetKey}
           onPinTap={(id) => setPeekedMallId(id)}
@@ -266,7 +282,7 @@ export default function MapPage() {
         // record's "always visible" framing).
         open={true}
         malls={malls}
-        selectedMallId={mallId}
+        selectedMallId={effectiveMallId}
         peekedMallId={peekedMallId}
         onCardTap={(id) => setPeekedMallId(id)}
       />
