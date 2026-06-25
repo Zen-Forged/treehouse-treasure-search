@@ -8,6 +8,41 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.206.0] — 2026-06-24
+
+### Session 206 — Home Hub 7-finding refinement bundle (hero dials · search removal · admin hero retarget · all-Kentucky map · admin demo booth · admin freshness override) — 8 runtime commits + 1 close
+
+David walked the session-205 Home Hub and surfaced a 7-finding bundle spanning pure visual dials, bounded functional rewires, and admin-gated data-model changes. Audit-first (Explore-agent sweep of the 4 functional items + direct reads of the home-hub components) grounded the cost shapes; three genuine forks resolved via `AskUserQuestion` (**#4 move the hero upload off Explore** · **#6 `hidden_from_feed` migration over env-exclusion** · **#6 demo booth needs creating**). Shipped smallest→largest in 8 commits, build green (`next build` exit 0) + tsc clean at every boundary; verified server-side + in the Preview MCP (the dev DB confirmed the `hidden_from_feed` filter is wired by erroring on the not-yet-migrated column, then the seed succeeded once migration 027 was applied to prod). The demo booth was seeded to prod (`Treehouse Demo Booth`, Awesome Flea Market, `hidden_from_feed=true`).
+
+### Added
+
+- **`vendors.hidden_from_feed`** (migration 027, `BOOLEAN NOT NULL DEFAULT FALSE`) — demo/hidden booths excluded from public discovery (Explore feed, search, per-mall stats); owner/admin still reach the booth via the Booth tab + direct links. `Vendor.hidden_from_feed` is optional in TS (absent = visible).
+- **Admin Booth nav tab** (`components/BottomNav.tsx`) — `showBoothTab` now fires for admin as well as vendor (→ `/my-shelf`), where the admin's demo booth lives. Bounded reversal of session 160's admin-no-Booth decision.
+- **Admin freshness override** — `getFeedPosts` / `searchPosts` / `getMallStatsByMallId` gain an `includeAllAges` flag (skips the 30-day `.gte(created_at)` window); Explore feed, `/home`, and `/map` pass `role === "admin"` from `useUserRole` (role in the effect deps so the feed re-fetches all-age finds on hydration).
+- **`scripts/seed-demo-booth.ts`** — idempotent, preview-by-default seed that attaches a `hidden_from_feed` vendor row to the admin's auth user (resolved by `NEXT_PUBLIC_ADMIN_EMAIL`); `--apply` writes via service role.
+- **`?scope=all`** on the `/map` route — opens the all-Kentucky overview (no mall scoped) when arriving from the home hub, while leaving the user's persisted saved-mall untouched (Explore keeps its scope).
+
+### Changed
+
+- **Home hub hero** (`components/home-hub/HeroCard.tsx`) — headline `lineHeight` 1.12 → 1.0 + `maxWidth` 240 → 270 (cohesive multi-line block, drops the disjointed gap); card height 248 → 272 + vertical padding 32 → 40 (text/CTA breathe off the edges). (#1, #2)
+- **Admin "home hero" upload** now drives the `/home` HeroCard (`featured_find_image_url`, fallback `/desktop-hero.png`) instead of the Explore feed. (#4)
+- **`/home` "Explore Nearby" + rail "view map"** push `/map?scope=all`. (#5)
+
+### Removed
+
+- **Search + filter row** from `/home` (#3) — it only deep-linked to Explore and served no real function; dead-code byproduct: `PiMagnifyingGlassBold`/`PiSlidersHorizontalBold` + `v2`/`FONT_INTER` imports + `goExplore()` retire.
+- **FeaturedBanner** from the Explore feed (`app/(tabs)/page.tsx`) — banner moved to `/home` (#4); `featuredImageUrl` state + fetch + `getSiteSettingUrl`/`FeaturedBanner` imports retire.
+
+### iPhone QA watch-items
+
+- **#5/#6/#7 need an on-device walk** (no admin session / geolocation headless): admin sees the Booth tab; admin's Explore/search/map show all-age finds; the demo booth's finds are absent from a *non-admin* feed; "Explore Nearby" opens the all-Kentucky map.
+- **Demo-booth finds ordering** — add sample finds to the demo booth *after* this branch deploys (current prod code doesn't filter `hidden_from_feed`, so finds added pre-deploy would briefly show in the public feed).
+- The "2 errors" dev overlay is the pre-existing SearchBar `::placeholder` hydration warning (session 200), not a regression.
+
+[v0.206.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.206.0
+
+---
+
 ## [v0.205.0] — 2026-06-24
 
 ### Session 205 — Home Hub: a dedicated central-hub front door (design pass → 4 build arcs → WCAG-clean → deployed) — 5 runtime commits + 1 dial commit + 1 close
