@@ -349,7 +349,13 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     borderRadius: 18,
     boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
     padding: 3,
-    display: "flex", alignItems: "center", gap: 24,
+    // Session 207 #2 — David iPhone QA: with the admin 5-tab variant
+    // (Home · Explore · Map · Saved · Booth) the gap:24 spread the pill
+    // wide. Tightened 24 → 8 so the bar reads compact across the 3/4/5-tab
+    // variants. The active-pill geometry measures each tab's live
+    // getBoundingClientRect, so a smaller gap recomputes cleanly with no
+    // animation change. Pure dial — bump if 5-tab still reads loose.
+    display: "flex", alignItems: "center", gap: 8,
     // Session 168 round 6 finding 2 part 3 — overflow:hidden retired alongside
     // the layoutId-pattern retirement below. The new canonical single-pill
     // computed-position pattern measures the pill's position FROM WITHIN
