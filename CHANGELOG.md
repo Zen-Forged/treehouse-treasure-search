@@ -8,6 +8,33 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.207.0] — 2026-06-26
+
+### Session 207 — Home Hub QA bundle (launch target · compact nav · mall-scoped hero) → design session → V1 Frame B mall-identity Explore hero — 4 runtime commits + 1 close
+
+David walked the session-205/206 Home Hub and surfaced a 3-finding iPhone-QA bundle, which then evolved into a multi-round design session for a richer mall-identity Explore hero — landing on **V1 Frame B**. Restated interpretation per `feedback_user_clarification_restate_interpretation`; audit-first (direct reads of manifest + BottomNav + HomeHero + TabsChrome + cachedMalls + Mall type) grounded every fix. One genuine fork (launch-target: code guard vs reinstall) resolved via `AskUserQuestion` → David picked the cold-launch guard. Shipped smallest→largest; build green (tsc + `next build`) at every boundary; Frame B verified end-to-end in the Preview MCP against a real mall (All Peddlers — band + photo + name-dropdown + live "Closed · opens Fri 10:30 AM" hours badge + baked-in search).
+
+### Added
+
+- **`components/StandaloneLaunchGate.tsx`** (#1) — cold-launch redirect guard. When the installed PWA cold-launches in standalone display mode and lands on `/` (cached pre-205 installs whose `start_url` predates `/home`), it redirects to `/home`. Mounted once in the persistent `(tabs)/` layout so `useEffect([])` fires exactly once per cold launch with the landing pathname — race-free, no sessionStorage; browser visits + fresh `/home` installs + tab-nav to Explore are all unaffected. Fixes every existing install without anyone reinstalling.
+- **V1 Frame B mall-identity Explore hero** (`components/HomeHero.tsx`) — when a specific mall is the Explore scope, the hero renders the band·photo·strip composition: a cream wordmark band (kept), the mall's photo, and a solid strip carrying the mall name + caret (the scope dropdown → `/map`), the open-now `MallHoursBadge` (live, timezone-aware), and the search bar baked in as the strip's bottom row. All-Kentucky scope keeps the plain brand hero. Design record lives in the untracked `docs/mockups/explore-mall-hero-v1…v7.html` exploration (V1 Frame B is the shipped pick).
+
+### Changed
+
+- **BottomNav inter-tab gap 24 → 8** (#2, `components/BottomNav.tsx`) — the admin 5-tab variant (Home · Explore · Map · Saved · Booth) spread wide at gap 24; tightened to read compact across the 3/4/5-tab variants. The active-pill geometry measures each tab's live `getBoundingClientRect`, so the smaller gap recomputes cleanly with no animation change.
+- **Explore hero is mall-scoped** (#3, evolved into Frame B) — interim commit `2c28383` swapped the full-bleed hero background to the selected mall's `hero_image_url` (Treehouse hero only on all-Kentucky scope); superseded the same session by the Frame B treatment (`81f2001`), where the mall photo becomes the strip's photo region. `TabsChrome` now passes `mall={selectedMall}` to `HomeHero` and **retires the separate `MallPickerChip` in mall-scoped mode** (the strip's name is the scope dropdown — removes the redundancy David flagged); the chip stays for all-Kentucky scope.
+
+### iPhone QA watch-items
+
+- **#1 launch target** — after v0.207.0 deploys, the *next* cold launch of the installed PWA should land on `/home` (no reinstall needed).
+- **Frame B on-device** — scope Explore to a specific mall: band + mall photo + "{mall} ▾" dropdown (→ /map) + live open-now badge + baked-in search; tap-target + legibility at arm's length; all-Kentucky scope still shows the plain brand hero.
+- **#2 nav** — compact 5-tab bar as admin (bump gap if it still reads loose; pure dial).
+- **Frame B dials noted in the build** — change-location is name+caret only (no separate "Change location" text); long names single-line with ellipsis (measure-and-shrink is a drop-in if wanted); address/phone/website intentionally out of this first build (forward-compat path in the V2–V5 mockups).
+
+[v0.207.0]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.207.0
+
+---
+
 ## [v0.206.0] — 2026-06-24
 
 ### Session 206 — Home Hub 7-finding refinement bundle (hero dials · search removal · admin hero retarget · all-Kentucky map · admin demo booth · admin freshness override) — 8 runtime commits + 1 close
