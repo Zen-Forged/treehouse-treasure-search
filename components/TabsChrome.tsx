@@ -105,11 +105,11 @@ export default function TabsChrome() {
         // URL state via its own Suspense boundary; caller only signals
         // "show search slot" via showSearch flag.
         showSearch={isHome}
-        // Session 207 #3 — Explore hero loads the selected mall's location
-        // image; null (all-Kentucky scope OR mall has no hero) falls back to
-        // the standard Treehouse hero inside HomeHero. selectedMall already
-        // derived above from useSavedMallId + useActiveMalls.
-        heroImageUrl={selectedMall?.hero_image_url ?? null}
+        // Session 207 — V1 Frame B. A specific mall scope renders the
+        // mall-identity hero (band · photo · strip with name → /map +
+        // open-now + search); null (all-Kentucky) → the brand hero.
+        // selectedMall derived above from useSavedMallId + useActiveMalls.
+        mall={selectedMall}
       />
 
       {/* Session 166 Shape A commit 1 — Profile chrome affordance restored
@@ -152,15 +152,18 @@ export default function TabsChrome() {
         </div>
       </div>
 
-      {showChip && (
+      {/* Session 207 — in mall-scoped mode the Frame B strip's mall name IS
+          the scope dropdown, so the separate chip retires (David's redundancy
+          note). All-Kentucky scope keeps the chip as the mall-pick entry. */}
+      {showChip && !selectedMall && (
         <MallPickerChip
           mallName={mallName}
           onTap={() => {
             // Session 154 home_strip_tapped event preserved verbatim;
             // session 178 F2 Arc 3.1 — handler routes to /map per D1.
-            track("home_strip_tapped", {
-              mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
-            });
+            // Session 207 — chip only renders in all-Kentucky scope now, so
+            // the slug is always all-kentucky.
+            track("home_strip_tapped", { mall_slug: "all-kentucky" });
             router.push("/map");
           }}
         />

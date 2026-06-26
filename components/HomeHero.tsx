@@ -1,42 +1,24 @@
 // components/HomeHero.tsx
-// Home hero primitive — Frame C composition from docs/home-hero-design.md.
+// Home (Explore) hero primitive.
 //
-// Composition: 33vh background-image hero (wordmark baked into asset) +
-// cream-fade overlay gradient at the bottom + embedded SearchBar anchored
-// 16px from hero bottom (Home only; Saved omits SearchBar per R18 lock).
+// Two modes (session 207 — V1 Frame B, docs/mockups/explore-mall-hero-v1.html):
+//   - Mall scoped (mall != null): the V1 Frame B mall-identity composition —
+//     a cream band (Treehouse wordmark) · the mall's photo · a solid bottom
+//     strip carrying the mall name (the scope dropdown → /map), the open-now
+//     MallHoursBadge, and the search bar baked in as the strip's bottom row.
+//     Address / phone / website are intentionally OUT of this first build.
+//   - All-Kentucky (mall == null): the plain brand hero — 33vh background-image
+//     of /home-hero.png (wordmark baked into the asset) + cream-fade overlay +
+//     embedded SearchBar (Frame C composition from docs/home-hero-design.md).
 //
-// Sticky behavior (session 176 scroll-and-compress dial — BOUNDED revision
-// of session 175 Option α; session 175 reversed session 164 D16-D19):
-//   - Home (showSearch=true):  position: sticky; top: -SCROLL_BEFORE_STICKY_PX
-//     At scrollY=0 hero sits at top:0 (full 33vh visible, chrome bubbles
-//     overlay photograph as designed). User scrolls — hero scrolls UP with
-//     content for SCROLL_BEFORE_STICKY_PX pixels. Once user has scrolled
-//     past that threshold, sticky activates pinning hero with the top
-//     SCROLL_BEFORE_STICKY_PX of hero offscreen. Visible pinned hero =
-//     33vh - SCROLL_BEFORE_STICKY_PX (compressed but wordmark + SearchBar
-//     still visible).
-//   - Saved (showSearch=false): position: static; height: 33vh
-//     Hero renders in document flow at top of page as identity beat;
-//     scrolls away with content when user scrolls down. (Unchanged from
-//     session 175 Option α — David's reference image for session 176.)
+// Frame B sticky behavior: position: sticky; top: 0 (full pin, no collapse) so
+// the wordmark band never clips and the scope + search stay reachable on scroll.
+// The all-Kentucky brand hero keeps the session-176 scroll-and-compress
+// (top: -SCROLL_BEFORE_STICKY_PX) behavior unchanged.
 //
-// Session 183 F2 Shape B — SearchBar URL state internalized via own
-// Suspense boundary. David's session 182 iPhone QA finding 2 root cause:
-// (tabs)/layout.tsx wrapped TabsChrome in <Suspense fallback={null}>;
-// useSearchParams in TabsChrome forced Next.js 14 Suspense bailout. On
-// warm-nav back to /, TabsChrome suspended → null fallback → entire
-// floating chrome (HomeHero photo + Profile overlay + MallPickerChip)
-// invisible until URL hydrated. Fix shape: split TabsChrome so non-URL
-// chrome renders outside Suspense + URL-dependent code (SearchBar reads
-// ?q / writes ?q) moves INSIDE HomeHero wrapped in its own Suspense.
-// Now: hero photo + cream-fade paint synchronously regardless of URL
-// hydration; only the SearchBar slot suspends briefly (contained to its
-// own bottom-anchored 16px slot inside the hero — visually negligible).
-//
-// API change: HomeHero accepts showSearch?: boolean (was: searchQuery +
-// onSearchChange optional). Caller no longer plumbs URL state through
-// HomeHero's props — HomeHero owns the URL state for its own SearchBar
-// slot.
+// Session 183 F2 Shape B — SearchBar URL state internalized via own Suspense
+// boundary (SearchBarSlot). HomeHero accepts showSearch?: boolean; the caller
+// signals "show search slot" rather than plumbing URL state through props.
 
 "use client";
 
@@ -44,43 +26,40 @@ import * as React from "react";
 import { Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
-import { v2 } from "@/lib/tokens";
+import MallHoursBadge from "@/components/MallHoursBadge";
+import { googleListingUrl } from "@/lib/mapsDeepLink";
+import { v2, FONT_CORMORANT } from "@/lib/tokens";
+import type { Mall } from "@/types/treehouse";
 
 interface Props {
-  // Session 183 — simplified prop. When true, SearchBar slot mounts inside
-  // hero's bottom-anchored position (Home only). When false/omitted, hero
-  // renders as photo + cream-fade only (Saved per session 121 R18 D-lock).
+  // Session 183 — when true, SearchBar slot mounts (Home only; Saved omits).
   showSearch?:        boolean;
   searchPlaceholder?: string;
-  // Session 207 #3 — David iPhone QA: on Explore, load the selected mall's
-  // location image instead of the standard Treehouse hero; the Treehouse
-  // hero (with baked-in wordmark) loads only when "All Kentucky locations"
-  // is the scope (heroImageUrl null/omitted). Mall photos carry no wordmark
-  // — that's intentional per the literal ask ("the mall location image loads
-  // instead").
-  heroImageUrl?:      string | null;
+  // Session 207 — when a specific mall is the Explore scope, render the V1
+  // Frame B mall-identity composition. null (all-Kentucky scope) → brand hero.
+  mall?:              Mall | null;
 }
 
 const HERO_HEIGHT_VH = 33;
 
-// Session 176 — scroll distance allowed before hero pins via negative-top
-// sticky. See session 177 dial — 80 → 40 (iPhone QA on v0.176.0 cut wordmark
-// flush against URL bar at 80; 40 halves compression so wordmark breathes).
+// Session 176 — scroll distance before the all-Kentucky brand hero pins via
+// negative-top sticky (session 177 dial 80 → 40).
 const SCROLL_BEFORE_STICKY_PX = 40;
 
-// Session 176 — hero's VISIBLE bottom edge in viewport coordinates when the
-// hero is sticky-pinned (Home, scrollY > SCROLL_BEFORE_STICKY_PX) OR when
-// it sits at the top of document flow. Consumers (MallPickerChip + MallMap-
-// Drawer, both Home-only) pin themselves at or below this edge.
+// Hero's VISIBLE bottom edge in viewport coords for the all-Kentucky brand
+// hero (consumers MallPickerChip + MallMapDrawer pin at/below this edge).
 export const HERO_BOTTOM_EDGE =
   `calc(${HERO_HEIGHT_VH}vh - ${SCROLL_BEFORE_STICKY_PX}px)`;
 const SEARCH_BOTTOM_OFFSET = 16;
 const SEARCH_HORIZ_PADDING = 16;
 
-// Session 183 F2 Shape B — SearchBar slot wraps the URL-aware read/write
-// in its own component so Suspense boundary contains the useSearchParams
-// bailout to JUST this slot (visually a 16px-from-bottom inset bar that's
-// briefly empty on warm-nav, surrounded by fully-painted hero photograph).
+// Frame B chrome (session 207).
+const STRIP_CREAM = v2.surface.warm;
+const HAIRLINE    = "1px solid rgba(42,26,10,0.10)";
+
+// Session 183 F2 Shape B — SearchBar slot wraps the URL-aware read/write in
+// its own component so the Suspense boundary contains the useSearchParams
+// bailout to just this slot.
 function SearchBarSlot({ placeholder }: { placeholder?: string }) {
   const searchParams = useSearchParams();
   const router       = useRouter();
@@ -106,25 +85,104 @@ function SearchBarSlot({ placeholder }: { placeholder?: string }) {
 export default function HomeHero({
   showSearch,
   searchPlaceholder,
-  heroImageUrl,
+  mall,
 }: Props) {
-  // Session 207 #3 — scoped mall photo when present, else the brand hero.
-  const heroSrc = heroImageUrl || "/home-hero.png";
-  // Sticky on Home (showSearch=true), static on Saved (showSearch=false).
-  // See file-top — preserved verbatim from session 175 Option α + session
-  // 176 scroll-and-compress dial.
-  const sectionStyle: React.CSSProperties = {
+  const router = useRouter();
+
+  // ── Frame B — mall-scoped mall-identity hero ────────────────────────────
+  if (showSearch && mall) {
+    const photoSrc  = mall.hero_image_url || null;
+    const hoursHref = googleListingUrl(
+      [mall.name, mall.address, mall.city].filter(Boolean).join(", ")
+    );
+
+    const sectionStyle: React.CSSProperties = {
+      position:      "sticky",
+      top:           0,
+      zIndex:        10,
+      width:         "100%",
+      height:        `${HERO_HEIGHT_VH}vh`,
+      overflow:      "hidden",
+      display:       "flex",
+      flexDirection: "column",
+      background:    STRIP_CREAM,
+    };
+
+    return (
+      <section style={sectionStyle} aria-label="Treehouse Finds">
+        {/* Band — wordmark embedded at top (David's session-207 ask). */}
+        <div style={{
+          flex: "none", background: STRIP_CREAM, borderBottom: HAIRLINE,
+          textAlign: "center", padding: "8px 14px",
+        }}>
+          <img
+            src="/wordmark.png"
+            alt="Treehouse Finds"
+            style={{ height: 40, width: "auto", display: "inline-block" }}
+          />
+        </div>
+
+        {/* Photo — the selected mall's image; warm fallback if absent. */}
+        <div style={{
+          flex: 1, minHeight: 0, backgroundColor: "#5b4a36",
+          ...(photoSrc ? {
+            backgroundImage:    `url('${photoSrc}')`,
+            backgroundSize:     "cover",
+            backgroundPosition: "center",
+          } : {}),
+        }} />
+
+        {/* Strip — scope dropdown + open-now + search baked in. */}
+        <div style={{
+          flex: "none", background: STRIP_CREAM, borderTop: HAIRLINE,
+          padding: "11px 14px 13px", display: "flex", flexDirection: "column", gap: 8,
+        }}>
+          {/* Mall name + caret = the scope dropdown → /map (replaces the
+              separate MallPickerChip in mall-scoped mode). */}
+          <button
+            onClick={() => router.push("/map")}
+            aria-label={`Change location — currently ${mall.name}`}
+            style={{
+              background: "none", border: "none", padding: 0, margin: 0,
+              textAlign: "left", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 5, maxWidth: "100%",
+              fontFamily: FONT_CORMORANT, fontStyle: "italic", fontWeight: 500,
+              fontSize: 22, lineHeight: 1.1, color: v2.text.primary,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {mall.name}
+            </span>
+            <span style={{ flex: "none", fontSize: 13, color: v2.text.muted, fontStyle: "normal" }}>▾</span>
+          </button>
+
+          {/* Open-now badge — falls back to the Hours-on-Google link internally
+              (returns null only when there is no hours data at all). */}
+          <MallHoursBadge
+            hoursJson={mall.hours_json}
+            timezone={mall.hours_timezone}
+            businessStatus={mall.business_status}
+            href={hoursHref}
+            mallSlug={mall.slug}
+            surface="explore_hero"
+          />
+
+          {/* Search baked into the strip as its bottom row. */}
+          <Suspense fallback={null}>
+            <SearchBarSlot placeholder={searchPlaceholder} />
+          </Suspense>
+        </div>
+      </section>
+    );
+  }
+
+  // ── All-Kentucky brand hero (unchanged Frame C composition) ─────────────
+  const brandSectionStyle: React.CSSProperties = {
     position: showSearch ? "sticky" : "static",
     ...(showSearch ? { top: -SCROLL_BEFORE_STICKY_PX, zIndex: 10 } : {}),
     width:              "100%",
     height:             `${HERO_HEIGHT_VH}vh`,
-    // Layered backgrounds: cream-fade overlay (D9) on top, hero asset
-    // (D12) below. Cover-sizing + center anchor keeps the baked-in
-    // wordmark visible across iPhone SE → 14 Pro Max widths.
-    //
-    // Session 166 dial 8 — gradient rgba migrates from (247,243,235) to
-    // (230,222,207) so the fade target matches v2.bg.tabs (#E6DECF) for
-    // continuous seam between hero bottom edge + (tabs)/ page bg.
     backgroundImage:
       `linear-gradient(180deg,
         rgba(230,222,207,0) 0%,
@@ -132,7 +190,7 @@ export default function HomeHero({
         rgba(230,222,207,0.30) 90%,
         rgba(230,222,207,0.78) 98%,
         ${v2.bg.tabs} 100%),
-       url('${heroSrc}')`,
+       url('/home-hero.png')`,
     backgroundSize:     "auto, cover",
     backgroundPosition: "center, center",
     backgroundRepeat:   "no-repeat",
@@ -148,13 +206,9 @@ export default function HomeHero({
   };
 
   return (
-    <section style={sectionStyle} aria-label="Treehouse Finds">
+    <section style={brandSectionStyle} aria-label="Treehouse Finds">
       {showSearch && (
         <div style={searchWrapStyle}>
-          {/* Suspense boundary CONTAINS useSearchParams bailout. Only this
-              16px-anchored slot suspends on warm-nav URL hydration; hero
-              photograph + cream-fade + wordmark all paint synchronously
-              around it. */}
           <Suspense fallback={null}>
             <SearchBarSlot placeholder={searchPlaceholder} />
           </Suspense>
