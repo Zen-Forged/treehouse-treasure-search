@@ -105,6 +105,11 @@ export default function TabsChrome() {
         // URL state via its own Suspense boundary; caller only signals
         // "show search slot" via showSearch flag.
         showSearch={isHome}
+        // Session 207 #3 — Explore hero loads the selected mall's location
+        // image; null (all-Kentucky scope OR mall has no hero) falls back to
+        // the standard Treehouse hero inside HomeHero. selectedMall already
+        // derived above from useSavedMallId + useActiveMalls.
+        heroImageUrl={selectedMall?.hero_image_url ?? null}
       />
 
       {/* Session 166 Shape A commit 1 — Profile chrome affordance restored

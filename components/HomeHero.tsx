@@ -52,6 +52,13 @@ interface Props {
   // renders as photo + cream-fade only (Saved per session 121 R18 D-lock).
   showSearch?:        boolean;
   searchPlaceholder?: string;
+  // Session 207 #3 — David iPhone QA: on Explore, load the selected mall's
+  // location image instead of the standard Treehouse hero; the Treehouse
+  // hero (with baked-in wordmark) loads only when "All Kentucky locations"
+  // is the scope (heroImageUrl null/omitted). Mall photos carry no wordmark
+  // — that's intentional per the literal ask ("the mall location image loads
+  // instead").
+  heroImageUrl?:      string | null;
 }
 
 const HERO_HEIGHT_VH = 33;
@@ -99,7 +106,10 @@ function SearchBarSlot({ placeholder }: { placeholder?: string }) {
 export default function HomeHero({
   showSearch,
   searchPlaceholder,
+  heroImageUrl,
 }: Props) {
+  // Session 207 #3 — scoped mall photo when present, else the brand hero.
+  const heroSrc = heroImageUrl || "/home-hero.png";
   // Sticky on Home (showSearch=true), static on Saved (showSearch=false).
   // See file-top — preserved verbatim from session 175 Option α + session
   // 176 scroll-and-compress dial.
@@ -122,7 +132,7 @@ export default function HomeHero({
         rgba(230,222,207,0.30) 90%,
         rgba(230,222,207,0.78) 98%,
         ${v2.bg.tabs} 100%),
-       url('/home-hero.png')`,
+       url('${heroSrc}')`,
     backgroundSize:     "auto, cover",
     backgroundPosition: "center, center",
     backgroundRepeat:   "no-repeat",
