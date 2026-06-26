@@ -38,6 +38,7 @@ import { usePathname } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import TabsChrome from "@/components/TabsChrome";
 import MallParamReceiver from "@/components/MallParamReceiver";
+import StandaloneLaunchGate from "@/components/StandaloneLaunchGate";
 import { useShopperSaves } from "@/lib/useShopperSaves";
 import { v2 } from "@/lib/tokens";
 
@@ -111,6 +112,11 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           chrome stack paints synchronously while only the URL-bound
           subtrees suspend briefly — addresses David's session 182 iPhone
           QA finding 2 (whole-chrome-invisible-during-Suspense-fallback). */}
+      {/* Session 207 #1 — cold-launch redirect guard. Mounts once per cold
+          launch in this persistent (tabs)/ layout; redirects standalone
+          launches that land on "/" (cached pre-205 installs) to "/home".
+          See components/StandaloneLaunchGate.tsx for the race-free rationale. */}
+      <StandaloneLaunchGate />
       <TabsChrome />
       <Suspense fallback={null}>
         <MallParamReceiver />
