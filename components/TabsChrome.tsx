@@ -104,12 +104,10 @@ export default function TabsChrome() {
         // Session 183 — simplified prop. HomeHero internalizes SearchBar's
         // URL state via its own Suspense boundary; caller only signals
         // "show search slot" via showSearch flag.
+        // Session 207 — V1 Frame B mall-identity hero reverted per David; the
+        // Explore hero is the plain brand hero + search regardless of scope.
+        // The mall picker lives in the MallPickerChip below the hero.
         showSearch={isHome}
-        // Session 207 — V1 Frame B. A specific mall scope renders the
-        // mall-identity hero (band · photo · strip with name → /map +
-        // open-now + search); null (all-Kentucky) → the brand hero.
-        // selectedMall derived above from useSavedMallId + useActiveMalls.
-        mall={selectedMall}
       />
 
       {/* Session 166 Shape A commit 1 — Profile chrome affordance restored
@@ -152,18 +150,18 @@ export default function TabsChrome() {
         </div>
       </div>
 
-      {/* Session 207 — in mall-scoped mode the Frame B strip's mall name IS
-          the scope dropdown, so the separate chip retires (David's redundancy
-          note). All-Kentucky scope keeps the chip as the mall-pick entry. */}
-      {showChip && !selectedMall && (
+      {/* Session 207 — Frame B reverted; the MallPickerChip is restored as the
+          universal scope-pick entry below the hero (both all-Kentucky + a
+          specific mall scope). */}
+      {showChip && (
         <MallPickerChip
           mallName={mallName}
           onTap={() => {
             // Session 154 home_strip_tapped event preserved verbatim;
             // session 178 F2 Arc 3.1 — handler routes to /map per D1.
-            // Session 207 — chip only renders in all-Kentucky scope now, so
-            // the slug is always all-kentucky.
-            track("home_strip_tapped", { mall_slug: "all-kentucky" });
+            track("home_strip_tapped", {
+              mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
+            });
             router.push("/map");
           }}
         />
