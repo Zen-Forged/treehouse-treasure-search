@@ -35,7 +35,7 @@ const AUDIENCES: Audience[] = [
     copy: "Showcase your finds, reach more shoppers & grow your booth locally.",
   },
   {
-    icon: <PiTreeBold />, accent: HUB_TEAL, labelColor: HUB_TEAL_TEXT, label: "SHOP",
+    icon: <PiTreeBold />, accent: HUB_TEAL, labelColor: HUB_TEAL_TEXT, label: "SHOP\nOWNERS",
     copy: "Drive foot traffic, promote your vendors & build a thriving community.",
   },
 ];
@@ -79,7 +79,7 @@ export default function AdvantageGrid() {
             >
               {a.icon}
             </div>
-            <h3 style={{ fontFamily: FONT_INTER, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", margin: "0 0 8px", color: a.labelColor }}>
+            <h3 style={{ fontFamily: FONT_INTER, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", margin: "0 0 8px", color: a.labelColor, whiteSpace: "pre-line" }}>
               {a.label}
             </h3>
             <p style={{ fontFamily: FONT_LORA, fontSize: 12.5, lineHeight: 1.45, color: v2.text.secondary, margin: 0 }}>
