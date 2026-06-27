@@ -35,7 +35,7 @@ const AUDIENCES: Audience[] = [
     copy: "Showcase your finds, reach more shoppers & grow your booth locally.",
   },
   {
-    icon: <PiTreeBold />, accent: HUB_TEAL, labelColor: HUB_TEAL_TEXT, label: "SHOP OWNERS",
+    icon: <PiTreeBold />, accent: HUB_TEAL, labelColor: HUB_TEAL_TEXT, label: "SHOP",
     copy: "Drive foot traffic, promote your vendors & build a thriving community.",
   },
 ];
