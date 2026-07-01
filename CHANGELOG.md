@@ -8,6 +8,29 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [v0.207.1] — 2026-06-26
+
+### Session 207 follow-on — Home Hub copy/icon pass + Explore hero reverted off Frame B — 4 runtime commits
+
+Same-session refinements on top of the v0.207.0 ship. David walked the hub + hero and made the calls: the mall-identity **Frame B Explore hero (shipped as v0.207.0's headline) is reverted** — the Explore hero is back to the plain brand hero + search bar, and the Home Hub audience grid gets a copy/icon refresh. Build green (tsc + `next build`); verified the hub copy via the server-rendered `/home` HTML and the hero revert via the live DOM (brand hero, no Frame B strip, MallPickerChip restored) with a mall still scoped. Net **−102 LOC** (the Frame B revert removes more than the hub tweaks add).
+
+### Changed
+
+- **Explore hero reverted off V1 Frame B** (`components/HomeHero.tsx` + `components/TabsChrome.tsx`) — David: "revert to the hero version we had prior to implementing the store location information, so it just has the search bar." `HomeHero` drops the `mall` prop + the band·photo·strip branch (mall name dropdown, `MallHoursBadge`, mall photo); the Explore hero is the plain `/home-hero.png` brand hero + search regardless of scope. `TabsChrome` restores the unconditional **MallPickerChip** below the hero (with the mall-slug analytics logic) as the universal scope-pick entry. The v0.207.0 launch guard (#1) + nav-gap dial (#2) are untouched.
+- **Home Hub audience grid copy** (`components/home-hub/AdvantageGrid.tsx`) — "The Treehouse Advantage" → **"The Treehouse Community"**; section labels "For Shoppers"/"For Vendors"/"Malls" → **"Treasure Seekers"** / **"Booth Vendors"** / **"SHOP\nOWNERS"** (stacked two lines via `whiteSpace: pre-line`); dropped the **"Coming Soon"** tag from the Shop Owners card (+ retired the now-dead `comingSoon` flag + render block).
+- **Home Hub audience icons** — shopper `PiShoppingBagBold` → **`MdOutlineExplore`** (the Explore nav glyph); Shop Owners `PiBuildingsBold` → **`PiTreeBold`**.
+- **Map location pins** (`components/TreehouseMap.tsx`, `LeafBubblePin`) — `PiLeafBold` → **`PiTreeBold`** (selected 20px / unselected 18px), inside the unchanged cream/green pin bubble.
+
+### iPhone QA watch-items
+
+- Home Hub: "The Treehouse Community" eyebrow + the three labels (Treasure Seekers / Booth Vendors / SHOP over OWNERS) + the two new icons (compass for Treasure Seekers, tree for Shop Owners) at the 58px circle size + no "Coming Soon".
+- Explore hero reads clean with just the search bar regardless of scope; the MallPickerChip shows the scoped mall name below.
+- Map pins render as trees (validate on-device — Mapbox markers only draw with the live token + real malls).
+
+[v0.207.1]: https://github.com/Zen-Forged/treehouse-treasure-search/releases/tag/v0.207.1
+
+---
+
 ## [v0.207.0] — 2026-06-26
 
 ### Session 207 — Home Hub QA bundle (launch target · compact nav · mall-scoped hero) → design session → V1 Frame B mall-identity Explore hero — 4 runtime commits + 1 close
